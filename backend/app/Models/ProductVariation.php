@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * The unit everything else in the system attaches to.
@@ -59,6 +60,11 @@ class ProductVariation extends Model
         return $this->belongsToMany(AttributeValue::class, 'product_variation_values')
             ->withPivot('attribute_id');
     }
+
+    public function inventory(): HasOne
+{
+    return $this->hasOne(Inventory::class, 'product_variation_id');
+}
 
     /**
      * The price a customer actually pays before any cart-level discount.

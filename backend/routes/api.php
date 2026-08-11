@@ -22,6 +22,12 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function (): void {
     Route::prefix('shop')->name('shop.')->group(base_path('routes/api/shop.php'));
     Route::prefix('admin')->name('admin.')->group(base_path('routes/api/admin.php'));
+
+    Route::get('/health', fn () => response()->json([
+        'success' => true,
+        'message' => 'Upokoron API is running',
+        'version' => 'v1',
+    ]));
 });
 
 Route::get('/', fn () => response()->json([
