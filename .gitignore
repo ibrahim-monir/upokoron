@@ -1,0 +1,59 @@
+# ── Secrets ──────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+auth.json
+
+# ── Dependencies ─────────────────────────────────────────────────────────
+/vendor
+/node_modules
+/backend/vendor
+/backend/node_modules
+
+# ── Laravel runtime ──────────────────────────────────────────────────────
+/backend/storage/*.key
+/backend/storage/framework/cache/*
+!/backend/storage/framework/cache/.gitignore
+/backend/storage/framework/sessions/*
+!/backend/storage/framework/sessions/.gitignore
+/backend/storage/framework/views/*
+!/backend/storage/framework/views/.gitignore
+/backend/storage/framework/testing
+/backend/storage/logs/*
+!/backend/storage/logs/.gitignore
+/backend/bootstrap/cache/*
+!/backend/bootstrap/cache/.gitignore
+
+# Uploaded product images. User content, not source.
+/backend/public/uploads/*
+!/backend/public/uploads/.gitignore
+
+# SQLite scratch database created by `composer create-project`; this project
+# runs on MySQL.
+/backend/database/*.sqlite
+/backend/database/*.sqlite-journal
+
+# ── Build output ─────────────────────────────────────────────────────────
+/backend/public/build
+/backend/public/hot
+/frontend/dist
+/frontend/.vite
+
+# ── Tooling ──────────────────────────────────────────────────────────────
+.phpunit.result.cache
+.phpunit.cache
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+
+# ── OS noise ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Deploy artefacts ─────────────────────────────────────────────────────
+*.zip
+*.tar.gz

@@ -1,0 +1,389 @@
+### Upokoron API — Phase 2
+#
+# Click "Send Request" above any block below.
+# Needs the VS Code extension "REST Client" (humao.rest-client).
+#
+# Server:  php artisan serve --port=8010   (already running)
+# Seeded:  php artisan migrate:fresh --seed
+#
+# Owner login:  owner@upokoron.test / upokoron-dev-2026   (from .env)
+
+@base = http://127.0.0.1:8010/api/v1
+
+
+### ─── 0. Health check ──────────────────────────────────────────────
+GET http://127.0.0.1:8010/api
+Accept: application/json
+
+
+### ─── 1. Public settings (no auth needed) ──────────────────────────
+# Only store identity + currency. Commission rates and stock policy
+# are deliberately NOT here.
+GET {{base}}/shop/settings
+Accept: application/json
+
+
+### ─── 2. Admin login → grabs a token for every request below ───────
+# @name adminLogin
+POST {{base}}/admin/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "identifier": "owner@upokoron.test",
+  "password": "upokoron-dev-2026",
+  "device_name": "vscode"
+}
+
+@adminToken = {{adminLogin.response.body.token}}
+
+
+### ─── 3. Who am I? ─────────────────────────────────────────────────
+GET {{base}}/shop/auth/me
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 4. Roles and how many staff hold each ────────────────────────
+GET {{base}}/admin/roles
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 5. The full permission catalogue, grouped ────────────────────
+GET {{base}}/admin/permissions
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 6. Every business setting, with its config default ───────────
+GET {{base}}/admin/settings
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 7. Change a setting ──────────────────────────────────────────
+PUT {{base}}/admin/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "settings": {
+    "store_name": "Upokoron Store",
+    "return_window_days": 10
+  }
+}
+
+
+### ─── 8. Unknown setting key is refused (expect 422) ───────────────
+PUT {{base}}/admin/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "settings": { "definitely_not_a_setting": "x" }
+}
+
+
+### ─── 9. Register a customer ───────────────────────────────────────
+# @name register
+POST {{base}}/shop/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Rahim Uddin",
+  "phone": "01712345678",
+  "password": "secret-pass-1",
+  "password_confirmation": "secret-pass-1",
+  "device_name": "vscode"
+}
+
+@customerToken = {{register.response.body.token}}
+
+
+### ─── 10. Customer hits an admin route (expect 403) ────────────────
+GET {{base}}/admin/users
+Authorization: Bearer {{customerToken}}
+Accept: application/json
+
+
+### ─── 11. Owner creates a manager ──────────────────────────────────
+POST {{base}}/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Karim Manager",
+  "email": "karim@upokoron.test",
+  "phone": "01812345678",
+  "password": "manager-pass-1",
+  "password_confirmation": "manager-pass-1",
+  "roles": ["manager"]
+}
+
+
+### ─── 12. PRIVILEGE ESCALATION TEST ────────────────────────────────
+# Sign in as that manager. A manager CAN manage users...
+# @name managerLogin
+POST {{base}}/admin/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "identifier": "karim@upokoron.test",
+  "password": "manager-pass-1",
+  "device_name": "vscode"
+}
+
+@managerToken = {{managerLogin.response.body.token}}
+
+
+### ─── 13. ...but CANNOT mint an owner (expect 403) ─────────────────
+# This is the guard that stops a manager taking over the store.
+POST {{base}}/admin/users
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Sneaky Owner",
+  "email": "sneaky@upokoron.test",
+  "password": "sneaky-pass-1",
+  "password_confirmation": "sneaky-pass-1",
+  "roles": ["owner"]
+}
+
+
+### ─── 14. ...but CAN create support staff (expect 201) ─────────────
+POST {{base}}/admin/users
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Salma Support",
+  "email": "salma@upokoron.test",
+  "password": "support-pass-1",
+  "password_confirmation": "support-pass-1",
+  "roles": ["support"]
+}
+
+
+### ─── 15. Audit trail — every change above is recorded ─────────────
+GET {{base}}/admin/audit-logs
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 16. Audit trail filtered to logins ───────────────────────────
+GET {{base}}/admin/audit-logs?event=login
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 17. Login throttle — run this 6 times ────────────────────────
+# The 6th is refused even with the right password. Wait 60s to clear.
+POST {{base}}/shop/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "identifier": "01712345678",
+  "password": "wrong-password"
+}
+
+
+### ─── 18. Logout ───────────────────────────────────────────────────
+POST {{base}}/shop/auth/logout
+Authorization: Bearer {{customerToken}}
+Accept: application/json
+
+
+##############################################################################
+# PHASE 3 — ACCOUNTING
+##############################################################################
+
+### ─── 19. Chart of accounts (65 accounts) ──────────────────────────
+GET {{base}}/admin/accounts
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 20. Only postable accounts, with balances ────────────────────
+GET {{base}}/admin/accounts?postable_only=1&with_balance=1
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 21. THE WORKED EXAMPLE — purchase 1: 100 units @ ৳100 ────────
+# Account ids: 10=Inventory(1150) 26=AP(2110) 11=GoodsInTransit(1155)
+# 9=AR(1140) 44=SalesRevenue(4100) 49=COGS(5100)
+# Check the ids against request 19 if your seed differs.
+POST {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "event": "purchase1",
+  "memo": "Purchase 1: 100 units at 100",
+  "lines": [
+    { "account_id": 10, "type": "debit",  "amount": "10000.00" },
+    { "account_id": 26, "type": "credit", "amount": "10000.00" }
+  ]
+}
+
+
+### ─── 22. Purchase 2: 100 units @ ৳120 → average becomes ৳110 ──────
+POST {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "event": "purchase2",
+  "memo": "Purchase 2: 100 units at 120",
+  "lines": [
+    { "account_id": 10, "type": "debit",  "amount": "12000.00" },
+    { "account_id": 26, "type": "credit", "amount": "12000.00" }
+  ]
+}
+
+
+### ─── 23. Ship 50 units — stock leaves, NO revenue yet ─────────────
+# This is what makes a failed COD delivery a clean one-line reversal.
+POST {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "event": "shipped",
+  "memo": "Shipped 50 units at average cost 110",
+  "lines": [
+    { "account_id": 11, "type": "debit",  "amount": "5500.00" },
+    { "account_id": 10, "type": "credit", "amount": "5500.00" }
+  ]
+}
+
+
+### ─── 24. Deliver — revenue recognised ─────────────────────────────
+POST {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "event": "revenue",
+  "memo": "Delivered 50 units at 150",
+  "lines": [
+    { "account_id": 9,  "type": "debit",  "amount": "7500.00" },
+    { "account_id": 44, "type": "credit", "amount": "7500.00" }
+  ]
+}
+
+
+### ─── 25. Deliver — COGS recognised at the SAME moment ─────────────
+POST {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "event": "cogs",
+  "memo": "COGS on delivery",
+  "lines": [
+    { "account_id": 49, "type": "debit",  "amount": "5500.00" },
+    { "account_id": 11, "type": "credit", "amount": "5500.00" }
+  ]
+}
+
+
+### ─── 26. PROFIT & LOSS → gross profit must be ৳2,000 ──────────────
+GET {{base}}/admin/reports/profit-loss
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 27. TRIAL BALANCE → debits must equal credits ────────────────
+GET {{base}}/admin/reports/trial-balance
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 28. Account ledger for Inventory (running balance) ───────────
+GET {{base}}/admin/reports/account-ledger/10
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 29. Unbalanced entry is refused (expect 422) ─────────────────
+POST {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "memo": "This should never post",
+  "lines": [
+    { "account_id": 49, "type": "debit",  "amount": "100.00" },
+    { "account_id": 10, "type": "credit", "amount": "90.00" }
+  ]
+}
+
+
+### ─── 30. Posting to a group header is refused (expect 422) ────────
+# Account 1 is "1000 Assets", a report header, not a real account.
+POST {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lines": [
+    { "account_id": 1,  "type": "debit",  "amount": "100.00" },
+    { "account_id": 10, "type": "credit", "amount": "100.00" }
+  ]
+}
+
+
+### ─── 31. All journal entries ──────────────────────────────────────
+GET {{base}}/admin/journal-entries
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 32. Reverse an entry (put its id in the URL) ─────────────────
+# The original is NEVER edited or deleted: both entries stay in the
+# ledger and cancel out, so the audit trail survives the correction.
+POST {{base}}/admin/journal-entries/4/reverse
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Customer refused delivery"
+}
+
+
+### ─── 33. Fiscal years and periods ─────────────────────────────────
+GET {{base}}/admin/fiscal-periods
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 34. Close the first period ───────────────────────────────────
+# Periods must be closed in order; skipping ahead returns 409.
+POST {{base}}/admin/fiscal-periods/1/close
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+### ─── 35. Closing out of order is refused (expect 409) ─────────────
+POST {{base}}/admin/fiscal-periods/5/close
+Authorization: Bearer {{adminToken}}
+Accept: application/json
