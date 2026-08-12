@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Account;
 use App\Services\Accounting\TrialBalanceService;
 use App\Support\Money;
 use Illuminate\Console\Command;
@@ -41,6 +42,15 @@ class CheckAccountingIntegrity extends Command
         $this->checkEntryDatesMatchLines();
         $this->checkTrialBalance($trial, $asOf);
         $this->checkReversalLinkage();
+
+        $this->newLine();
+        $this->line('  <fg=gray>inventory</>');
+
+        $this->checkStockValueMatchesInventoryAccount();
+        $this->checkQuantityMatchesMovements();
+        $this->checkReservedMatchesReservations();
+        $this->checkNoNegativeStock();
+        $this->checkNoValueWithoutStock();
 
         $this->newLine();
 
@@ -148,6 +158,109 @@ class CheckAccountingIntegrity extends Command
             ->count();
 
         $this->report('    reversal links are two-way', $broken === 0, fn () => ["{$broken} one-way links"]);
+    }
+
+    /**
+     * I2: the stock subledger equals the Inventory control account.
+     *
+     * The single most important inventory check. If these disagree, either a
+     * stock movement skipped the ledger or a journal entry touched Inventory
+     * without moving stock -- and the balance sheet is wrong either way.
+     */
+    private function checkStockValueMatchesInventoryAccount(): void
+    {
+        $subledger = Money::of((string) (DB::table('inventories')->sum('stock_value') ?: 0));
+
+        $account = Account::firstWhere('system_key', 'inventory');
+
+        if ($account === null) {
+            $this->report('I2  stock value matches Inventory account', false, fn () => ['no account mapped to system key [inventory]']);
+
+            return;
+        }
+
+        $control = $account->balanceAsOf();
+
+        $this->report(
+            'I2  stock value matches Inventory account',
+            $subledger->equals($control),
+            fn () => [
+                'stock subledger '.$subledger->format(),
+                'Inventory 1150  '.$control->format(),
+                'difference      '.$subledger->minus($control)->format(),
+            ],
+        );
+    }
+
+    /** I3: on-hand quantity equals the signed sum of its own movements. */
+    private function checkQuantityMatchesMovements(): void
+    {
+        $broken = DB::table('inventories as i')
+            ->leftJoin('inventory_transactions as t', 't.product_variation_id', '=', 'i.product_variation_id')
+            ->select('i.product_variation_id', 'i.quantity')
+            ->selectRaw("COALESCE(SUM(CASE WHEN t.direction = 'in' THEN t.quantity ELSE -t.quantity END), 0) as ledger_qty")
+            ->groupBy('i.product_variation_id', 'i.quantity')
+            ->havingRaw("i.quantity <> COALESCE(SUM(CASE WHEN t.direction = 'in' THEN t.quantity ELSE -t.quantity END), 0)")
+            ->get();
+
+        $this->report(
+            'I3  quantity matches the stock ledger',
+            $broken->isEmpty(),
+            fn () => $broken->map(fn ($r) => "variation #{$r->product_variation_id}: on hand {$r->quantity} vs ledger {$r->ledger_qty}")->all(),
+        );
+    }
+
+    /** I4: the reserved counter equals the active reservation rows. */
+    private function checkReservedMatchesReservations(): void
+    {
+        $broken = DB::table('inventories as i')
+            ->leftJoin('stock_reservations as r', function ($join): void {
+                $join->on('r.product_variation_id', '=', 'i.product_variation_id')
+                    ->where('r.status', '=', 'active');
+            })
+            ->select('i.product_variation_id', 'i.reserved_quantity')
+            ->selectRaw('COALESCE(SUM(r.quantity), 0) as held')
+            ->groupBy('i.product_variation_id', 'i.reserved_quantity')
+            ->havingRaw('i.reserved_quantity <> COALESCE(SUM(r.quantity), 0)')
+            ->get();
+
+        $this->report(
+            'I4  reserved matches active reservations',
+            $broken->isEmpty(),
+            fn () => $broken->map(fn ($r) => "variation #{$r->product_variation_id}: counter {$r->reserved_quantity} vs rows {$r->held}")->all(),
+        );
+    }
+
+    private function checkNoNegativeStock(): void
+    {
+        $broken = DB::table('inventories')
+            ->where('quantity', '<', 0)
+            ->orWhere('reserved_quantity', '<', 0)
+            ->orWhere('stock_value', '<', 0)
+            ->count();
+
+        $this->report('    no negative stock or value', $broken === 0, fn () => ["{$broken} row(s)"]);
+    }
+
+    /**
+     * Value stranded on an item with no units left.
+     *
+     * This is the drift the full-depletion rule in CostingService exists to
+     * prevent: if it ever appears, Inventory is carrying money for stock that
+     * does not exist.
+     */
+    private function checkNoValueWithoutStock(): void
+    {
+        $broken = DB::table('inventories')
+            ->where('quantity', '=', 0)
+            ->where('stock_value', '<>', 0)
+            ->get(['product_variation_id', 'stock_value']);
+
+        $this->report(
+            '    no value left on zero stock',
+            $broken->isEmpty(),
+            fn () => $broken->map(fn ($r) => "variation #{$r->product_variation_id}: {$r->stock_value} with no units")->all(),
+        );
     }
 
     /**
