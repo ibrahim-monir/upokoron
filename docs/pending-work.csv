@@ -1,0 +1,70 @@
+﻿Phase,Area,Item,What it does,Needed to start selling,Depends on,Status
+1,Planning,Architecture & ERD,"Design, chart of accounts, 14-phase roadmap, cPanel plan",Done,-,DONE
+2,Foundation,Laravel setup + MySQL,"Laravel 13, PHP 8.4, MySQL 8, test suite on MySQL",Done,-,DONE
+2,Foundation,Authentication,"Sanctum dual mode: session cookie for SPA, bearer token for mobile",Done,-,DONE
+2,Foundation,Roles & permissions,"60 permissions, 6 roles, privilege-escalation guard",Done,-,DONE
+2,Foundation,Settings,"28 runtime-editable business settings with config fallback",Done,-,DONE
+2,Foundation,Document numbering,"Row-locked order/invoice numbers, Dhaka-time year rollover",Done,-,DONE
+2,Foundation,Audit trail,"Append-only log of every change; never records a password",Done,-,DONE
+3,Accounting,Money value object,"Exact decimal arithmetic on bcmath; allocate() for partial refunds",Done,-,DONE
+3,Accounting,Chart of accounts,"65 accounts resolved by system_key so they can be renamed freely",Done,-,DONE
+3,Accounting,Journal engine,"Only writer to the ledger; immutable entries, reversals only",Done,-,DONE
+3,Accounting,Fiscal periods,"Period locking so a closed month cannot be restated",Done,-,DONE
+3,Accounting,Trial balance & P&L,"Both derived from the same ledger, so they cannot disagree",Done,-,DONE
+3,Accounting,Customer/supplier ledgers,"Derived from journal lines, so they cannot drift from control accounts",Done,-,DONE
+4,Catalog,Categories / brands / attributes / units,"Cycle-guarded category tree, colour swatches, decimal-aware units",Done,-,DONE
+4,Catalog,Products & variations,"Every product has >=1 variation; cartesian generator capped at 200",Done,-,DONE
+4,Catalog,Product images,"Upload with real MIME check; writes to a served dir (no symlink needed)",Done,-,DONE
+5,Inventory,Weighted average costing,"Full-depletion rule and clamp so stock value never drifts or goes negative",Done,-,DONE
+5,Inventory,Stock ledger + GL integration,"Every movement posts to the ledger; invariants I2/I3/I4 checked nightly",Done,-,DONE
+5,Inventory,Stock reservations,"TTL release for abandoned carts; indefinite hold for confirmed COD",Done,-,DONE
+5,Inventory,Inventory admin API,"Stock list, manual adjustment endpoints, opening-stock entry screen",Helpful,Phase 5 core,PENDING
+5,Inventory,Inventory valuation report,"What the stock on hand is worth, as of any date",No,Phase 5 core,PENDING
+5,Inventory,Stock movement + low stock reports,"Movement history per product; what needs reordering",Helpful,Phase 5 core,PENDING
+6,Purchasing,Suppliers,"Supplier profiles, payable balance, supplier ledger",No,Phase 3,PENDING
+6,Purchasing,Purchase orders,"Order goods from a supplier before they arrive",No,Suppliers,PENDING
+6,Purchasing,Purchase receipts,"Partial receiving; stock and cost enter here, not at order time",No,Purchase orders,PENDING
+6,Purchasing,Landed cost allocation,"Spread freight/duty into unit cost by value or quantity",No,Purchase receipts,PENDING
+6,Purchasing,Purchase returns,"Send goods back at the cost they were received for",No,Purchase receipts,PENDING
+6,Purchasing,Supplier payments,"Pay suppliers; advances; clears Accounts Payable",No,Suppliers,PENDING
+7,Sales,Customer management,"Admin CRUD, customer groups, block/unblock, ledger view",Helpful,Phase 2,PENDING
+7,Sales,Customer addresses,"Save/edit delivery addresses; snapshotted onto orders",YES,Customers,PENDING
+7,Sales,Storefront catalog API,"Filter by category/brand/attribute, search, sort, paginate",YES,Phase 4,PENDING
+7,Sales,Shopping cart,"Server-side cart; prices always recomputed, never trusted from browser",YES,Phase 4/5,PENDING
+7,Sales,Pricing service,"Recomputes every line, discount, and total server-side",YES,Cart,PENDING
+7,Sales,Shipping zones & methods,"Inside/outside Dhaka rates, flat/weight/free-above",YES,Phase 2,PENDING
+8,Orders,Payment methods,"COD first; bKash / Nagad / SSLCommerz gateways after",YES,Phase 3,PENDING
+8,Orders,Checkout,"Validates stock inside the transaction; prevents overselling",YES,Cart + Shipping,PENDING
+8,Orders,Order creation & reservation,"Places the order and holds the stock",YES,Checkout,PENDING
+8,Orders,Order state machine,"Pending>Confirmed>Processing>Packed>Shipped>Delivered>Completed",YES,Orders,PENDING
+8,Orders,Revenue & COGS recognition,"Both recognised on delivery so COD failures do not overstate sales",YES,Orders + Phase 5,PENDING
+8,Orders,Shipments & COD remittance,"Courier tracking; COD money tracked until the courier remits it",YES,Orders,PENDING
+8,Orders,Order payments,"Record full/partial payment; webhook-safe and idempotent",YES,Payment methods,PENDING
+8,Orders,Guest checkout,"Buy without an account",Helpful,Checkout,PENDING
+9,Returns,Return requests,"Customer requests; admin approves, receives, restocks",No,Phase 8,PENDING
+9,Returns,Refunds,"Refunds the exact allocated line amount; reverses the exact COGS",No,Returns,PENDING
+9,Returns,RTO handling,"Failed COD delivery returns stock with no revenue to unwind",Helpful,Phase 8,PENDING
+9,Marketing,Coupons,"Percentage/fixed/free-shipping, limits, expiry, restrictions",Helpful,Phase 8,PENDING
+9,Marketing,Discount campaigns,"Scheduled category-wide or product-wide sales",No,Phase 8,PENDING
+10,Marketing,Reward points,"Earn/redeem/expire as a real GL liability, not a counter",No,Phase 8,PENDING
+10,Marketing,Affiliate system,"Codes, clicks, commissions, reversal on refund, payouts",No,Phase 8,PENDING
+11,Money,Expenses,"Rent, salary, marketing, delivery, packaging; each posts to the ledger",Helpful,Phase 3,PENDING
+11,Money,Other income,"Income outside sales",No,Phase 3,PENDING
+11,Reports,21 reports,"Sales, purchase, COGS, profit, cash flow, AR/AP, product profitability",Helpful,Phases 5-10,PENDING
+11,Reports,Admin dashboard,"Today's sales, profit, low stock, pending orders, charts",Helpful,Reports,PENDING
+12,Notifications,Email & SMS,"Order confirmation, status updates, delivery notice",Helpful,Phase 8,PENDING
+12,Notifications,SMS OTP password reset,"Phone-only accounts cannot reset by email today",Helpful,Notifications,PENDING
+12,SEO,Sitemap & structured data,"Product schema, sitemap.xml, redirects, canonical URLs",Helpful,Phase 4,PENDING
+12,Accounting,Balance sheet endpoint,"Data already exists; only the presentation is missing",No,Phase 3,PENDING
+12,Accounting,Year-end closing entry,"Sweeps P&L into retained earnings at year end",No,Phase 3,PENDING
+12,Accounting,Landed cost adjustment,"Freight invoices that arrive after the goods",No,Phase 6,PENDING
+12,Performance,Account period balance cache,"Only needed if the trial balance slows on shared hosting",No,Phase 3,PENDING
+13,Hardening,Parallel concurrency tests,"Prove the row locks hold: 100 buyers, 100 units, exactly 100 sold",Before launch,Phase 8,PENDING
+13,Hardening,Load testing,"Confirm shared hosting copes with real traffic",Before launch,Phase 8,PENDING
+13,Hardening,Security review,"Full pass over auth, uploads, rate limits, authorisation",Before launch,All,PENDING
+14,Deploy,cPanel deployment,"Laravel outside web root, SPA fallback, cron for queue and scheduler",YES,All,PENDING
+14,Deploy,Backups & monitoring,"Daily off-server database backup; integrity check alerting",Before launch,Deployment,PENDING
+14,Deploy,Owner handover,"Credentials, runbook, how to add products and read the reports",Before launch,All,PENDING
+-,Frontend,React storefront,"Product browse, search, cart, checkout, account, order tracking",YES,Phase 7/8 APIs,IN PROGRESS
+-,Frontend,React admin panel,"Products, inventory, orders, customers, accounting, reports, settings",YES,Existing APIs,IN PROGRESS
+-,Decision,Dev password in repo,"upokoron-dev-2026 is in OwnerSeeder fallback and docs; guarded but public",Your call,-,OPEN QUESTION
