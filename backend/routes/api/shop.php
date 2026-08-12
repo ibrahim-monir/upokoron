@@ -10,14 +10,12 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Shop\ProductController;
 use Illuminate\Support\Facades\Route;
 
-
 /*
 | Storefront API -- public browsing plus the signed-in customer's own account.
 */
 
 Route::get('settings', [SettingController::class, 'publicSettings'])
     ->name('settings');
-
 
 /*
 | Public product catalog.
@@ -28,7 +26,6 @@ Route::get('products', [ProductController::class, 'index'])
 
 Route::get('products/{product:slug}', [ProductController::class, 'show'])
     ->name('products.show');
-
 
 /*
 | Guest-only auth.
@@ -47,7 +44,6 @@ Route::middleware('throttle:auth')->group(function (): void {
     Route::post('auth/reset-password', [PasswordController::class, 'reset'])
         ->name('auth.reset');
 });
-
 
 Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::post('auth/logout', [LoginController::class, 'destroy'])

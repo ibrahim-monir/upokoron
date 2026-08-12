@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * The unit everything else in the system attaches to.
@@ -62,9 +62,9 @@ class ProductVariation extends Model
     }
 
     public function inventory(): HasOne
-{
-    return $this->hasOne(Inventory::class, 'product_variation_id');
-}
+    {
+        return $this->hasOne(Inventory::class, 'product_variation_id');
+    }
 
     /**
      * The price a customer actually pays before any cart-level discount.

@@ -35,7 +35,7 @@ class ProductController extends Controller
 
             // Search by product name, SKU or barcode.
             ->when($request->filled('search'), function ($query) use ($request): void {
-                $term = '%' . $request->string('search')->trim() . '%';
+                $term = '%'.$request->string('search')->trim().'%';
 
                 $query->where(function ($q) use ($term): void {
                     $q->where('name', 'like', $term)
