@@ -17,7 +17,7 @@ import { ProductCard, ProductCardSkeleton } from './ProductCard'
  */
 const SLIDES = [
   {
-    eyebrow: 'শপিং ফেস্ট',
+    eyebrow: 'Shopping fest',
     title: 'Electronics\nfor everyone',
     body: 'Audio, charging, and computer accessories stocked in Dhaka.',
     cta: 'Shop now',
@@ -25,7 +25,7 @@ const SLIDES = [
     to: 'to-brand-900',
   },
   {
-    eyebrow: 'ক্যাশ অন ডেলিভারি',
+    eyebrow: 'Cash on delivery',
     title: 'Pay when it\narrives',
     body: 'No advance payment. Check the product, then hand over the cash.',
     cta: 'Browse products',
@@ -33,7 +33,7 @@ const SLIDES = [
     to: 'to-navy-900',
   },
   {
-    eyebrow: 'জেনুইন প্রোডাক্ট',
+    eyebrow: 'Genuine products',
     title: 'Genuine stock,\nwith warranty',
     body: 'Every item comes from the brand or its authorised distributor.',
     cta: 'See the range',
