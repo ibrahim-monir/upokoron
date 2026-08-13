@@ -242,12 +242,23 @@ Copy-Item (Join-Path $deploy 'env.production.example') -Destination $build -Forc
 if (-not $NoZip) {
     Step 'Zipping'
 
-    Compress-Archive -Path (Join-Path $appOut '*') -DestinationPath (Join-Path $build 'laravel.zip') -Force
+    # Not Compress-Archive: on Windows PowerShell 5.1 it stores paths with
+    # backslashes, and cPanel's extractor then produces a flat file literally
+    # named "api\.htaccess" instead of a directory. See make-zip.php.
+    $zipper = Join-Path $deploy 'make-zip.php'
 
-    # -Force on the folder itself would skip hidden files; .htaccess is hidden
-    # by name only on Unix, but Compress-Archive still needs them listed.
-    Compress-Archive -Path (Get-ChildItem $webOut -Force | Select-Object -ExpandProperty FullName) `
-        -DestinationPath (Join-Path $build 'public_html.zip') -Force
+    & php $zipper $appOut (Join-Path $build 'laravel.zip') `
+        'artisan' 'vendor/autoload.php' 'bootstrap/app.php' 'storage/logs/.gitignore'
+
+    if ($LASTEXITCODE -ne 0) { Fail 'laravel.zip is incomplete.' }
+
+    # The dotfiles are the whole deployment: without api/.htaccess every route
+    # 404s, and without uploads/.htaccess the image directory can execute what
+    # it is handed.
+    & php $zipper $webOut (Join-Path $build 'public_html.zip') `
+        'index.html' 'api/index.php' '.htaccess' 'api/.htaccess' 'uploads/.htaccess'
+
+    if ($LASTEXITCODE -ne 0) { Fail 'public_html.zip is incomplete.' }
 }
 
 # --------------------------------------------------------------- summary
