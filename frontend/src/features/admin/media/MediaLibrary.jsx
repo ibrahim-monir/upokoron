@@ -42,10 +42,12 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
   })
 
   const upload = useMutation({
+    // Takes a real array of File objects, never a live FileList -- see
+    // handleFiles for why that distinction matters.
     mutationFn: async (files) => {
       const form = new FormData()
 
-      Array.from(files).forEach((file) => form.append('files[]', file))
+      files.forEach((file) => form.append('files[]', file))
       form.append('folder', fixedFolder ?? folder ?? 'general')
 
       // Let the browser set the multipart boundary; naming it by hand is the
@@ -81,8 +83,19 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
   const items = query.data?.data ?? []
   const isSelected = (item) => selected.some((s) => (s?.id ?? s) === item.id)
 
-  const handleFiles = (files) => {
-    if (!files?.length) return
+  /**
+   * Snapshot the FileList into a real array before anything else happens.
+   *
+   * `input.files` is LIVE: clearing `input.value` (which we do so that
+   * re-picking the same file fires change again) empties it. Because
+   * mutate() is asynchronous, the reset ran first and the upload built its
+   * FormData from an already-empty list -- the request reached the server
+   * carrying no file at all, and came back "The files field is required".
+   */
+  const handleFiles = (fileList) => {
+    const files = Array.from(fileList ?? [])
+
+    if (files.length === 0) return
 
     if (!can('media.manage')) {
       toast.error('You do not have permission to upload images.')
@@ -145,9 +158,11 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
           multiple
           hidden
           onChange={(event) => {
-            handleFiles(event.target.files)
-            // Reset so re-picking the same file fires change again.
+            // Copy the list out BEFORE resetting the input, which is what
+            // makes re-picking the same file fire change again.
+            const picked = Array.from(event.target.files ?? [])
             event.target.value = ''
+            handleFiles(picked)
           }}
         />
       </div>
