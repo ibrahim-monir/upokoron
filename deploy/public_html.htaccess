@@ -1,0 +1,74 @@
+# Upokoron — public_html/.htaccess
+#
+# Goes in the web root, alongside the built React app. It does three jobs:
+# force HTTPS, keep /api and /uploads out of the SPA's hands, and send
+# everything else to index.html so client-side routing works on a refresh.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # HTTPS. Comment out until the certificate is actually issued, or every
+    # request loops on a host that is not serving 443 yet.
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # /api and /uploads are real directories; leave them to their own
+    # .htaccess (Laravel) or to Apache (static images).
+    RewriteCond %{REQUEST_URI} ^/(api|uploads)(/|$) [NC]
+    RewriteRule ^ - [L]
+
+    # Sanctum's CSRF endpoint and the health check have no directory of their
+    # own -- they are Laravel routes. Without these two lines the login flow
+    # dies at the first write: /sanctum/csrf-cookie would fall through to the
+    # SPA fallback below and return index.html instead of a cookie.
+    RewriteRule ^sanctum/ api/index.php [L]
+    RewriteRule ^up$ api/index.php [L]
+
+    # A real file or directory is served as-is.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Everything else is a React route. Without this, reloading /products or
+    # /admin/orders returns a 404 from Apache before React ever runs.
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# Hashed asset filenames change whenever the contents change, so they can be
+# cached hard. index.html must NOT be, or a deploy ships to nobody.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 6 months"
+    ExpiresByType image/png "access plus 6 months"
+    ExpiresByType image/jpeg "access plus 6 months"
+    ExpiresByType image/webp "access plus 6 months"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+<Files "index.html">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, must-revalidate"
+    </IfModule>
+</Files>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Nothing beginning with a dot is ever served: .env, .git, .htaccess itself.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes

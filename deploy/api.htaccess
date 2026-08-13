@@ -1,0 +1,46 @@
+# Upokoron — public_html/api/.htaccess
+#
+# Everything under /api that is not a real file goes to Laravel's front
+# controller. Same job as Laravel's stock public/.htaccess, with RewriteBase
+# pinned because this lives in a subdirectory.
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+    RewriteBase /api/
+
+    # cPanel's Apache commonly runs CGI/FastCGI, which strips the
+    # Authorization header. Sanctum's token guard needs it back. (Session
+    # auth does not, but API tokens for a future mobile app would.)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # The SPA sends the CSRF token in a header; some FastCGI setups drop it.
+    RewriteCond %{HTTP:X-XSRF-TOKEN} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-TOKEN}]
+
+    # Redirect trailing slashes if not a folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # ...and send everything else to the front controller.
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# API responses are per-user and must never be cached by a proxy or the
+# browser. A cached /api/v1/admin/... response served to the wrong session
+# would be a data leak, not just a stale page.
+<IfModule mod_headers.c>
+    Header always set Cache-Control "no-store, no-cache, must-revalidate, private"
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

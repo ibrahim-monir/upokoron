@@ -241,14 +241,17 @@ class InventoryController extends Controller
     private function summary(): array
     {
         $totals = DB::table('inventories')
-            ->selectRaw('COUNT(*) as lines')
+            // `lines` is a reserved word in MySQL (LOAD DATA ... LINES
+            // TERMINATED BY), so an unquoted alias is a syntax error and this
+            // whole summary 500s.
+            ->selectRaw('COUNT(*) as tracked_lines')
             ->selectRaw('COALESCE(SUM(stock_value), 0) as value')
             ->selectRaw('SUM(CASE WHEN available_quantity <= 0 THEN 1 ELSE 0 END) as out_of_stock')
             ->selectRaw('SUM(CASE WHEN reorder_level > 0 AND quantity <= reorder_level THEN 1 ELSE 0 END) as low_stock')
             ->first();
 
         return [
-            'tracked_items' => (int) $totals->lines,
+            'tracked_items' => (int) $totals->tracked_lines,
             'stock_value' => Money::of((string) $totals->value)->value(),
             'out_of_stock' => (int) $totals->out_of_stock,
             'low_stock' => (int) $totals->low_stock,
