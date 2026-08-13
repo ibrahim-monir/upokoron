@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
 use App\Http\Controllers\Api\V1\Auth\ProfileController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
+use App\Http\Controllers\Api\V1\Shop\CategoryController;
 use App\Http\Controllers\Api\V1\Shop\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,21 @@ Route::get('settings', [SettingController::class, 'publicSettings'])
 /*
 | Public product catalog.
 */
+
+Route::get('categories', [CategoryController::class, 'index'])
+    ->name('categories.index');
+
+// One request for the whole home page, rather than one per category strip.
+Route::get('categories/featured', [CategoryController::class, 'featured'])
+    ->name('categories.featured');
+
+// Categories for the storefront navigation, and the per-category product
+// strips the home page shows.
+Route::get('categories', [CategoryController::class, 'index'])
+    ->name('categories.index');
+
+Route::get('categories/featured', [CategoryController::class, 'featured'])
+    ->name('categories.featured');
 
 Route::get('products', [ProductController::class, 'index'])
     ->name('products.index');

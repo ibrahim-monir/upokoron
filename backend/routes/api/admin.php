@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\AttributeController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
+use App\Http\Controllers\Api\V1\Admin\InventoryController;
 use App\Http\Controllers\Api\V1\Admin\JournalEntryController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
@@ -75,6 +76,20 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy'])->name('products.images.destroy');
     Route::post('products/{product}/images/{image}/primary', [ProductImageController::class, 'makePrimary'])->name('products.images.primary');
     Route::post('products/{product}/images/reorder', [ProductImageController::class, 'reorder'])->name('products.images.reorder');
+
+    /*
+    |----------------------------------------------------------------------
+    | Inventory
+    |----------------------------------------------------------------------
+    */
+
+    Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('inventory/valuation', [InventoryController::class, 'valuation'])->name('inventory.valuation');
+    Route::post('inventory/adjust', [InventoryController::class, 'adjust'])->name('inventory.adjust');
+    Route::get('inventory/{variation}/movements', [InventoryController::class, 'movements'])
+        ->name('inventory.movements');
+    Route::put('inventory/{variation}/levels', [InventoryController::class, 'updateLevels'])
+        ->name('inventory.levels');
 
     /*
     |----------------------------------------------------------------------

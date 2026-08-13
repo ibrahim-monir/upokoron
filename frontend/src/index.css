@@ -1,0 +1,128 @@
+@import 'tailwindcss';
+
+/*
+ * Hind Siliguri carries Bangla and Latin in one family, so product names,
+ * prices, and UI chrome all sit on the same face without a fallback jump
+ * mid-sentence. Loaded from Google Fonts with display=swap; if it fails the
+ * system stack below is a deliberate second choice, not an accident.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  /*
+   * Hot magenta, the familiar Bangladeshi marketplace signal -- it carries
+   * the header, prices, and every call to action.
+   */
+  --color-brand-50: #fff0f6;
+  --color-brand-100: #ffdcea;
+  --color-brand-200: #ffb3d1;
+  --color-brand-300: #ff7fb2;
+  --color-brand-400: #fb4590;
+  --color-brand-500: #f00a70;
+  --color-brand-600: #e6006e;
+  --color-brand-700: #bd0059;
+  --color-brand-800: #9b0049;
+  --color-brand-900: #7f033e;
+  --color-brand-950: #4d0125;
+
+  /*
+   * Discount flags only. Green against the magenta is the one place a second
+   * hue is allowed, because "you save this much" has to survive being read
+   * at a glance on a busy grid.
+   */
+  --color-accent-50: #eefbf1;
+  --color-accent-100: #d5f4de;
+  --color-accent-200: #ade7bf;
+  --color-accent-300: #74d295;
+  --color-accent-400: #41b76e;
+  --color-accent-500: #21a03c;
+  --color-accent-600: #178330;
+  --color-accent-700: #146829;
+  --color-accent-800: #145324;
+  --color-accent-900: #114520;
+
+  /*
+   * Neutrals carry a faint warm bias so they sit beside the magenta rather
+   * than fighting it. A pure cool grey next to this pink reads as unrelated.
+   */
+  --color-ink-50: #faf8f7;
+  --color-ink-100: #f2eeed;
+  --color-ink-200: #e5dfde;
+  --color-ink-300: #cbc2c1;
+  --color-ink-400: #9d9291;
+  --color-ink-500: #776c6b;
+  --color-ink-600: #5f5453;
+  --color-ink-700: #4c4342;
+  --color-ink-800: #3e3736;
+  --color-ink-900: #221d1d;
+  --color-ink-950: #141111;
+
+  /*
+   * Semantic colours are separate from the accent on purpose: "this worked"
+   * must never be confusable with "this is a price".
+   */
+  --color-success-50: #edfbf3;
+  --color-success-500: #16a34a;
+  --color-success-700: #15803d;
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-700: #b45309;
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --font-sans: 'Hind Siliguri', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-card: 0.625rem;
+
+  --shadow-card: 0 1px 2px 0 rgb(18 22 21 / 0.05), 0 1px 3px 0 rgb(18 22 21 / 0.06);
+  --shadow-raised: 0 4px 12px -2px rgb(18 22 21 / 0.10), 0 2px 6px -2px rgb(18 22 21 / 0.06);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink-50 text-ink-900 font-sans antialiased;
+  }
+
+  /* Figures that sit in columns must line up, everywhere. */
+  .tabular,
+  td.numeric,
+  th.numeric {
+    font-variant-numeric: tabular-nums;
+  }
+
+  td.numeric,
+  th.numeric {
+    @apply text-right;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+}
+
+@layer utilities {
+  /* Wide tables scroll inside their own container; the page never does. */
+  .scroll-x {
+    @apply overflow-x-auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
