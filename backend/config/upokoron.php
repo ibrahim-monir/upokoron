@@ -64,7 +64,10 @@ return [
             'store_phone_alt' => '',
             'store_whatsapp' => '',
             'store_address' => '',
-            'store_logo' => null,
+
+            // Falls back to /logo.png in the frontend's public folder when
+            // blank, so dropping the file in is enough to brand the site.
+            'store_logo' => '',
 
             // Social profiles. Blank means "we are not on that platform", and
             // the footer hides the icon rather than linking nowhere.

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, Globe, Mail, Phone } from 'lucide-react'
+import { Logo } from '../components/Logo'
 
 /*
  * Brand marks are drawn inline rather than imported.
@@ -84,12 +85,9 @@ export function Footer({ settings }) {
       <div className="mx-auto max-w-[1400px] px-4 py-12">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
           <div>
-            <Link to="/" className="flex items-center gap-3">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-800 text-2xl font-bold text-white">
-                {storeName.charAt(0)}
-              </span>
-              <span className="text-3xl font-extrabold leading-tight text-white">{storeName}</span>
-            </Link>
+            {/* variant="light" knocks the near-black wordmark out to white so
+                it reads on the navy. */}
+            <Logo settings={settings} variant="light" className="[&_img]:h-12" />
 
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-400">
               {settings?.store_description ??

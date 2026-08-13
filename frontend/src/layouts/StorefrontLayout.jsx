@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { get } from '../lib/api'
 import { cx } from '../lib/format'
 import { useAuthStore } from '../stores/authStore'
+import { Logo } from '../components/Logo'
 import { Footer } from './Footer'
 
 function useStoreSettings() {
@@ -36,12 +37,12 @@ function SearchBar({ className }) {
         onChange={(event) => setTerm(event.target.value)}
         placeholder="Search product"
         aria-label="Search products"
-        className="h-11 w-full rounded-md border-0 bg-white pl-4 pr-12 text-sm text-ink-900 placeholder:text-ink-400"
+        className="h-11 w-full rounded-md border border-ink-300 bg-white pl-4 pr-14 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500"
       />
       <button
         type="submit"
         aria-label="Search"
-        className="absolute right-1 top-1 grid h-9 w-10 place-items-center rounded-md text-ink-500 hover:text-brand-600"
+        className="absolute right-1 top-1 grid h-9 w-11 place-items-center rounded-md bg-brand-600 text-white transition-colors hover:bg-brand-700"
       >
         <Search className="h-4.5 w-4.5" aria-hidden="true" />
       </button>
@@ -57,10 +58,10 @@ function SearchBar({ className }) {
  */
 function IconCounter({ icon: Icon, count = 0, label, to }) {
   return (
-    <Link to={to} className="relative flex items-center gap-1.5 text-white/95 hover:text-white">
+    <Link to={to} className="relative flex items-center gap-1.5 text-ink-700 hover:text-brand-600">
       <span className="relative">
         <Icon className="h-5 w-5" aria-hidden="true" />
-        <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-white px-1 text-[10px] font-bold text-brand-600">
+        <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
           {count}
         </span>
       </span>
@@ -80,106 +81,113 @@ export function StorefrontLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-ink-50">
-      <header className="sticky top-0 z-30 bg-brand-600">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-3 sm:px-4">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-md bg-white/15 text-lg font-bold text-white ring-1 ring-white/25">
-              {storeName.charAt(0)}
-            </span>
-            <span className="hidden text-xl font-bold tracking-tight text-white sm:block">
-              {storeName}
-            </span>
-          </Link>
+      {/*
+        The top row is white so the logo can appear in its own colours -- its
+        wordmark is near-black and vanishes against the brand blue. The blue
+        moves to the nav strip below and to every control, so the brand is
+        still the loudest thing on the page.
+      */}
+      <header className="sticky top-0 z-30 shadow-sm">
+        <div className="bg-white">
+          <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-3 sm:px-4">
+            <Logo settings={settings} />
 
-          <SearchBar className="hidden max-w-md flex-1 md:block" />
+            <SearchBar className="hidden max-w-lg flex-1 md:block" />
 
-          <nav className="ml-auto hidden items-center gap-5 xl:flex">
+            <div className="ml-auto flex items-center gap-4">
+              <div className="hidden items-center gap-4 sm:flex">
+                <IconCounter icon={ShoppingCart} to="/products" label="কার্ট দেখুন" />
+                <IconCounter icon={Heart} to="/products" />
+              </div>
+
+              <span className="hidden h-6 w-px bg-ink-200 lg:block" />
+
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <Link
+                    to="/account"
+                    className="flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-600"
+                  >
+                    <User className="h-4 w-4" aria-hidden="true" />
+                    <span className="hidden sm:inline">{user.name?.split(' ')[0]}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await logout()
+                      navigate('/')
+                    }}
+                    className="hidden text-sm font-medium text-ink-500 hover:text-ink-900 sm:block"
+                  >
+                    লগ আউট
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-600"
+                >
+                  <LogIn className="h-4 w-4" aria-hidden="true" />
+                  লগ ইন
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={menuOpen}
+                className="rounded-md p-1.5 text-ink-700 hover:bg-ink-100 md:hidden"
+              >
+                {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden bg-brand-600 md:block">
+          <nav className="mx-auto flex h-11 max-w-[1400px] items-center gap-6 px-3 sm:px-4">
             <NavLink to="/products" className="text-sm font-medium text-white/95 hover:text-white">
               শপিং
             </NavLink>
             <NavLink to="/products?sort=oldest" className="text-sm font-medium text-white/95 hover:text-white">
               অফার সমূহ
             </NavLink>
-          </nav>
-
-          <div className="ml-auto flex items-center gap-4 xl:ml-6">
-            <div className="hidden items-center gap-4 sm:flex">
-              <IconCounter icon={ShoppingCart} to="/products" label="কার্ট দেখুন" />
-              <IconCounter icon={Heart} to="/products" />
-            </div>
-
-            <span className="hidden h-6 w-px bg-white/25 lg:block" />
+            <NavLink to="/contact" className="text-sm font-medium text-white/95 hover:text-white">
+              যোগাযোগ
+            </NavLink>
 
             <button
               type="button"
-              className="hidden items-center gap-1.5 text-sm font-medium text-white/95 hover:text-white lg:flex"
+              className="ml-auto flex items-center gap-1.5 text-sm font-medium text-white/95 hover:text-white"
               title="Bangla and English are planned"
             >
               <Globe className="h-4 w-4" aria-hidden="true" />
               Language
             </button>
-
-            <span className="hidden h-6 w-px bg-white/25 lg:block" />
-
-            {user ? (
-              <div className="flex items-center gap-3">
-                <Link
-                  to="/account"
-                  className="flex items-center gap-1.5 text-sm font-medium text-white/95 hover:text-white"
-                >
-                  <User className="h-4 w-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{user.name?.split(' ')[0]}</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await logout()
-                    navigate('/')
-                  }}
-                  className="hidden text-sm font-medium text-white/80 hover:text-white sm:block"
-                >
-                  লগ আউট
-                </button>
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-1.5 text-sm font-medium text-white/95 hover:text-white"
-              >
-                <LogIn className="h-4 w-4" aria-hidden="true" />
-                লগ ইন
-              </Link>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={menuOpen}
-              className="rounded-md p-1.5 text-white hover:bg-white/15 md:hidden"
-            >
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
+          </nav>
         </div>
 
         {menuOpen && (
-          <div className="border-t border-white/15 bg-brand-600 px-3 pb-4 pt-3 md:hidden">
+          <div className="border-t border-ink-200 bg-white px-3 pb-4 pt-3 md:hidden">
             <SearchBar />
             <nav className="mt-3 flex flex-col gap-2.5">
-              <NavLink to="/products" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+              <NavLink to="/products" className="text-sm font-medium text-ink-800" onClick={() => setMenuOpen(false)}>
                 শপিং
               </NavLink>
+              <NavLink to="/contact" className="text-sm font-medium text-ink-800" onClick={() => setMenuOpen(false)}>
+                যোগাযোগ
+              </NavLink>
               {user ? (
-                <NavLink to="/account" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+                <NavLink to="/account" className="text-sm font-medium text-ink-800" onClick={() => setMenuOpen(false)}>
                   My account
                 </NavLink>
               ) : (
                 <>
-                  <NavLink to="/login" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+                  <NavLink to="/login" className="text-sm font-medium text-ink-800" onClick={() => setMenuOpen(false)}>
                     লগ ইন
                   </NavLink>
-                  <NavLink to="/register" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+                  <NavLink to="/register" className="text-sm font-medium text-ink-800" onClick={() => setMenuOpen(false)}>
                     Create account
                   </NavLink>
                 </>
