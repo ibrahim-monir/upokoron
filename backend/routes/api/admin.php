@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController;
 use App\Http\Controllers\Api\V1\Admin\JournalEntryController;
+use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -56,6 +57,13 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     | Catalog
     |----------------------------------------------------------------------
     */
+
+    // Image library. Uploaded once, reused by products, categories, brands,
+    // and the store logo.
+    Route::get('media', [MediaController::class, 'index'])->name('media.index');
+    Route::post('media', [MediaController::class, 'store'])->name('media.store');
+    Route::put('media/{medium}', [MediaController::class, 'update'])->name('media.update');
+    Route::delete('media/{medium}', [MediaController::class, 'destroy'])->name('media.destroy');
 
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('brands', BrandController::class);

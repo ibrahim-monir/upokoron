@@ -62,7 +62,24 @@ return [
         'uploads' => [
             'driver' => 'local',
             'root' => env('UPLOADS_ROOT', public_path('uploads')),
-            'url' => env('UPLOADS_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/uploads'),
+
+            /*
+             * A ROOT-RELATIVE url, not an absolute one.
+             *
+             * Deriving it from APP_URL bakes a host into every stored image
+             * reference, and that host is wrong the moment anything differs:
+             * in development the API, the Vite dev server, and APP_URL are
+             * three different ports, so absolute URLs pointed at a origin
+             * nothing was listening on. Relative paths resolve against
+             * whatever origin the browser is already on, which is correct in
+             * development (through the proxy) and in production (same origin
+             * by design).
+             *
+             * Set UPLOADS_URL only when images are served from another host,
+             * such as a CDN.
+             */
+            'url' => env('UPLOADS_URL', '/uploads'),
+
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

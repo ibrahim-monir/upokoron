@@ -38,6 +38,8 @@ final class Permissions
                 'categories.manage' => 'Manage categories',
                 'brands.manage' => 'Manage brands',
                 'attributes.manage' => 'Manage attributes',
+                'media.view' => 'View the image library',
+                'media.manage' => 'Upload and delete images',
             ],
             'Inventory' => [
                 'inventory.view' => 'View stock levels',
@@ -142,6 +144,7 @@ final class Permissions
                 self::ADMIN_ACCESS, 'dashboard.view',
                 'products.view', 'products.create', 'products.update', 'products.delete',
                 'categories.manage', 'brands.manage', 'attributes.manage',
+                'media.view', 'media.manage',
                 'inventory.view', 'inventory.adjust', 'inventory.valuation',
                 'suppliers.view', 'suppliers.manage',
                 'purchases.view', 'purchases.create', 'purchases.update',
@@ -180,6 +183,7 @@ final class Permissions
                 self::ADMIN_ACCESS, 'dashboard.view',
                 'products.view', 'products.create', 'products.update',
                 'categories.manage', 'brands.manage', 'attributes.manage',
+                'media.view', 'media.manage',
                 'inventory.view', 'inventory.adjust', 'inventory.opening', 'inventory.valuation',
                 'suppliers.view', 'suppliers.manage',
                 'purchases.view', 'purchases.create', 'purchases.update',
@@ -190,7 +194,7 @@ final class Permissions
 
             'support' => [
                 self::ADMIN_ACCESS, 'dashboard.view',
-                'products.view', 'inventory.view',
+                'products.view', 'inventory.view', 'media.view',
                 'orders.view', 'orders.status',
                 'returns.view', 'returns.manage',
                 'customers.view', 'customers.manage',

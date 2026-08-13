@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Image as ImageIcon } from 'lucide-react'
 import { useList, useWrite } from './useResource'
+import { MediaPicker } from './media/MediaLibrary'
 import { Button, Card, CardHeader, ErrorState, Field, Select, Spinner, Textarea } from '../../components/ui'
 
 /*
@@ -20,6 +22,9 @@ const GROUP_LABELS = {
 /** Long-form settings that need room to write in. */
 const MULTILINE = ['page_about', 'page_privacy', 'page_terms', 'store_address', 'store_description']
 
+/** Settings that hold an image URL, so they get a picker instead of a text box. */
+const IMAGE_KEYS = ['store_logo']
+
 const CHOICES = {
   revenue_recognition_point: [
     { value: 'delivered', label: 'On delivery (recommended for COD)' },
@@ -39,6 +44,9 @@ export default function SettingsPage() {
   const query = useList('admin.settings', '/admin/settings')
   const write = useWrite('admin.settings', { successMessage: 'Settings saved.' })
   const [values, setValues] = useState({})
+
+  // Which image setting the picker is currently choosing for, if any.
+  const [picking, setPicking] = useState(null)
 
   useEffect(() => {
     if (query.data?.data) setValues(query.data.data)
@@ -84,6 +92,14 @@ export default function SettingsPage() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
+      <MediaPicker
+        open={picking !== null}
+        onClose={() => setPicking(null)}
+        onSelect={(item) => set(picking, item.url)}
+        folder="branding"
+        title="Choose an image"
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-ink-900">Settings</h1>
@@ -135,6 +151,36 @@ export default function SettingsPage() {
                             </option>
                           ))}
                         </Select>
+                      )}
+                    </Field>
+                  )
+                }
+
+                // Image settings get a picker and a live preview rather than
+                // a text box the owner has to paste a URL into.
+                if (IMAGE_KEYS.includes(key)) {
+                  return (
+                    <Field key={key} label={humanise(key)} hint="Pick from the image library.">
+                      {() => (
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-14 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-ink-50">
+                            {value ? (
+                              <img src={value} alt="" className="h-full w-full object-contain" />
+                            ) : (
+                              <ImageIcon className="h-5 w-5 text-ink-400" aria-hidden="true" />
+                            )}
+                          </span>
+
+                          <Button variant="secondary" size="sm" onClick={() => setPicking(key)}>
+                            {value ? 'Change' : 'Choose'}
+                          </Button>
+
+                          {value && (
+                            <Button variant="ghost" size="sm" onClick={() => set(key, '')}>
+                              Remove
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </Field>
                   )

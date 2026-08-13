@@ -5,6 +5,7 @@ import {
   Boxes,
   ChevronDown,
   FileText,
+  Image as ImageIcon,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -38,6 +39,7 @@ const SECTIONS = [
       { to: '/admin/categories', icon: Shapes, label: 'Categories', can: 'products.view' },
       { to: '/admin/brands', icon: Store, label: 'Brands', can: 'products.view' },
       { to: '/admin/attributes', icon: Shapes, label: 'Attributes', can: 'products.view' },
+      { to: '/admin/media', icon: ImageIcon, label: 'Image library', can: 'media.view' },
     ],
   },
   {

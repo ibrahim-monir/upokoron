@@ -140,6 +140,10 @@ export const router = createBrowserRouter([
         path: 'attributes',
         element: guarded('products.view', lazyAdmin(() => import('../features/admin/AttributesPage'))),
       },
+      {
+        path: 'media',
+        element: guarded('media.view', lazyAdmin(() => import('../features/admin/media/MediaLibrary'))),
+      },
 
       {
         path: 'inventory',
