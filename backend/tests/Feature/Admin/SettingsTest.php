@@ -92,7 +92,7 @@ class SettingsTest extends TestCase
         $this->getJson('/api/v1/shop/settings')
             ->assertOk()
             ->assertJsonPath('data.currency_code', 'BDT')
-            ->assertJsonPath('data.store_name', 'Upokoron');
+            ->assertJsonPath('data.store_name', config('upokoron.settings.store.store_name'));
     }
 
     public function test_public_settings_do_not_leak_business_configuration(): void
@@ -104,5 +104,20 @@ class SettingsTest extends TestCase
         // Commission rates and cost controls are nobody else's business.
         $this->assertArrayNotHasKey('default_commission_rate', $data);
         $this->assertArrayNotHasKey('allow_negative_stock', $data);
+    }
+
+    /**
+     * The storefront footer and content pages render before anyone signs in,
+     * so their settings have to be readable without a session.
+     */
+    public function test_footer_and_page_settings_are_public(): void
+    {
+        $this->seed(SettingsSeeder::class);
+
+        $data = $this->getJson('/api/v1/shop/settings')->assertOk()->json('data');
+
+        foreach (['store_phone', 'store_address', 'store_facebook', 'page_about', 'page_privacy'] as $key) {
+            $this->assertArrayHasKey($key, $data, "[{$key}] must be readable by the storefront.");
+        }
     }
 }

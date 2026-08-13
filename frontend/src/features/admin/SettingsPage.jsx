@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useList, useWrite } from './useResource'
-import { Button, Card, CardHeader, ErrorState, Field, Select, Spinner } from '../../components/ui'
+import { Button, Card, CardHeader, ErrorState, Field, Select, Spinner, Textarea } from '../../components/ui'
 
 /*
  * Only keys the backend declares in config can be written, so this screen is
@@ -9,12 +9,16 @@ import { Button, Card, CardHeader, ErrorState, Field, Select, Spinner } from '..
  */
 const GROUP_LABELS = {
   store: 'Store details',
+  pages: 'Footer pages',
   sales: 'Sales and orders',
   inventory: 'Inventory',
   rewards: 'Reward points',
   affiliate: 'Affiliate',
   tax: 'Tax',
 }
+
+/** Long-form settings that need room to write in. */
+const MULTILINE = ['page_about', 'page_privacy', 'page_terms', 'store_address', 'store_description']
 
 const CHOICES = {
   revenue_recognition_point: [
@@ -64,6 +68,7 @@ export default function SettingsPage() {
   const keysFor = (group) =>
     Object.keys(values).filter((key) => {
       if (group === 'store') return key.startsWith('store_')
+      if (group === 'pages') return key.startsWith('page_')
       if (group === 'rewards') return key.startsWith('rewards_') || key.includes('points') || key.includes('redeem') || key === 'referral_points' || key === 'expiry_months'
       if (group === 'affiliate') return key.startsWith('affiliate_') || key.startsWith('default_commission') || key === 'cookie_days' || key === 'min_payout_amount'
       if (group === 'tax') return key.startsWith('tax_') || key === 'prices_include_tax'
@@ -130,6 +135,30 @@ export default function SettingsPage() {
                             </option>
                           ))}
                         </Select>
+                      )}
+                    </Field>
+                  )
+                }
+
+                if (MULTILINE.includes(key)) {
+                  return (
+                    <Field
+                      key={key}
+                      label={humanise(key)}
+                      className="sm:col-span-2"
+                      hint={
+                        key.startsWith('page_')
+                          ? 'Shown on the storefront. Left blank, the page says it has not been written yet.'
+                          : undefined
+                      }
+                    >
+                      {({ id }) => (
+                        <Textarea
+                          id={id}
+                          rows={key.startsWith('page_') ? 8 : 3}
+                          value={value ?? ''}
+                          onChange={(event) => set(key, event.target.value)}
+                        />
                       )}
                     </Field>
                   )

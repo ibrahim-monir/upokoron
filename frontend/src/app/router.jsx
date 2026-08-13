@@ -9,6 +9,7 @@ import { PageLoader } from '../components/ui'
 import { HomePage } from '../features/storefront/HomePage'
 import { ProductListPage } from '../features/storefront/ProductListPage'
 import { ProductDetailPage } from '../features/storefront/ProductDetailPage'
+import { ContactPage, ContentPage } from '../features/storefront/ContentPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { AccountPage } from '../features/auth/AccountPage'
@@ -56,6 +57,21 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'products', element: <ProductListPage /> },
       { path: 'products/:slug', element: <ProductDetailPage /> },
+
+      // Footer pages. Bodies come from settings the owner writes.
+      { path: 'contact', element: <ContactPage /> },
+      {
+        path: 'about',
+        element: <ContentPage title="About us" settingKey="page_about" />,
+      },
+      {
+        path: 'privacy',
+        element: <ContentPage title="Privacy policy" settingKey="page_privacy" />,
+      },
+      {
+        path: 'terms',
+        element: <ContentPage title="Terms & conditions" settingKey="page_terms" />,
+      },
 
       {
         path: 'login',

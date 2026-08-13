@@ -18,27 +18,27 @@ import { ProductCard, ProductCardSkeleton } from './ProductCard'
 const SLIDES = [
   {
     eyebrow: 'শপিং ফেস্ট',
-    title: 'Everyday things,\nfair prices',
-    body: 'Household goods stocked in Dhaka and delivered to your door.',
+    title: 'Electronics\nfor everyone',
+    body: 'Audio, charging, and computer accessories stocked in Dhaka.',
     cta: 'Shop now',
     from: 'from-brand-600',
-    to: 'to-brand-800',
+    to: 'to-brand-900',
   },
   {
     eyebrow: 'ক্যাশ অন ডেলিভারি',
     title: 'Pay when it\narrives',
     body: 'No advance payment. Check the product, then hand over the cash.',
     cta: 'Browse products',
-    from: 'from-[#6b1152]',
-    to: 'to-brand-700',
+    from: 'from-brand-700',
+    to: 'to-navy-900',
   },
   {
     eyebrow: 'জেনুইন প্রোডাক্ট',
-    title: 'Sourced direct,\nnever resold',
+    title: 'Genuine stock,\nwith warranty',
     body: 'Every item comes from the brand or its authorised distributor.',
     cta: 'See the range',
-    from: 'from-[#8f0549]',
-    to: 'to-[#4d0125]',
+    from: 'from-navy-800',
+    to: 'to-brand-800',
   },
 ]
 
@@ -201,7 +201,7 @@ function CategorySection({ section }) {
 
 const PROMISES = [
   { icon: Truck, title: 'Cash on delivery', body: 'Pay when your order reaches your door.' },
-  { icon: ShieldCheck, title: 'Genuine products', body: 'Sourced directly, never resold stock.' },
+  { icon: ShieldCheck, title: 'Genuine with warranty', body: 'Straight from the brand or its distributor.' },
   { icon: PackageOpen, title: 'Easy returns', body: 'Something wrong? Send it back.' },
 ]
 

@@ -1,10 +1,11 @@
 import { Link, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Globe, Heart, LogIn, Menu, Search, ShoppingCart, User, X } from 'lucide-react'
+import { Globe, Heart, LogIn, Menu, MessageCircle, Search, ShoppingCart, User, X } from 'lucide-react'
 import { useState } from 'react'
 import { get } from '../lib/api'
 import { cx } from '../lib/format'
 import { useAuthStore } from '../stores/authStore'
+import { Footer } from './Footer'
 
 function useStoreSettings() {
   return useQuery({
@@ -192,29 +193,38 @@ export function StorefrontLayout() {
         <Outlet />
       </main>
 
-      <footer className="mt-8 border-t border-ink-200 bg-white">
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-6 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {new Date().getFullYear()} {storeName}
-          </p>
-          {settings?.store_email && <p>{settings.store_email}</p>}
-        </div>
-      </footer>
+      <Footer settings={settings} />
 
-      {/* Floating cart, as in the sample. Goes to the catalogue until the
-          cart module exists. */}
-      <Link
-        to="/products"
-        aria-label="Cart"
-        className="fixed bottom-5 right-5 z-40 grid h-12 w-12 place-items-center rounded-full bg-white shadow-raised ring-1 ring-ink-200 hover:ring-brand-300"
-      >
-        <span className="relative">
-          <ShoppingCart className="h-5 w-5 text-brand-600" aria-hidden="true" />
-          <span className="absolute -right-2.5 -top-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
-            0
+      <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-3">
+        {/* Only rendered when the owner has actually set a WhatsApp number --
+            a chat button that opens an empty conversation is worse than none. */}
+        {settings?.store_whatsapp && (
+          <a
+            href={`https://wa.me/${settings.store_whatsapp.replace(/\D/g, '')}`}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label="Chat on WhatsApp"
+            className="grid h-12 w-12 place-items-center rounded-full bg-[#25d366] text-white shadow-raised transition-transform hover:scale-105"
+          >
+            <MessageCircle className="h-6 w-6" aria-hidden="true" />
+          </a>
+        )}
+
+        {/* Floating cart, as in the reference. Goes to the catalogue until
+            the cart module exists. */}
+        <Link
+          to="/products"
+          aria-label="Cart"
+          className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-raised ring-1 ring-ink-200 hover:ring-brand-300"
+        >
+          <span className="relative">
+            <ShoppingCart className="h-5 w-5 text-brand-600" aria-hidden="true" />
+            <span className="absolute -right-2.5 -top-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
+              0
+            </span>
           </span>
-        </span>
-      </Link>
+        </Link>
+      </div>
     </div>
   )
 }

@@ -14,20 +14,24 @@
 
 @theme {
   /*
-   * Hot magenta, the familiar Bangladeshi marketplace signal -- it carries
-   * the header, prices, and every call to action.
+   * Taken from the Upokoron.com logo: the electric blue of the plug mark and
+   * the .com badge. It carries the header, prices, and every call to action.
    */
-  --color-brand-50: #fff0f6;
-  --color-brand-100: #ffdcea;
-  --color-brand-200: #ffb3d1;
-  --color-brand-300: #ff7fb2;
-  --color-brand-400: #fb4590;
-  --color-brand-500: #f00a70;
-  --color-brand-600: #e6006e;
-  --color-brand-700: #bd0059;
-  --color-brand-800: #9b0049;
-  --color-brand-900: #7f033e;
-  --color-brand-950: #4d0125;
+  --color-brand-50: #eef3ff;
+  --color-brand-100: #dbe4ff;
+  --color-brand-200: #bccdff;
+  --color-brand-300: #90aaff;
+  --color-brand-400: #607dff;
+  --color-brand-500: #3a5ef7;
+  --color-brand-600: #1e4be0;
+  --color-brand-700: #1a3cbd;
+  --color-brand-800: #1b3599;
+  --color-brand-900: #1b317a;
+  --color-brand-950: #131e4a;
+
+  /* The near-black of the wordmark. Dark surfaces use this, not pure black. */
+  --color-navy-900: #0b1220;
+  --color-navy-800: #131c30;
 
   /*
    * Discount flags only. Green against the magenta is the one place a second
@@ -46,20 +50,20 @@
   --color-accent-900: #114520;
 
   /*
-   * Neutrals carry a faint warm bias so they sit beside the magenta rather
-   * than fighting it. A pure cool grey next to this pink reads as unrelated.
+   * Neutrals carry a slight cool bias so they sit with the blue rather than
+   * beside it. A warm grey next to this blue reads as unrelated.
    */
-  --color-ink-50: #faf8f7;
-  --color-ink-100: #f2eeed;
-  --color-ink-200: #e5dfde;
-  --color-ink-300: #cbc2c1;
-  --color-ink-400: #9d9291;
-  --color-ink-500: #776c6b;
-  --color-ink-600: #5f5453;
-  --color-ink-700: #4c4342;
-  --color-ink-800: #3e3736;
-  --color-ink-900: #221d1d;
-  --color-ink-950: #141111;
+  --color-ink-50: #f7f9fb;
+  --color-ink-100: #eef1f6;
+  --color-ink-200: #dfe4ec;
+  --color-ink-300: #c3cad8;
+  --color-ink-400: #929cb0;
+  --color-ink-500: #6b7589;
+  --color-ink-600: #545d70;
+  --color-ink-700: #434b5c;
+  --color-ink-800: #363d4c;
+  --color-ink-900: #1c2231;
+  --color-ink-950: #0f1420;
 
   /*
    * Semantic colours are separate from the accent on purpose: "this worked"

@@ -36,8 +36,9 @@ class SettingsSeeder extends Seeder
                     'group' => $group,
                     'value' => $type->serialize($default),
                     'type' => $type,
-                    // Store identity is needed by the storefront before login.
-                    'is_public' => $group === 'store',
+                    // Store identity and footer pages are needed by the
+                    // storefront before anyone signs in.
+                    'is_public' => in_array($group, ['store', 'pages'], true),
                     'label' => str($key)->replace('_', ' ')->title()->value(),
                 ]);
 

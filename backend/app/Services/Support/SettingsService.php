@@ -166,7 +166,9 @@ class SettingsService
                 return [
                     'group' => $group,
                     'type' => SettingType::infer($keys[$key]),
-                    'is_public' => $group === 'store',
+                    // Must match SettingsSeeder, or a setting saved through
+                    // the API would lose the visibility it was seeded with.
+                    'is_public' => in_array($group, ['store', 'pages'], true),
                 ];
             }
         }

@@ -1,13 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Upokoron">
-  <rect width="64" height="64" rx="14" fill="#e6006e" />
+  <!--
+    The logo's plug mark inside the U-shaped bag, reduced to what survives at
+    16px: the rounded U in brand blue with a lightning bolt through it.
+  -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a5ef7" />
+      <stop offset="1" stop-color="#1a3cbd" />
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#g)" />
+
   <path
-    d="M20 20h4.6l2.2 20.2a4 4 0 0 0 4 3.6h13.4a4 4 0 0 0 3.9-3.1L51 26H27"
+    d="M20 16v20a12 12 0 0 0 24 0V16"
     fill="none"
     stroke="#ffffff"
-    stroke-width="4.5"
+    stroke-width="7"
     stroke-linecap="round"
-    stroke-linejoin="round"
   />
-  <circle cx="32.5" cy="50" r="3.2" fill="#ffffff" />
-  <circle cx="44.5" cy="50" r="3.2" fill="#ffffff" />
+
+  <path d="M34.5 24 27 35h5l-2.5 8 8-11h-5l2-8z" fill="#ffffff" />
 </svg>

@@ -48,12 +48,45 @@ return [
     */
     'settings' => [
 
+        /*
+         * Public store identity. Everything in this group is exposed to the
+         * storefront without authentication (see SettingsSeeder), because the
+         * footer and contact page need it before anyone signs in.
+         */
         'store' => [
-            'store_name' => 'Upokoron',
+            'store_name' => 'Upokoron.com',
+            'store_tagline' => 'Electronics for everyone',
+            'store_description' => 'Genuine electronics and accessories, stocked in Dhaka and '.
+                'delivered to your door. Cash on delivery, warranty on every item, and returns '.
+                'if something is not right.',
             'store_email' => 'support@upokoron.test',
             'store_phone' => '',
+            'store_phone_alt' => '',
+            'store_whatsapp' => '',
             'store_address' => '',
             'store_logo' => null,
+
+            // Social profiles. Blank means "we are not on that platform", and
+            // the footer hides the icon rather than linking nowhere.
+            'store_facebook' => '',
+            'store_youtube' => '',
+            'store_instagram' => '',
+            'store_tiktok' => '',
+        ],
+
+        /*
+         * Footer content pages.
+         *
+         * Empty by default and left that way on purpose: a privacy policy or
+         * terms document has to describe what this specific shop actually
+         * does, and shipping invented legal text would be worse than shipping
+         * none. The owner writes these in Settings; until then each page says
+         * so plainly rather than showing filler.
+         */
+        'pages' => [
+            'page_about' => '',
+            'page_privacy' => '',
+            'page_terms' => '',
         ],
 
         'sales' => [
