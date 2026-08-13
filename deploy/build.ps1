@@ -252,8 +252,12 @@ if (-not $NoZip) {
     # named "api\.htaccess" instead of a directory. See make-zip.php.
     $zipper = Join-Path $deploy 'make-zip.php'
 
-    & php $zipper $appOut (Join-Path $build 'laravel.zip') `
-        'artisan' 'vendor/autoload.php' 'bootstrap/app.php' 'storage/logs/.gitignore'
+    # --prefix so this extracts to <somewhere>/laravel/ no matter where the
+    # person extracts it. public_html.zip stays flat on purpose: its contents
+    # go directly into an existing public_html.
+    & php $zipper $appOut (Join-Path $build 'laravel.zip') --prefix=laravel `
+        'laravel/artisan' 'laravel/vendor/autoload.php' 'laravel/bootstrap/app.php' `
+        'laravel/storage/logs/.gitignore'
 
     if ($LASTEXITCODE -ne 0) { Fail 'laravel.zip is incomplete.' }
 

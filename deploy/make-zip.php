@@ -14,17 +14,37 @@ declare(strict_types=1);
  *
  * ZipArchive writes correct entries, and PHP is already required by the build.
  *
+ * --prefix=NAME wraps everything in a top-level folder. Without it, an
+ * archive of 6,600 loose files extracts wherever the person happened to be
+ * standing -- scattering app/, vendor/ and artisan across their home
+ * directory, which is miserable to undo through a File Manager. With it,
+ * extracting anywhere puts the tree in NAME/ and there is nothing to get
+ * wrong.
+ *
  * Any further arguments are entries that MUST exist in the finished archive;
  * the script exits non-zero if one is absent. Worth checking rather than
  * assuming, because the files most likely to go missing are the dotfiles the
  * whole deployment depends on.
  *
- * Usage: php make-zip.php <source-directory> <target.zip> [required-entry...]
+ * Usage: php make-zip.php <source-dir> <target.zip> [--prefix=NAME] [entry...]
  */
 
-$source = $argv[1] ?? null;
-$target = $argv[2] ?? null;
-$required = array_slice($argv, 3);
+$arguments = array_slice($argv, 1);
+$prefix = '';
+
+foreach ($arguments as $index => $argument) {
+    if (str_starts_with($argument, '--prefix=')) {
+        $prefix = rtrim(substr($argument, 9), '/').'/';
+
+        unset($arguments[$index]);
+    }
+}
+
+$arguments = array_values($arguments);
+
+$source = $arguments[0] ?? null;
+$target = $arguments[1] ?? null;
+$required = array_slice($arguments, 2);
 
 if ($source === null || $target === null) {
     fwrite(STDERR, "Usage: php make-zip.php <source-directory> <target.zip>\n");
@@ -61,7 +81,7 @@ $count = 0;
 
 foreach ($files as $file) {
     /** @var SplFileInfo $file */
-    $local = str_replace('\\', '/', substr($file->getPathname(), strlen($source) + 1));
+    $local = $prefix.str_replace('\\', '/', substr($file->getPathname(), strlen($source) + 1));
 
     if ($file->isDir()) {
         // Empty directories vanish otherwise, and Laravel fails on a missing
