@@ -2,9 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+
+    <title>Upokoron — Everyday things for the home</title>
+    <meta
+      name="description"
+      content="Household goods stocked in Dhaka and delivered to your door. Cash on delivery available."
+    />
+    <meta name="theme-color" content="#e6006e" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!--
+      Hind Siliguri covers Bangla and Latin in one family. Loaded here rather
+      than via @import in the stylesheet: Tailwind's expansion pushes a later
+      @import past the top of the file, CSS requires @import to come first,
+      and PostCSS then drops it -- leaving the whole site on a system font
+      with nothing in the console to say why.
+
+      preconnect opens the connection to the font host while the CSS is still
+      downloading, so the face arrives sooner.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap"
+    />
   </head>
   <body>
     <div id="root"></div>

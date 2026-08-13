@@ -3,10 +3,14 @@
 /*
  * Hind Siliguri carries Bangla and Latin in one family, so product names,
  * prices, and UI chrome all sit on the same face without a fallback jump
- * mid-sentence. Loaded from Google Fonts with display=swap; if it fails the
- * system stack below is a deliberate second choice, not an accident.
+ * mid-sentence.
+ *
+ * It is loaded by a <link> in index.html, NOT by @import here. Tailwind's
+ * expansion pushes anything after its own import down the file, and CSS
+ * requires @import to come first -- PostCSS then drops it and the font
+ * silently never loads. A <link> also lets the browser start fetching the
+ * font before it has parsed this stylesheet at all.
  */
-@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
 
 @theme {
   /*
