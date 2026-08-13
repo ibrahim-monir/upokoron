@@ -233,6 +233,11 @@ Set-Content -Path (Join-Path $uploads 'index.html') -Value '' -Encoding utf8
 # The hosting check, so it is on hand if something misbehaves after upload.
 Copy-Item (Join-Path $deploy 'preflight.php') -Destination $webOut -Force
 
+# The one-click installer, so a plan without Terminal still gets a correct
+# setup. It is inert until INSTALL_TOKEN is set in .env, and deletes itself
+# when it is done.
+Copy-Item (Join-Path $deploy 'install.php') -Destination $webOut -Force
+
 # The .env template travels beside the bundle, never inside laravel/, so it
 # cannot be mistaken for a working file and left with placeholder values.
 Copy-Item (Join-Path $deploy 'env.production.example') -Destination $build -Force
@@ -256,7 +261,8 @@ if (-not $NoZip) {
     # 404s, and without uploads/.htaccess the image directory can execute what
     # it is handed.
     & php $zipper $webOut (Join-Path $build 'public_html.zip') `
-        'index.html' 'api/index.php' '.htaccess' 'api/.htaccess' 'uploads/.htaccess'
+        'index.html' 'api/index.php' '.htaccess' 'api/.htaccess' 'uploads/.htaccess' `
+        'install.php' 'preflight.php'
 
     if ($LASTEXITCODE -ne 0) { Fail 'public_html.zip is incomplete.' }
 }
