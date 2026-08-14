@@ -184,13 +184,25 @@ class ProductService
             $override = $overrides->get($key, []);
             $labels = $this->generator->labels($combination, $values);
 
+            /*
+             * Product-level values are the starting point for every
+             * variation, and an override replaces one.
+             *
+             * The offer fields used to be the exception: selling price and
+             * weight fell back to the product, while the special price only
+             * ever came from an override. So a shop that set an offer on a
+             * variable product got a product with no offer at all -- no
+             * error, no warning, just the normal price everywhere. The form
+             * says "each variation can override it", and now that is true of
+             * all of them rather than only some.
+             */
             $attributes = [
                 'name' => implode(' / ', $labels),
                 'selling_price' => $override['selling_price'] ?? $data['selling_price'] ?? '0.00',
-                'compare_at_price' => $override['compare_at_price'] ?? null,
-                'special_price' => $override['special_price'] ?? null,
-                'special_starts_at' => $override['special_starts_at'] ?? null,
-                'special_ends_at' => $override['special_ends_at'] ?? null,
+                'compare_at_price' => $override['compare_at_price'] ?? $data['compare_at_price'] ?? null,
+                'special_price' => $override['special_price'] ?? $data['special_price'] ?? null,
+                'special_starts_at' => $override['special_starts_at'] ?? $data['special_starts_at'] ?? null,
+                'special_ends_at' => $override['special_ends_at'] ?? $data['special_ends_at'] ?? null,
                 'barcode' => $override['barcode'] ?? null,
                 'weight' => $override['weight'] ?? $data['weight'] ?? null,
                 'is_default' => $position === 0,
