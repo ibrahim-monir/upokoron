@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Catalog;
 
 use App\Exceptions\BusinessRuleException;
+use App\Models\Media;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\UploadedFile;
@@ -56,6 +57,34 @@ class ProductImageService
     }
 
     /**
+     * Attach an image that is already in the media library.
+     *
+     * The preferred route, and the one the admin panel uses. The library
+     * already de-duplicated the file, so the same photo used on six products
+     * is stored once; pointing at its path rather than copying the bytes is
+     * what keeps that true.
+     *
+     * Deliberately NOT a foreign key to media: deleting a library entry must
+     * never blank out a product page, and MediaService already refuses to
+     * delete anything still in use.
+     */
+    public function attachMedia(Product $product, Media $media, ?string $alt = null): ProductImage
+    {
+        return DB::transaction(function () use ($product, $media, $alt): ProductImage {
+            $isFirst = ! $product->images()->exists();
+
+            return $product->images()->create([
+                'disk' => $media->disk,
+                'path' => $media->path,
+                'alt' => $alt ?? $media->alt ?? $product->name,
+                'size' => $media->size,
+                'position' => (int) $product->images()->max('position') + 1,
+                'is_primary' => $isFirst,
+            ]);
+        });
+    }
+
+    /**
      * Attach an externally hosted image by URL, so a store can list products
      * before it has any upload pipeline configured.
      */
@@ -97,7 +126,20 @@ class ProductImageService
     {
         DB::transaction(function () use ($image): void {
             ProductImage::where('product_id', $image->product_id)->update(['is_primary' => false]);
-            $image->update(['is_primary' => true]);
+
+            /*
+             * Written through the query builder, not $image->update().
+             *
+             * The mass update above changed the database but not this
+             * in-memory instance, which still reads is_primary = true. Eloquent
+             * then finds nothing dirty about setting it to true and saves
+             * nothing at all -- leaving the product with no primary image and
+             * a blank thumbnail everywhere it is shown. The failure is silent:
+             * the request returns 200 and the row is simply wrong.
+             */
+            $image->newQuery()->whereKey($image->getKey())->update(['is_primary' => true]);
+
+            $image->refresh();
         });
     }
 

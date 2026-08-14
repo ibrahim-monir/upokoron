@@ -19,6 +19,7 @@ import {
   Textarea,
   useToast,
 } from '../../components/ui'
+import { ProductImages, imagesFromProduct, syncProductImages } from './ProductImages'
 
 /*
  * Mirrors StoreProductRequest, including the two price rules that exist to
@@ -37,10 +38,25 @@ const schema = z
     sku: z.string().max(60).optional().or(z.literal('')),
     barcode: z.string().max(60).optional().or(z.literal('')),
     selling_price: z.coerce.number({ message: 'Enter a price.' }).min(0),
-    compare_at_price: z.union([z.coerce.number().min(0), z.literal('')]).optional(),
+
+    /*
+     * The empty literal goes FIRST in these unions, and that ordering is the
+     * whole point.
+     *
+     * A union tries its options in order. With `z.coerce.number().min(0)`
+     * first, an empty box coerces to 0 and passes -- so "no compare-at
+     * price" silently became "compare-at price of zero", and the rule below
+     * then rejected the product with a message about a price the user never
+     * entered. Leaving the field blank made the form unusable.
+     *
+     * It bites here and not on brand or unit because those coerce to 0 and
+     * then FAIL `.positive()`, falling through to the literal by luck rather
+     * than design.
+     */
+    compare_at_price: z.union([z.literal(''), z.coerce.number().min(0)]).optional(),
     is_stock_tracked: z.boolean(),
     is_featured: z.boolean(),
-    weight: z.union([z.coerce.number().min(0), z.literal('')]).optional(),
+    weight: z.union([z.literal(''), z.coerce.number().min(0)]).optional(),
   })
   .refine(
     (v) => v.compare_at_price === '' || v.compare_at_price == null || v.compare_at_price > v.selling_price,
@@ -56,6 +72,14 @@ export default function ProductFormPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const [saving, setSaving] = useState(false)
+
+  /*
+   * The gallery is held here rather than saved as it is edited, because a
+   * new product has no id to attach images to yet. `originalImages` is what
+   * the server had, so the save can work out what was removed.
+   */
+  const [images, setImages] = useState([])
+  const [originalImages, setOriginalImages] = useState([])
 
   const categories = useQuery({
     queryKey: ['admin', 'categories', 'options'],
@@ -130,6 +154,11 @@ export default function ProductFormPage() {
       is_featured: product.is_featured,
       weight: product.weight ?? '',
     })
+
+    const loaded = imagesFromProduct(product)
+
+    setImages(loaded)
+    setOriginalImages(loaded)
   }, [existing.data, reset])
 
   const type = watch('type')
@@ -142,13 +171,24 @@ export default function ProductFormPage() {
     )
 
     try {
+      let productId = id
+
       if (isEdit) {
         await put(`/admin/products/${id}`, payload)
-        toast.success('Product updated.')
       } else {
-        const { message } = await post('/admin/products', payload)
-        toast.success(message ?? 'Product created.')
+        // Images need an id to hang off, so the product is created first and
+        // the gallery written straight after. The create response nests the
+        // record under `product`, not `data`.
+        const created = await post('/admin/products', payload)
+
+        productId = created.product?.id
       }
+
+      if (productId) {
+        await syncProductImages(productId, images, originalImages)
+      }
+
+      toast.success(isEdit ? 'Product updated.' : 'Product created.')
 
       navigate('/admin/products')
     } catch (error) {
@@ -253,6 +293,17 @@ export default function ProductFormPage() {
             <Field label="Description" className="sm:col-span-2" error={errors.description?.message}>
               {({ id: fieldId }) => <Textarea id={fieldId} rows={5} {...register('description')} />}
             </Field>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Images"
+            description="The first image is what the shop, the search results and every product card show."
+          />
+
+          <div className="p-4">
+            <ProductImages productId={isEdit ? id : null} value={images} onChange={setImages} />
           </div>
         </Card>
 
