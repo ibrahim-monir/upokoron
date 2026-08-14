@@ -184,6 +184,11 @@ export const router = createBrowserRouter([
       },
 
       {
+        path: 'shipping',
+        element: guarded('shipping.manage', lazyAdmin(() => import('../features/admin/ShippingZonesPage'))),
+      },
+
+      {
         path: 'inventory',
         element: guarded('inventory.view', lazyAdmin(() => import('../features/admin/InventoryPage'))),
       },

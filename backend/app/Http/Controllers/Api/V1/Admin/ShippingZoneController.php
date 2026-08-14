@@ -9,11 +9,12 @@ use App\Http\Controllers\Controller;
 use App\Models\ShippingRate;
 use App\Models\ShippingZone;
 use App\Models\ShippingZoneArea;
+use App\Services\Shipping\ShippingService;
+use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 /**
  * Delivery zones, the areas in them, and what each charges.
@@ -140,6 +141,53 @@ class ShippingZoneController extends Controller
         });
 
         return response()->json(['data' => $this->present($zone->refresh()->load(['areas', 'rates']))]);
+    }
+
+    /**
+     * "Where does Gazipur go, and what would it cost?"
+     *
+     * Zone matching is the part of this screen that goes wrong quietly: a
+     * district listed twice, or one nobody listed at all. Both look fine in
+     * the editor and only show up as a customer being charged the wrong
+     * amount -- or, worse, being unable to check out at all. This answers the
+     * question directly, against the same service checkout uses.
+     */
+    public function test(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->can('shipping.manage'), 403);
+
+        $data = $request->validate([
+            'district' => ['required', 'string', 'max:100'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'subtotal' => ['sometimes', 'numeric', 'min:0', 'max:99999999'],
+            'cod' => ['sometimes', 'boolean'],
+        ]);
+
+        $shipping = app(ShippingService::class);
+        $subtotal = Money::of((string) ($data['subtotal'] ?? '1000'));
+
+        $zone = $shipping->zoneFor($data['district'], $data['city'] ?? null);
+
+        return response()->json([
+            'data' => [
+                'zone' => [
+                    'id' => $zone->id,
+                    'name' => $zone->name,
+                    'is_fallback' => $zone->is_fallback,
+                ],
+
+                // Said out loud, because "it fell through to the default" is
+                // the answer that usually means an area is missing.
+                'matched_by' => $zone->is_fallback ? 'default zone' : 'a listed area',
+
+                'subtotal' => $subtotal->value(),
+                'options' => $shipping->quote(
+                    zone: $zone,
+                    subtotal: $subtotal,
+                    requiresCod: (bool) ($data['cod'] ?? false),
+                ),
+            ],
+        ]);
     }
 
     public function storeRate(Request $request, ShippingZone $zone): JsonResponse

@@ -148,6 +148,10 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
 
     // Delivery zones, the places in them, and what each charges.
     Route::get('shipping/zones', [ShippingZoneController::class, 'index'])->name('shipping.zones.index');
+
+    // "Which zone does this address fall in, and what would it cost?"
+    Route::post('shipping/test', [ShippingZoneController::class, 'test'])->name('shipping.test');
+
     Route::post('shipping/zones', [ShippingZoneController::class, 'store'])->name('shipping.zones.store');
     Route::put('shipping/zones/{zone}', [ShippingZoneController::class, 'update'])->name('shipping.zones.update');
     Route::delete('shipping/zones/{zone}', [ShippingZoneController::class, 'destroy'])->name('shipping.zones.destroy');
