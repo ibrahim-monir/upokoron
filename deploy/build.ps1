@@ -238,6 +238,39 @@ Copy-Item (Join-Path $deploy 'preflight.php') -Destination $webOut -Force
 # when it is done.
 Copy-Item (Join-Path $deploy 'install.php') -Destination $webOut -Force
 
+# The update endpoint. Runs migrations and rebuilds caches, and nothing else --
+# it accepts no files, so a leaked token cannot put code on the site.
+Copy-Item (Join-Path $deploy 'update.php') -Destination $webOut -Force
+
+# Stamp the build so the server can say which code it is actually running.
+# The commonest update mistake is extracting the zip in the wrong place; then
+# the site looks unchanged and there is nothing on screen to explain why.
+$commit = (& git -C $root rev-parse --short HEAD 2>$null)
+
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($commit)) {
+    $commit = 'unknown'
+}
+
+$dirty = (& git -C $root status --porcelain 2>$null)
+
+if (-not [string]::IsNullOrWhiteSpace($dirty)) {
+    # Built from a working tree with uncommitted edits: say so, or the commit
+    # in build.json is a lie about what is on the server.
+    $commit = "$commit+local"
+}
+
+# WriteAllText with a BOM-less encoder, not Set-Content -Encoding utf8:
+# on Windows PowerShell 5.1 that writes a UTF-8 BOM, and json_decode returns
+# null on the leading bytes. The file looks perfect in every editor and the
+# server reports it unreadable.
+[System.IO.File]::WriteAllText(
+    (Join-Path $appOut 'build.json'),
+    (@{ commit = $commit; built_at = (Get-Date -Format 'yyyy-MM-dd HH:mm') } | ConvertTo-Json -Compress),
+    (New-Object System.Text.UTF8Encoding $false)
+)
+
+Write-Host "    build    $commit"
+
 # The .env template travels beside the bundle, never inside laravel/, so it
 # cannot be mistaken for a working file and left with placeholder values.
 Copy-Item (Join-Path $deploy 'env.production.example') -Destination $build -Force
@@ -266,9 +299,56 @@ if (-not $NoZip) {
     # it is handed.
     & php $zipper $webOut (Join-Path $build 'public_html.zip') `
         'index.html' 'api/index.php' '.htaccess' 'api/.htaccess' 'uploads/.htaccess' `
-        'install.php' 'preflight.php'
+        'install.php' 'preflight.php' 'update.php'
 
     if ($LASTEXITCODE -ne 0) { Fail 'public_html.zip is incomplete.' }
+
+    # ---------------------------------------------------------- update.zip
+    #
+    # The routine deploy. vendor/ is 7 of the full bundle's 8 MB and changes
+    # only when a package is added, so leaving it out turns a three-minute
+    # upload into a fifteen-second one. update.php refuses to run if the
+    # vendor on the server no longer matches composer.lock, which is the one
+    # case where this bundle is not enough.
+    #
+    # Laid out to be extracted at the HOME directory: laravel/ and
+    # public_html/ then land in the right places from one upload. It carries
+    # no .env, no storage/, and no uploads/ -- nothing that holds state.
+
+    $updateStage = Join-Path $build 'update'
+
+    if (Test-Path $updateStage) { Remove-Item $updateStage -Recurse -Force }
+
+    $updateApp = Join-Path $updateStage 'laravel'
+    $updateWeb = Join-Path $updateStage 'public_html'
+
+    New-Item -ItemType Directory -Path $updateApp, $updateWeb -Force | Out-Null
+
+    foreach ($item in @('app', 'bootstrap', 'config', 'database', 'lang', 'resources', 'routes',
+                        'artisan', 'composer.json', 'composer.lock', 'build.json')) {
+        $source = Join-Path $appOut $item
+
+        if (Test-Path $source) {
+            Copy-Item $source -Destination $updateApp -Recurse -Force
+        }
+    }
+
+    foreach ($item in @('index.html', 'assets', 'api', '.htaccess', 'update.php',
+                        'favicon.ico', 'favicon.svg', 'icons.svg', 'robots.txt')) {
+        $source = Join-Path $webOut $item
+
+        if (Test-Path $source) {
+            Copy-Item $source -Destination $updateWeb -Recurse -Force
+        }
+    }
+
+    & php $zipper $updateStage (Join-Path $build 'update.zip') `
+        'laravel/artisan' 'laravel/build.json' 'public_html/index.html' `
+        'public_html/api/index.php' 'public_html/update.php'
+
+    if ($LASTEXITCODE -ne 0) { Fail 'update.zip is incomplete.' }
+
+    Remove-Item $updateStage -Recurse -Force
 }
 
 # --------------------------------------------------------------- summary
@@ -289,9 +369,13 @@ Write-Host "  public_html/   $(Folder-Size $webOut)   -> /home/USER/public_html"
 
 if (-not $NoZip) {
     Write-Host ''
-    Write-Host '  Upload these two archives and extract them in place:'
-    Write-Host "    $(Join-Path $build 'laravel.zip')"
-    Write-Host "    $(Join-Path $build 'public_html.zip')"
+    Write-Host '  ROUTINE UPDATE -- upload this one, extract at the HOME directory:'
+    Write-Host "    $(Join-Path $build 'update.zip')"
+    Write-Host '    then open  https://YOUR-DOMAIN/update.php?token=...'
+    Write-Host ''
+    Write-Host '  FIRST INSTALL, or when composer.lock changed:'
+    Write-Host "    $(Join-Path $build 'laravel.zip')      -> extract at the home directory"
+    Write-Host "    $(Join-Path $build 'public_html.zip')  -> extract inside public_html"
 }
 
 Write-Host ''
