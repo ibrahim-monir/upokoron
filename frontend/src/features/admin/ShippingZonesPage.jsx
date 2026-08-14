@@ -13,6 +13,7 @@ import {
   useToast,
 } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
+import { DistrictSelect } from '../../components/DistrictSelect'
 
 /**
  * Where the shop delivers, and what it charges.
@@ -222,16 +223,14 @@ function AreaEditor({ zone, onClose }) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <Input
+        {/*
+          A zone may only name a real district. Typed free, a misspelling
+          creates an area that matches no address ever entered, and the zone
+          silently covers nothing.
+        */}
+        <DistrictSelect
           value={district}
           onChange={(event) => setDistrict(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              add()
-            }
-          }}
-          placeholder="District"
           aria-label="District"
           className="min-w-36 flex-1"
         />

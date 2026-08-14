@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AlertTriangle, ArrowRight, ImageOff, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Spinner, useToast } from '../../components/ui'
+import { DistrictSelect } from '../../components/DistrictSelect'
 import {
   useCart,
   useClearCart,
@@ -166,12 +167,11 @@ function DeliveryEstimate({ subtotal }) {
           if (district.trim()) quote.mutate({ district: district.trim(), city: city.trim() })
         }}
       >
-        <input
+        <DistrictSelect
           value={district}
           onChange={(event) => setDistrict(event.target.value)}
-          placeholder="District (e.g. Dhaka)"
           aria-label="District"
-          className="h-10 w-full min-w-0 rounded-lg border border-ink-200 px-3 text-sm text-ink-900 placeholder:text-ink-400"
+          className="w-full min-w-0"
         />
         <input
           value={city}

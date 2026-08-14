@@ -79,6 +79,10 @@ Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
 | a question people ask before they are willing to register.
 */
 
+// The districts every address form offers. One list, so the dropdown and the
+// validation behind it cannot disagree.
+Route::get('districts', [ShippingController::class, 'districts'])->name('districts');
+
 Route::get('shipping/zones', [ShippingController::class, 'zones'])->name('shipping.zones');
 Route::post('shipping/quote', [ShippingController::class, 'quote'])->name('shipping.quote');
 

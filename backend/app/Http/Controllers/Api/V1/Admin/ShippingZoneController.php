@@ -10,11 +10,13 @@ use App\Models\ShippingRate;
 use App\Models\ShippingZone;
 use App\Models\ShippingZoneArea;
 use App\Services\Shipping\ShippingService;
+use App\Support\Districts;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Delivery zones, the areas in them, and what each charges.
@@ -122,7 +124,12 @@ class ShippingZoneController extends Controller
 
         $data = $request->validate([
             'areas' => ['present', 'array', 'max:200'],
-            'areas.*.district' => ['required', 'string', 'max:100'],
+
+            // A zone may only name a real district. Left free-text, a typo
+            // creates an area that matches no address ever entered, and the
+            // zone silently covers nothing.
+            'areas.*.district' => ['required', 'string', Rule::in(Districts::names())],
+
             'areas.*.city' => ['nullable', 'string', 'max:100'],
         ]);
 
@@ -156,6 +163,14 @@ class ShippingZoneController extends Controller
     {
         abort_unless($request->user()?->can('shipping.manage'), 403);
 
+        /*
+         * Free text here, unlike everywhere else.
+         *
+         * This is a diagnostic: its whole job is to answer "what happens if
+         * someone writes Jessore", and restricting it to the canonical list
+         * would remove the only way to check that the old spellings still
+         * find their zone.
+         */
         $data = $request->validate([
             'district' => ['required', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],

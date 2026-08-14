@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { AlertTriangle, Check, ShoppingBag, Truck } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Field, Spinner, useToast } from '../../components/ui'
+import { DistrictSelect } from '../../components/DistrictSelect'
 import { useCheckout, usePlaceOrder, useShippingOptions } from './useCheckout'
 
 /** A selectable card. Used for addresses, delivery options and payment. */
@@ -285,13 +286,20 @@ export function CheckoutPage() {
                   {...form.register('city', { required: 'A city is required.' })}
                 />
 
-                <Field
-                  label="District"
-                  required
-                  placeholder="Dhaka"
-                  error={form.formState.errors.district?.message}
-                  {...form.register('district', { required: 'A district is required.' })}
-                />
+                {/*
+                  Chosen, not typed. The district decides the delivery charge,
+                  and a spelling no zone matches would quietly bill the
+                  customer for the far side of the country.
+                */}
+                <Field label="District" required error={form.formState.errors.district?.message}>
+                  {({ id: fieldId, invalid }) => (
+                    <DistrictSelect
+                      id={fieldId}
+                      invalid={invalid}
+                      {...form.register('district', { required: 'Choose your district.' })}
+                    />
+                  )}
+                </Field>
               </div>
             )}
           </Section>

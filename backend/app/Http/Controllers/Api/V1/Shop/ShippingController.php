@@ -9,8 +9,10 @@ use App\Http\Controllers\Controller;
 use App\Models\ShippingZone;
 use App\Services\Cart\CartService;
 use App\Services\Shipping\ShippingService;
+use App\Support\Districts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * "What will delivery cost to my address?"
@@ -31,7 +33,7 @@ class ShippingController extends Controller
     public function quote(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'district' => ['required', 'string', 'max:100'],
+            'district' => ['required', 'string', Rule::in(Districts::names())],
             'city' => ['nullable', 'string', 'max:100'],
             'cod' => ['sometimes', 'boolean'],
         ]);
@@ -59,6 +61,25 @@ class ShippingController extends Controller
                 ],
                 'subtotal' => $summary['subtotal']->value(),
                 'options' => $options,
+            ],
+        ]);
+    }
+
+    /**
+     * The districts a customer may choose from.
+     *
+     * Served rather than duplicated in the frontend, so the dropdown and the
+     * validation can never drift apart -- and so a delivery zone can never
+     * name a district that no address form will produce.
+     */
+    public function districts(): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'country' => Districts::COUNTRY,
+                'country_name' => Districts::COUNTRY_NAME,
+                'divisions' => Districts::byDivision(),
+                'districts' => Districts::names(),
             ],
         ]);
     }

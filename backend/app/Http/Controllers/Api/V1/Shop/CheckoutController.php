@@ -17,8 +17,10 @@ use App\Services\Order\OrderService;
 use App\Services\Order\OrderStatusService;
 use App\Services\Order\PlaceOrderData;
 use App\Services\Shipping\ShippingService;
+use App\Support\Districts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Checkout.
@@ -105,7 +107,7 @@ class CheckoutController extends Controller
     public function shippingOptions(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'district' => ['required', 'string', 'max:100'],
+            'district' => ['required', 'string', Rule::in(Districts::names())],
             'city' => ['nullable', 'string', 'max:100'],
             'cod' => ['sometimes', 'boolean'],
         ]);
@@ -154,7 +156,16 @@ class CheckoutController extends Controller
             'address.address_line2' => ['nullable', 'string', 'max:200'],
             'address.area' => ['nullable', 'string', 'max:100'],
             'address.city' => ['required_without:customer_address_id', 'string', 'max:100'],
-            'address.district' => ['required_without:customer_address_id', 'string', 'max:100'],
+
+            // From the list, never typed: the district decides the delivery
+            // charge, and a spelling nobody's zone matches would quietly bill
+            // the customer for the far side of the country.
+            'address.district' => [
+                'required_without:customer_address_id',
+                'string',
+                Rule::in(Districts::names()),
+            ],
+
             'address.postcode' => ['nullable', 'string', 'max:20'],
         ]);
 

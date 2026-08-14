@@ -8,6 +8,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\ShippingRate;
 use App\Models\ShippingZone;
 use App\Models\ShippingZoneArea;
+use App\Support\Districts;
 use App\Support\Money;
 use App\Support\Quantity;
 
@@ -32,7 +33,15 @@ class ShippingService
      */
     public function zoneFor(string $district, ?string $city = null): ShippingZone
     {
-        $district = trim($district);
+        /*
+         * Normalised to the official spelling first.
+         *
+         * Half the country still writes Jessore and Comilla, and a zone
+         * listing Jashore would not match either. The failure is silent and
+         * expensive: the address falls through to the fallback zone and the
+         * customer is quoted the most distant delivery charge.
+         */
+        $district = Districts::normalise($district) ?? trim($district);
         $city = $city === null ? null : trim($city);
 
         /*

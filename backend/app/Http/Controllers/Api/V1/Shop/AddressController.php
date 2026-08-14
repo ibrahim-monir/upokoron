@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
+use App\Support\Districts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,7 @@ class AddressController extends Controller
      */
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'label' => ['nullable', 'string', 'max:50'],
             'name' => ['required', 'string', 'max:120'],
             // Bangladeshi mobile numbers: 01XXXXXXXXX, with or without +88.
@@ -111,12 +112,21 @@ class AddressController extends Controller
             'address_line2' => ['nullable', 'string', 'max:200'],
             'area' => ['nullable', 'string', 'max:100'],
             'city' => ['required', 'string', 'max:100'],
-            'district' => ['required', 'string', 'max:100'],
+
+            // Chosen from the list the shop serves, not typed. A free-text
+            // district is a delivery charge waiting to be wrong.
+            'district' => ['required', 'string', Rule::in(Districts::names())],
+
             'postcode' => ['nullable', 'string', 'max:20'],
-            'country' => ['sometimes', Rule::in(['BD'])],
             'is_default_shipping' => ['sometimes', 'boolean'],
             'is_default_billing' => ['sometimes', 'boolean'],
         ]);
+
+        // The shop delivers inside Bangladesh only, so this is a constant
+        // rather than something a request may state.
+        $data['country'] = Districts::COUNTRY;
+
+        return $data;
     }
 
     /**

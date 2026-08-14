@@ -10,6 +10,7 @@ use App\Models\CustomerGroup;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\ProductVariation;
+use App\Models\ShippingZoneArea;
 use App\Services\Cart\CartService;
 use App\Services\Inventory\InventoryService;
 use App\Services\Pricing\PricingService;
@@ -212,6 +213,23 @@ class CartAndPricingTest extends TestCase
         $this->assertSame('inside-dhaka-city', $shipping->zoneFor('Dhaka', 'Dhaka')->slug);
         $this->assertSame('dhaka-district', $shipping->zoneFor('Dhaka', 'Savar')->slug);
         $this->assertSame('dhaka-district', $shipping->zoneFor('Dhaka')->slug);
+    }
+
+    public function test_a_renamed_district_still_finds_its_zone(): void
+    {
+        // Half the country still writes Jessore and Comilla. Matching those
+        // as strangers would quote them the most distant delivery charge for
+        // an address the shop covers.
+        $shipping = app(ShippingService::class);
+
+        ShippingZoneArea::create([
+            'shipping_zone_id' => $shipping->zoneFor('Dhaka', 'Dhaka')->id,
+            'district' => 'Jashore',
+            'city' => null,
+        ]);
+
+        $this->assertSame('inside-dhaka-city', $shipping->zoneFor('Jessore')->slug);
+        $this->assertSame('inside-dhaka-city', $shipping->zoneFor('JESSORE')->slug);
     }
 
     public function test_an_unlisted_district_falls_back_rather_than_failing(): void
