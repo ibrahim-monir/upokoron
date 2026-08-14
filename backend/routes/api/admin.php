@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\AttributeController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
+use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController;
 use App\Http\Controllers\Api\V1\Admin\JournalEntryController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -132,6 +133,9 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
         ->name('fiscal-periods.close');
     Route::post('fiscal-periods/{period}/reopen', [AccountingReportController::class, 'reopenPeriod'])
         ->name('fiscal-periods.reopen');
+
+    // Everything the dashboard shows, in one request rather than five.
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Orders. Status changes are what post to the ledger, so they are gated
     // separately from merely reading the list.
