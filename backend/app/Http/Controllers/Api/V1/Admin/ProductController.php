@@ -12,9 +12,12 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Services\Catalog\ProductService;
 use App\Services\Catalog\VariationGenerator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -48,10 +51,105 @@ class ProductController extends Controller
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->string('type')->value()))
             ->when($request->boolean('featured'), fn ($q) => $q->where('is_featured', true))
             ->when($request->boolean('trashed'), fn ($q) => $q->onlyTrashed())
+            ->when($request->filled('stock'), fn ($q) => $this->filterByStock($q, $request->string('stock')->value()))
             ->latest('id')
             ->paginate($request->integer('per_page', 20));
 
         return ProductResource::collection($products);
+    }
+
+    /**
+     * Narrow the list by what is actually on the shelf.
+     *
+     * Measured on AVAILABLE quantity, not on hand: stock sitting in someone
+     * else's basket cannot be sold to anybody else, so a product with ten
+     * units all reserved is out of stock for every purpose this filter
+     * serves.
+     *
+     * Untracked products are never "out": a service or a made-to-order item
+     * has no stock row and would otherwise fill the out-of-stock list with
+     * things that can always be sold.
+     */
+    private function filterByStock(Builder $query, string $filter): void
+    {
+        $hasStock = fn ($q) => $q->whereHas(
+            'variations.inventory',
+            fn ($i) => $i->where('available_quantity', '>', 0),
+        );
+
+        match ($filter) {
+            'in' => $hasStock($query),
+
+            'out' => $query->where('is_stock_tracked', true)
+                ->whereDoesntHave(
+                    'variations.inventory',
+                    fn ($i) => $i->where('available_quantity', '>', 0),
+                ),
+
+            // At or below the reorder level while still having something
+            // left -- the window in which reordering is still useful.
+            'low' => $query->where('is_stock_tracked', true)
+                ->whereHas('variations.inventory', fn ($i) => $i
+                    ->where('reorder_level', '>', 0)
+                    ->whereColumn('quantity', '<=', 'reorder_level')
+                    ->where('available_quantity', '>', 0)),
+
+            default => null,
+        };
+    }
+
+    /**
+     * Act on several products at once.
+     *
+     * Publishing forty products one at a time is the kind of task that makes
+     * people keep a spreadsheet instead. Each action is checked against its
+     * own permission -- changing a status is not the same trust as deleting.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'action' => ['required', Rule::in(['status', 'feature', 'unfeature', 'delete'])],
+            'ids' => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer'],
+            'status' => ['required_if:action,status', Rule::in(ProductStatus::values())],
+        ]);
+
+        $permission = $data['action'] === 'delete' ? 'products.delete' : 'products.update';
+
+        abort_unless($request->user()?->can($permission), 403);
+
+        $products = Product::whereIn('id', $data['ids'])->get();
+
+        $affected = DB::transaction(function () use ($products, $data): int {
+            $count = 0;
+
+            foreach ($products as $product) {
+                match ($data['action']) {
+                    'status' => $product->update(['status' => $data['status']]),
+                    'feature' => $product->update(['is_featured' => true]),
+                    'unfeature' => $product->update(['is_featured' => false]),
+
+                    // Soft delete. A product that has been sold is referenced
+                    // by order lines that must keep reading correctly, so it
+                    // is withdrawn rather than removed.
+                    'delete' => $product->delete(),
+                };
+
+                $count++;
+            }
+
+            return $count;
+        });
+
+        return response()->json([
+            'message' => match ($data['action']) {
+                'status' => "{$affected} product(s) set to ".ProductStatus::from($data['status'])->label().'.',
+                'feature' => "{$affected} product(s) featured.",
+                'unfeature' => "{$affected} product(s) no longer featured.",
+                'delete' => "{$affected} product(s) removed.",
+            },
+            'affected' => $affected,
+        ]);
     }
 
     public function store(StoreProductRequest $request): JsonResponse

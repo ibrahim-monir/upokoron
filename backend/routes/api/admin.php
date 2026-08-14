@@ -78,6 +78,10 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::post('products/preview-variations', [ProductController::class, 'previewVariations'])
         ->name('products.preview-variations');
 
+    // Publish, feature or withdraw several at once. Declared before the
+    // apiResource, or {product} would swallow "bulk" as an id.
+    Route::post('products/bulk', [ProductController::class, 'bulk'])->name('products.bulk');
+
     Route::apiResource('products', ProductController::class);
     Route::post('products/{id}/restore', [ProductController::class, 'restore'])
         ->whereNumber('id')
