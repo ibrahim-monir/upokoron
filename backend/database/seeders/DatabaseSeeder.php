@@ -32,6 +32,10 @@ class DatabaseSeeder extends Seeder
             // with no fallback zone cannot quote delivery to an unlisted
             // district, and the customer simply cannot check out.
             ShippingZoneSeeder::class,
+
+            // How the shop gets paid. Needs the chart of accounts above it,
+            // because each method posts to a named account.
+            PaymentMethodSeeder::class,
         ]);
     }
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Shop\AddressController;
 use App\Http\Controllers\Api\V1\Shop\CartController;
 use App\Http\Controllers\Api\V1\Shop\CategoryController;
+use App\Http\Controllers\Api\V1\Shop\CheckoutController;
 use App\Http\Controllers\Api\V1\Shop\ProductController;
 use App\Http\Controllers\Api\V1\Shop\ShippingController;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +82,20 @@ Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
 Route::get('shipping/zones', [ShippingController::class, 'zones'])->name('shipping.zones');
 Route::post('shipping/quote', [ShippingController::class, 'quote'])->name('shipping.quote');
 
+/*
+| Checkout.
+|
+| Guests can order: requiring an account before someone can buy loses sales,
+| and the address they type is all the shop actually needs. What the request
+| may contain is an address, a delivery option, a payment method and a note --
+| never a price or a total.
+*/
+
+Route::get('checkout', [CheckoutController::class, 'show'])->name('checkout.show');
+Route::post('checkout/shipping-options', [CheckoutController::class, 'shippingOptions'])
+    ->name('checkout.shipping-options');
+Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
 Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::post('auth/logout', [LoginController::class, 'destroy'])
         ->name('auth.logout');
@@ -90,6 +105,12 @@ Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::post('addresses', [AddressController::class, 'store'])->name('addresses.store');
     Route::put('addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
     Route::delete('addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+
+    // The customer's own order history. Scoped to them in the controller,
+    // because an order number is not a secret.
+    Route::get('orders', [CheckoutController::class, 'index'])->name('orders.index');
+    Route::get('orders/{number}', [CheckoutController::class, 'showOrder'])->name('orders.show');
+    Route::post('orders/{number}/cancel', [CheckoutController::class, 'cancel'])->name('orders.cancel');
 
     Route::get('auth/me', [ProfileController::class, 'show'])
         ->name('auth.me');

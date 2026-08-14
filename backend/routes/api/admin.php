@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController;
 use App\Http\Controllers\Api\V1\Admin\JournalEntryController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
+use App\Http\Controllers\Api\V1\Admin\OrderController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -131,6 +132,15 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
         ->name('fiscal-periods.close');
     Route::post('fiscal-periods/{period}/reopen', [AccountingReportController::class, 'reopenPeriod'])
         ->name('fiscal-periods.reopen');
+
+    // Orders. Status changes are what post to the ledger, so they are gated
+    // separately from merely reading the list.
+    Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::put('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+    Route::post('orders/{order}/payments', [OrderController::class, 'recordPayment'])->name('orders.payments');
+    Route::post('orders/{order}/refunds', [OrderController::class, 'refund'])->name('orders.refunds');
+    Route::put('orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.note');
 
     // Delivery zones, the places in them, and what each charges.
     Route::get('shipping/zones', [ShippingZoneController::class, 'index'])->name('shipping.zones.index');
