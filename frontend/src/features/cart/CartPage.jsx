@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ImageOff, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react'
-import { money } from '../../lib/format'
+import { AlertTriangle, ArrowRight, ImageOff, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react'
+import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Spinner, useToast } from '../../components/ui'
 import {
   useCart,
@@ -327,15 +327,30 @@ export function CartPage() {
             </dl>
 
             {/*
-              Checkout is Phase 8. A button that looks ready and then does
-              nothing is worse than one that says what it is waiting for.
+              Disabled while any hold has lapsed: checkout would refuse the
+              order anyway, and being told here -- next to the line that is
+              the problem -- is better than being told after filling in an
+              address.
             */}
-            <Button className="mt-4 w-full" disabled>
-              Checkout — coming soon
-            </Button>
+            <Link
+              to="/checkout"
+              aria-disabled={data.has_unheld_items}
+              onClick={(event) => {
+                if (data.has_unheld_items) event.preventDefault()
+              }}
+              className={cx(
+                'mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors',
+                data.has_unheld_items
+                  ? 'pointer-events-none bg-ink-200 text-ink-500'
+                  : 'bg-brand-600 text-white shadow-card hover:bg-brand-700',
+              )}
+            >
+              Proceed to checkout
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
 
             <p className="mt-2 text-center text-xs text-ink-500">
-              Cash on delivery will be available at checkout.
+              Cash on delivery available.
             </p>
           </div>
 

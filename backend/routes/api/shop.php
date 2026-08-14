@@ -96,6 +96,18 @@ Route::post('checkout/shipping-options', [CheckoutController::class, 'shippingOp
     ->name('checkout.shipping-options');
 Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 
+/*
+| A single order, for whoever placed it.
+|
+| Outside the auth group on purpose: guests can buy here, so guests must be
+| able to see what they bought. Without a session they have to produce the
+| delivery phone number as well as the order number -- the number alone is
+| sequential and would hand out addresses to anyone counting upwards.
+*/
+
+Route::get('orders/{number}', [CheckoutController::class, 'showOrder'])->name('orders.show');
+Route::post('orders/{number}/cancel', [CheckoutController::class, 'cancel'])->name('orders.cancel');
+
 Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::post('auth/logout', [LoginController::class, 'destroy'])
         ->name('auth.logout');
@@ -106,11 +118,8 @@ Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::put('addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
     Route::delete('addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
 
-    // The customer's own order history. Scoped to them in the controller,
-    // because an order number is not a secret.
+    // The customer's own order history.
     Route::get('orders', [CheckoutController::class, 'index'])->name('orders.index');
-    Route::get('orders/{number}', [CheckoutController::class, 'showOrder'])->name('orders.show');
-    Route::post('orders/{number}/cancel', [CheckoutController::class, 'cancel'])->name('orders.cancel');
 
     Route::get('auth/me', [ProfileController::class, 'show'])
         ->name('auth.me');

@@ -215,17 +215,23 @@ class CheckoutController extends Controller
         ]);
     }
 
+    /**
+     * One order, for the person who placed it.
+     *
+     * Guests can buy, so guests must be able to see what they bought --
+     * otherwise checkout ends by throwing the customer at a login screen with
+     * no confirmation, seconds after they committed to paying.
+     *
+     * A signed-in customer gets their own orders by id. Everyone else has to
+     * produce the delivery phone number as well as the order number: the
+     * number alone is sequential and guessable, and would otherwise hand out
+     * names and home addresses to anyone counting upwards.
+     */
     public function showOrder(Request $request, string $number): JsonResponse
     {
-        $customer = $request->user()?->customer;
-
-        abort_if($customer === null, 403, 'This account cannot place orders.');
-
-        $order = Order::query()
-            ->where('customer_id', $customer->id)
-            ->where('number', $number)
-            ->with(['items', 'paymentMethod', 'history', 'payments'])
-            ->firstOrFail();
+        $order = $this->findForCaller($request, $number, [
+            'items', 'paymentMethod', 'history', 'payments',
+        ]);
 
         return response()->json(['data' => new OrderResource($order)]);
     }
@@ -235,14 +241,7 @@ class CheckoutController extends Controller
      */
     public function cancel(Request $request, string $number): JsonResponse
     {
-        $customer = $request->user()?->customer;
-
-        abort_if($customer === null, 403, 'This account cannot place orders.');
-
-        $order = Order::query()
-            ->where('customer_id', $customer->id)
-            ->where('number', $number)
-            ->firstOrFail();
+        $order = $this->findForCaller($request, $number);
 
         $data = $request->validate([
             'reason' => ['nullable', 'string', 'max:200'],
@@ -255,5 +254,54 @@ class CheckoutController extends Controller
         );
 
         return response()->json(['message' => 'Order cancelled.']);
+    }
+
+    /**
+     * The one order this caller is entitled to see.
+     *
+     * @param  array<int, string>  $with
+     */
+    private function findForCaller(Request $request, string $number, array $with = []): Order
+    {
+        $customer = $request->user()?->customer;
+
+        $query = Order::query()->where('number', $number)->with($with);
+
+        if ($customer !== null) {
+            $owned = (clone $query)->where('customer_id', $customer->id)->first();
+
+            if ($owned !== null) {
+                return $owned;
+            }
+        }
+
+        // Query string on a GET, body on a POST; `input` covers both so the
+        // rule does not have to be written twice.
+        $phone = trim((string) $request->input('phone', ''));
+
+        abort_if(
+            $phone === '',
+            403,
+            'Sign in, or add the delivery phone number to see this order.',
+        );
+
+        $order = $query->firstOrFail();
+
+        /*
+         * Compared on digits only, and from the right-hand side.
+         *
+         * A customer who saved "+8801712345678" and later types
+         * "01712345678" means the same phone, and being told their own order
+         * does not exist is both wrong and infuriating.
+         */
+        $given = preg_replace('/\D/', '', $phone) ?? '';
+        $stored = preg_replace('/\D/', '', $order->ship_phone) ?? '';
+
+        abort_unless(
+            $given !== '' && str_ends_with($stored, substr($given, -10)),
+            404,
+        );
+
+        return $order;
     }
 }

@@ -10,11 +10,13 @@ import {
   LogOut,
   Menu,
   Package,
+  ReceiptText,
   ScrollText,
   Settings,
   Shapes,
   ShieldCheck,
   Store,
+  Truck,
   Users,
   X,
 } from 'lucide-react'
@@ -40,6 +42,15 @@ const SECTIONS = [
       { to: '/admin/brands', icon: Store, label: 'Brands', can: 'products.view' },
       { to: '/admin/attributes', icon: Shapes, label: 'Attributes', can: 'products.view' },
       { to: '/admin/media', icon: ImageIcon, label: 'Image library', can: 'media.view' },
+    ],
+  },
+  {
+    // Above Stock deliberately: this is the screen the shop opens first every
+    // morning, and the one it lives in all day.
+    label: 'Sales',
+    items: [
+      { to: '/admin/orders', icon: ReceiptText, label: 'Orders', can: 'orders.view' },
+      { to: '/admin/shipping', icon: Truck, label: 'Delivery zones', can: 'shipping.manage' },
     ],
   },
   {

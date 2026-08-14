@@ -11,6 +11,9 @@ import { ProductListPage } from '../features/storefront/ProductListPage'
 import { ProductDetailPage } from '../features/storefront/ProductDetailPage'
 import { ContactPage, ContentPage } from '../features/storefront/ContentPage'
 import { CartPage } from '../features/cart/CartPage'
+import { CheckoutPage } from '../features/checkout/CheckoutPage'
+import { OrderDetailPage } from '../features/checkout/OrderDetailPage'
+import { OrdersPage } from '../features/checkout/OrdersPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { AccountPage } from '../features/auth/AccountPage'
@@ -59,9 +62,30 @@ export const router = createBrowserRouter([
       { path: 'products', element: <ProductListPage /> },
       { path: 'products/:slug', element: <ProductDetailPage /> },
 
-      // Guests included: a shopper fills a basket before deciding whether to
-      // make an account, so this is deliberately not behind RequireAuth.
+      // Guests included: a shopper fills a basket, and buys, before deciding
+      // whether to make an account. Requiring one to check out loses sales,
+      // and the address they type is all the shop actually needs -- so these
+      // are deliberately not behind RequireAuth.
       { path: 'cart', element: <CartPage /> },
+      { path: 'checkout', element: <CheckoutPage /> },
+
+      // A single order is public, because a guest who has just bought
+      // something must see their confirmation rather than being thrown at a
+      // login screen seconds after committing to pay. Without a session the
+      // API also demands the delivery phone number, which the page carries in
+      // the URL after checkout.
+      { path: 'orders/:number', element: <OrderDetailPage /> },
+
+      // The LIST is different: "every order this person ever placed" needs an
+      // account to scope it to.
+      {
+        path: 'orders',
+        element: (
+          <RequireAuth>
+            <OrdersPage />
+          </RequireAuth>
+        ),
+      },
 
       // Footer pages. Bodies come from settings the owner writes.
       { path: 'contact', element: <ContactPage /> },
@@ -148,6 +172,15 @@ export const router = createBrowserRouter([
       {
         path: 'media',
         element: guarded('media.view', lazyAdmin(() => import('../features/admin/media/MediaLibrary'))),
+      },
+
+      {
+        path: 'orders',
+        element: guarded('orders.view', lazyAdmin(() => import('../features/admin/OrdersPage'))),
+      },
+      {
+        path: 'orders/:id',
+        element: guarded('orders.view', lazyAdmin(() => import('../features/admin/OrderDetailPage'))),
       },
 
       {
