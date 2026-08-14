@@ -29,6 +29,23 @@ return Application::configure(basePath: dirname(__DIR__))
         // HttpOnly cookie instead of a token in reachable storage.
         $middleware->statefulApi();
 
+        /*
+         * The cart token is not encrypted, on purpose.
+         *
+         * Cookie encryption only runs for requests Sanctum considers
+         * "stateful" -- ones carrying an Origin or Referer it recognises.
+         * With the token encrypted, a request without those headers cannot
+         * decrypt its own cookie, so the shopper is handed a brand new empty
+         * basket and the old one is orphaned holding stock. Cart identity
+         * must not depend on how the request happened to be labelled.
+         *
+         * The token is a random UUID that grants nothing but access to that
+         * one basket: no personal data, no money, no account. It is the same
+         * exposure every guest-cart system accepts, and far less than the
+         * session cookie sitting beside it, which stays encrypted.
+         */
+        $middleware->encryptCookies(except: ['cart_token']);
+
         $middleware->alias([
             'admin.access' => EnsureAdminAccess::class,
             'account.active' => EnsureAccountIsActive::class,

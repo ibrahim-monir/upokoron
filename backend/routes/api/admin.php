@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
+use App\Http\Controllers\Api\V1\Admin\ShippingZoneController;
 use App\Http\Controllers\Api\V1\Admin\UnitController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
@@ -130,4 +131,19 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
         ->name('fiscal-periods.close');
     Route::post('fiscal-periods/{period}/reopen', [AccountingReportController::class, 'reopenPeriod'])
         ->name('fiscal-periods.reopen');
+
+    // Delivery zones, the places in them, and what each charges.
+    Route::get('shipping/zones', [ShippingZoneController::class, 'index'])->name('shipping.zones.index');
+    Route::post('shipping/zones', [ShippingZoneController::class, 'store'])->name('shipping.zones.store');
+    Route::put('shipping/zones/{zone}', [ShippingZoneController::class, 'update'])->name('shipping.zones.update');
+    Route::delete('shipping/zones/{zone}', [ShippingZoneController::class, 'destroy'])->name('shipping.zones.destroy');
+    Route::put('shipping/zones/{zone}/areas', [ShippingZoneController::class, 'syncAreas'])
+        ->name('shipping.zones.areas');
+
+    Route::post('shipping/zones/{zone}/rates', [ShippingZoneController::class, 'storeRate'])
+        ->name('shipping.rates.store');
+    Route::put('shipping/zones/{zone}/rates/{rate}', [ShippingZoneController::class, 'updateRate'])
+        ->name('shipping.rates.update');
+    Route::delete('shipping/zones/{zone}/rates/{rate}', [ShippingZoneController::class, 'destroyRate'])
+        ->name('shipping.rates.destroy');
 });

@@ -27,6 +27,11 @@ class DatabaseSeeder extends Seeder
 
             // Catalog reference data.
             UnitSeeder::class,
+
+            // Delivery zones. Seeded rather than left empty because a shop
+            // with no fallback zone cannot quote delivery to an unlisted
+            // district, and the customer simply cannot check out.
+            ShippingZoneSeeder::class,
         ]);
     }
 }

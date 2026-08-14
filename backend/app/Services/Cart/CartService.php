@@ -1,0 +1,350 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Cart;
+
+use App\Exceptions\BusinessRuleException;
+use App\Models\Cart;
+use App\Models\CartItem;
+use App\Models\Customer;
+use App\Models\ProductVariation;
+use App\Services\Inventory\ReservationService;
+use App\Services\Pricing\PricedLine;
+use App\Services\Pricing\PricingService;
+use App\Services\Support\SettingsService;
+use App\Support\Money;
+use App\Support\Quantity;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+/**
+ * The basket, and the stock it is holding.
+ *
+ * Adding to the cart takes a real reservation against inventory, so what the
+ * shop shows as available already excludes it. That is the point of the
+ * reservation table built in Phase 5: without it, ten people can put the last
+ * unit in ten baskets and nine of them find out at checkout.
+ *
+ * The holds are temporary. An abandoned basket gives its stock back when the
+ * TTL lapses (the scheduler sweeps every five minutes), because the opposite
+ * failure -- a shop that shows itself sold out while the shelves are full --
+ * is worse and much harder to notice.
+ */
+class CartService
+{
+    public function __construct(
+        private readonly ReservationService $reservations,
+        private readonly PricingService $pricing,
+        private readonly SettingsService $settings,
+    ) {}
+
+    /**
+     * Find the caller's cart, or start one.
+     *
+     * A signed-in customer's own active cart wins over the token, so signing
+     * in on a second device shows the basket already there rather than an
+     * empty one.
+     */
+    public function resolve(?string $token, ?Customer $customer = null): Cart
+    {
+        if ($customer !== null) {
+            $existing = Cart::active()->where('customer_id', $customer->id)->latest('id')->first();
+
+            if ($existing !== null) {
+                // A guest basket built before signing in gets folded in, not
+                // thrown away.
+                if ($token !== null && $token !== $existing->token) {
+                    $guest = Cart::active()->where('token', $token)->whereNull('customer_id')->first();
+
+                    if ($guest !== null) {
+                        $this->merge($guest, $existing);
+                    }
+                }
+
+                return $existing;
+            }
+        }
+
+        $cart = $token === null ? null : Cart::active()->where('token', $token)->first();
+
+        if ($cart === null) {
+            return Cart::create([
+                'token' => (string) Str::uuid(),
+                'customer_id' => $customer?->id,
+                'status' => 'active',
+                'last_activity_at' => now(),
+                'expires_at' => $this->expiryFromNow(),
+            ]);
+        }
+
+        // Claim a guest cart for whoever just signed in.
+        if ($customer !== null && $cart->customer_id === null) {
+            $cart->forceFill(['customer_id' => $customer->id])->save();
+        }
+
+        return $cart;
+    }
+
+    /**
+     * Put something in the basket, holding the stock for it.
+     *
+     * Adding an item already present adds to its quantity rather than
+     * creating a second line.
+     */
+    public function add(Cart $cart, ProductVariation $variation, Quantity|string|int $quantity): CartItem
+    {
+        $quantity = Quantity::of($quantity);
+
+        $this->assertSellable($variation);
+        $this->assertPositive($quantity);
+
+        return DB::transaction(function () use ($cart, $variation, $quantity): CartItem {
+            $item = CartItem::where('cart_id', $cart->id)
+                ->where('product_variation_id', $variation->id)
+                ->lockForUpdate()
+                ->first();
+
+            $wanted = $item === null
+                ? $quantity
+                : $item->quantity()->plus($quantity);
+
+            return $this->hold($cart, $variation, $item, $wanted);
+        });
+    }
+
+    /**
+     * Set a line to an exact quantity. Zero removes it.
+     */
+    public function setQuantity(Cart $cart, CartItem $item, Quantity|string|int $quantity): ?CartItem
+    {
+        $quantity = Quantity::of($quantity);
+
+        if (! $quantity->isPositive()) {
+            $this->remove($cart, $item);
+
+            return null;
+        }
+
+        $this->assertSellable($item->variation);
+
+        return DB::transaction(fn (): CartItem => $this->hold($cart, $item->variation, $item, $quantity));
+    }
+
+    public function remove(Cart $cart, CartItem $item): void
+    {
+        DB::transaction(function () use ($cart, $item): void {
+            if ($item->reservation !== null) {
+                $this->reservations->release($item->reservation);
+            }
+
+            $item->delete();
+
+            $this->touchCart($cart);
+        });
+    }
+
+    public function clear(Cart $cart): void
+    {
+        DB::transaction(function () use ($cart): void {
+            // By cart token rather than by item, so a hold whose line was
+            // already deleted is still let go.
+            $this->reservations->releaseForCart($cart->token);
+
+            $cart->items()->delete();
+
+            $this->touchCart($cart);
+        });
+    }
+
+    /**
+     * Everything the storefront needs to draw the basket.
+     *
+     * Prices are worked out here, from the catalogue, every single time. The
+     * cart stores no money at all.
+     *
+     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, weight_kg: Quantity, item_count: int, has_unheld: bool}
+     */
+    public function summary(Cart $cart, ?Customer $customer = null): array
+    {
+        $cart->loadMissing([
+            'items.variation.product:id,name,slug,status,published_at',
+            'items.variation.image',
+            'items.variation.inventory',
+            'items.reservation',
+        ]);
+
+        $priced = [];
+        $lines = [];
+        $hasUnheld = false;
+
+        foreach ($cart->items as $item) {
+            $variation = $item->variation;
+
+            if ($variation === null) {
+                continue;
+            }
+
+            $line = $this->pricing->price($variation, $item->quantity(), $customer);
+            $priced[] = $line;
+
+            $available = $variation->inventory?->available() ?? Quantity::zero();
+            $held = $item->isHeld();
+
+            if (! $held) {
+                $hasUnheld = true;
+            }
+
+            $lines[] = [
+                'id' => $item->id,
+                'product_variation_id' => $variation->id,
+                'product_id' => $variation->product_id,
+                'name' => $variation->product?->name,
+                'slug' => $variation->product?->slug,
+                'variation' => $variation->displayName(),
+                'sku' => $variation->sku,
+                'image' => $variation->image?->url,
+                'quantity' => $item->quantity()->value(),
+                'list_price' => $line->listPrice->value(),
+                'unit_price' => $line->unitPrice->value(),
+                'line_total' => $line->lineTotal->value(),
+                'line_discount' => $line->lineDiscount->value(),
+                'discount_reason' => $line->discountReason,
+
+                /*
+                 * Whether the stock is still ours. A lapsed hold does not
+                 * empty the basket -- the shopper keeps seeing what they
+                 * picked -- but checkout will not accept the line until it is
+                 * taken again, and this is what tells the UI to say so.
+                 */
+                'is_held' => $held,
+                'available' => $available->value(),
+                'is_sellable' => $this->isSellable($variation),
+            ];
+        }
+
+        return [
+            'cart' => $cart,
+            'lines' => $lines,
+            'priced' => $priced,
+            'subtotal' => $this->pricing->subtotal($priced),
+            'discount' => $this->pricing->totalDiscount($priced),
+            'weight_kg' => $this->pricing->totalWeight($priced),
+            'item_count' => count($lines),
+            'has_unheld' => $hasUnheld,
+        ];
+    }
+
+    /**
+     * Fold one basket into another, keeping the stock holds straight.
+     *
+     * Used when a guest signs in. Quantities add up; anything that cannot be
+     * held any more is dropped rather than silently promised.
+     */
+    public function merge(Cart $from, Cart $into): Cart
+    {
+        DB::transaction(function () use ($from, $into): void {
+            foreach ($from->items()->with('variation')->get() as $item) {
+                if ($item->variation === null) {
+                    continue;
+                }
+
+                try {
+                    $this->add($into, $item->variation, $item->quantity());
+                } catch (BusinessRuleException) {
+                    // Out of stock now. The customer sees the merged basket
+                    // without it, which is honest; promising it and failing
+                    // at checkout is not.
+                }
+            }
+
+            $this->clear($from);
+
+            $from->forceFill(['status' => 'abandoned'])->save();
+        });
+
+        return $into->refresh();
+    }
+
+    /**
+     * Take, adjust, or re-take the stock hold behind a line.
+     *
+     * Release-then-reserve rather than adjusting in place: the whole thing
+     * runs inside one transaction, and reserve() locks the inventory row, so
+     * nobody can slip in between the two halves and take the stock we just
+     * let go of.
+     */
+    private function hold(Cart $cart, ProductVariation $variation, ?CartItem $item, Quantity $wanted): CartItem
+    {
+        if ($item?->reservation !== null) {
+            $this->reservations->release($item->reservation);
+        }
+
+        $reservation = $this->reservations->reserve(
+            variation: $variation,
+            quantity: $wanted,
+            cartToken: $cart->token,
+        );
+
+        if ($item === null) {
+            $item = CartItem::create([
+                'cart_id' => $cart->id,
+                'product_variation_id' => $variation->id,
+                'quantity' => $wanted->value(),
+                'stock_reservation_id' => $reservation->id,
+            ]);
+        } else {
+            $item->forceFill([
+                'quantity' => $wanted->value(),
+                'stock_reservation_id' => $reservation->id,
+            ])->save();
+        }
+
+        $this->touchCart($cart);
+
+        return $item->refresh();
+    }
+
+    private function touchCart(Cart $cart): void
+    {
+        $cart->forceFill([
+            'last_activity_at' => now(),
+            'expires_at' => $this->expiryFromNow(),
+        ])->save();
+    }
+
+    private function expiryFromNow(): \Illuminate\Support\Carbon
+    {
+        return now()->addMinutes($this->settings->int('reservation_ttl_minutes', 30));
+    }
+
+    private function isSellable(ProductVariation $variation): bool
+    {
+        return $variation->is_active
+            && $variation->product !== null
+            && $variation->product->status->isSellable()
+            && ($variation->product->published_at === null
+                || ! $variation->product->published_at->isFuture());
+    }
+
+    private function assertSellable(ProductVariation $variation): void
+    {
+        if (! $this->isSellable($variation)) {
+            throw new BusinessRuleException(
+                'That product is not available.',
+                'not_purchasable',
+                ['product_variation_id' => $variation->id],
+            );
+        }
+    }
+
+    private function assertPositive(Quantity $quantity): void
+    {
+        if (! $quantity->isPositive()) {
+            throw new BusinessRuleException(
+                'A quantity must be more than zero.',
+                'invalid_quantity',
+            );
+        }
+    }
+}
