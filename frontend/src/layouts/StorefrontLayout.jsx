@@ -6,6 +6,7 @@ import { get } from '../lib/api'
 import { cx } from '../lib/format'
 import { useAuthStore } from '../stores/authStore'
 import { Logo } from '../components/Logo'
+import { useCartCount } from '../features/cart/useCart'
 import { Footer } from './Footer'
 
 function useStoreSettings() {
@@ -55,8 +56,9 @@ function SearchBar({ className }) {
 /**
  * Counter badges sit on the cart and wishlist icons.
  *
- * They read 0 because neither feature has a backend yet -- that is the true
- * number, not a placeholder. When the cart module lands it feeds this.
+ * The cart count is real, read from the server's copy of the basket. The
+ * wishlist still reads 0 because that feature has no backend -- which is the
+ * true number, not a placeholder.
  */
 function IconCounter({ icon: Icon, count = 0, label, to }) {
   return (
@@ -77,6 +79,7 @@ function IconCounter({ icon: Icon, count = 0, label, to }) {
 
 export function StorefrontLayout() {
   const { data: settings } = useStoreSettings()
+  const cartCount = useCartCount()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const navigate = useNavigate()
@@ -118,7 +121,7 @@ export function StorefrontLayout() {
 
           <div className="ml-auto flex items-center gap-3 lg:gap-4">
             <div className="hidden items-center gap-4 sm:flex">
-              <IconCounter icon={ShoppingCart} to="/products" label="Cart" />
+              <IconCounter icon={ShoppingCart} to="/cart" label="Cart" count={cartCount} />
               <IconCounter icon={Heart} to="/products" />
             </div>
 
@@ -222,17 +225,16 @@ export function StorefrontLayout() {
           </a>
         )}
 
-        {/* Floating cart, as in the reference. Goes to the catalogue until
-            the cart module exists. */}
+        {/* Floating cart, as in the reference. */}
         <Link
-          to="/products"
-          aria-label="Cart"
+          to="/cart"
+          aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
           className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-raised ring-1 ring-ink-200 hover:ring-brand-300"
         >
           <span className="relative">
             <ShoppingCart className="h-5 w-5 text-brand-600" aria-hidden="true" />
             <span className="absolute -right-2.5 -top-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
-              0
+              {cartCount}
             </span>
           </span>
         </Link>

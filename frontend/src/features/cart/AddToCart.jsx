@@ -1,0 +1,131 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Check, Minus, Plus, ShoppingCart } from 'lucide-react'
+import { Button, useToast } from '../../components/ui'
+import { useAddToCart } from './useCart'
+
+/**
+ * The buy box.
+ *
+ * Availability comes from the variation the API sent, which already has
+ * everyone else's held stock subtracted -- so "3 left" means three a shopper
+ * can actually have, not three that exist somewhere in other people's carts.
+ */
+export function AddToCart({ variation, compact = false }) {
+  const toast = useToast()
+  const addToCart = useAddToCart()
+  const [quantity, setQuantity] = useState(1)
+  const [added, setAdded] = useState(false)
+
+  const available = Number(variation?.available_quantity ?? variation?.available ?? 0)
+  const inStock = available > 0
+  const canBuy = Boolean(variation) && inStock && !addToCart.isPending
+
+  const add = () => {
+    if (!variation) return
+
+    addToCart.mutate(
+      { variationId: variation.id, quantity },
+      {
+        onSuccess() {
+          setAdded(true)
+          // Long enough to register, short enough that the button is ready
+          // again before someone tries to add a second item.
+          setTimeout(() => setAdded(false), 2000)
+        },
+        onError(error) {
+          toast.error(error?.message ?? 'Could not add that to your cart.')
+        },
+      },
+    )
+  }
+
+  if (compact) {
+    return (
+      <Button size="sm" className="w-full" onClick={add} disabled={!canBuy} loading={addToCart.isPending}>
+        {added ? (
+          <>
+            <Check className="h-4 w-4" aria-hidden="true" />
+            Added
+          </>
+        ) : (
+          <>
+            <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+            {inStock ? 'Add to cart' : 'Out of stock'}
+          </>
+        )}
+      </Button>
+    )
+  }
+
+  return (
+    <div className="rounded-card border border-ink-200 bg-white p-4">
+      {inStock ? (
+        <p className="text-sm text-ink-600">
+          <span className="font-semibold text-success-700">In stock</span>
+          {available <= 5 && (
+            <span className="text-ink-500"> — only {available} left</span>
+          )}
+        </p>
+      ) : (
+        <p className="text-sm font-semibold text-danger-700">Out of stock</p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <div className="inline-flex items-center rounded-lg border border-ink-200">
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            disabled={quantity <= 1 || !inStock}
+            aria-label="Reduce quantity"
+            className="grid h-10 w-10 place-items-center rounded-l-lg text-ink-600 enabled:hover:bg-ink-50 disabled:opacity-40"
+          >
+            <Minus className="h-4 w-4" aria-hidden="true" />
+          </button>
+
+          <span className="tabular w-12 text-center font-semibold text-ink-900">{quantity}</span>
+
+          <button
+            type="button"
+            // Capped at what is actually available, so the failure happens
+            // here rather than as a server error after a click.
+            onClick={() => setQuantity((q) => Math.min(available, q + 1))}
+            disabled={quantity >= available || !inStock}
+            aria-label="Increase quantity"
+            className="grid h-10 w-10 place-items-center rounded-r-lg text-ink-600 enabled:hover:bg-ink-50 disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        <Button
+          className="flex-1"
+          onClick={add}
+          disabled={!canBuy}
+          loading={addToCart.isPending}
+        >
+          {added ? (
+            <>
+              <Check className="h-4 w-4" aria-hidden="true" />
+              Added to cart
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+              Add to cart
+            </>
+          )}
+        </Button>
+      </div>
+
+      {added && (
+        <Link
+          to="/cart"
+          className="mt-3 block text-center text-sm font-medium text-brand-600 hover:text-brand-700"
+        >
+          View cart →
+        </Link>
+      )}
+    </div>
+  )
+}

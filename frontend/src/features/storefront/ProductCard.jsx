@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Heart, ImageOff, Star } from 'lucide-react'
 import { money } from '../../lib/format'
+import { AddToCart } from '../cart/AddToCart'
 
 /**
  * The saving, in taka rather than a percentage.
@@ -84,6 +85,24 @@ export function ProductCard({ product }) {
           </span>
           <span aria-hidden="true">·</span>
           <span className="tabular">{sold % 1 === 0 ? sold : sold.toFixed(0)} Sold</span>
+        </div>
+
+        {/*
+          Straight into the basket for a simple product. A product with
+          several variations sends the shopper to the page instead, because
+          "add to cart" cannot know which colour they meant.
+        */}
+        <div className="pt-1">
+          {(product.variations_count ?? 1) > 1 ? (
+            <Link
+              to={`/products/${product.slug}`}
+              className="block rounded-lg border border-brand-200 px-3 py-2 text-center text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50"
+            >
+              Choose options
+            </Link>
+          ) : (
+            <AddToCart variation={variation} compact />
+          )}
         </div>
       </div>
     </div>

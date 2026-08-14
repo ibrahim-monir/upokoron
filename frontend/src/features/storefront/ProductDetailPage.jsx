@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { ChevronRight, ImageOff, ShieldCheck, Truck } from 'lucide-react'
 import { get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
-import { Badge, Button, ErrorState, PageLoader } from '../../components/ui'
+import { Badge, ErrorState, PageLoader } from '../../components/ui'
+import { AddToCart } from '../cart/AddToCart'
 
 export function ProductDetailPage() {
   const { slug } = useParams()
@@ -152,20 +153,7 @@ export function ProductDetailPage() {
             )}
           </dl>
 
-          {/*
-            Checkout arrives with the orders module. Showing a dead "Add to
-            cart" button would be worse than saying so plainly.
-          */}
-          <div className="rounded-card border border-dashed border-ink-300 bg-ink-50 p-4">
-            <p className="text-sm font-medium text-ink-800">Ordering opens soon</p>
-            <p className="mt-1 text-sm text-ink-500">
-              The cart and checkout are being built. Everything you see here is live data from the
-              catalogue.
-            </p>
-            <Button variant="secondary" size="sm" className="mt-3" disabled>
-              Add to cart
-            </Button>
-          </div>
+          <AddToCart variation={selected} />
 
           <div className="flex flex-col gap-2 text-sm text-ink-600">
             <p className="flex items-center gap-2">

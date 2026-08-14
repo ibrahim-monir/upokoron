@@ -29,7 +29,9 @@ class ProductController extends Controller
                 'category:id,name,slug',
                 'brand:id,name,slug',
                 'primaryImage',
-                'defaultVariation',
+                // The stock row comes with it, so a listing can grey out what
+                // is sold out instead of finding out one product page later.
+                'defaultVariation.inventory',
             ])
             ->withCount('variations')
 
@@ -129,7 +131,9 @@ class ProductController extends Controller
             'images',
             'primaryImage',
             'variations.attributeValues.attribute',
+            'variations.inventory',
             'defaultVariation.attributeValues.attribute',
+            'defaultVariation.inventory',
             'attributeValues.attribute',
         ]);
 
