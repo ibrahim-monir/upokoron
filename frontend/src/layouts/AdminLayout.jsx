@@ -1,9 +1,10 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   BookOpen,
   Boxes,
   ChevronDown,
+  ChevronRight,
   FileText,
   Image as ImageIcon,
   LayoutDashboard,
@@ -31,17 +32,25 @@ import { useAuthStore } from '../stores/authStore'
  */
 const SECTIONS = [
   {
+    // Top level, never collapsed. Both are places you go straight to rather
+    // than things you go looking for -- the image library in particular is
+    // used from every screen that has a picture on it, not only products.
     label: null,
-    items: [{ to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard', can: 'dashboard.view' }],
+    items: [
+      { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard', can: 'dashboard.view' },
+      { to: '/admin/media', icon: ImageIcon, label: 'Image library', can: 'media.view' },
+    ],
   },
   {
-    label: 'Catalogue',
+    // Named for the thing, not the jargon: the group is where you go to work
+    // on products, so "Products" is what it is called. The item inside is
+    // then "All products", which is what it actually shows.
+    label: 'Products',
     items: [
-      { to: '/admin/products', icon: Package, label: 'Products', can: 'products.view' },
+      { to: '/admin/products', icon: Package, label: 'All products', can: 'products.view' },
       { to: '/admin/categories', icon: Shapes, label: 'Categories', can: 'products.view' },
       { to: '/admin/brands', icon: Store, label: 'Brands', can: 'products.view' },
       { to: '/admin/attributes', icon: Shapes, label: 'Attributes', can: 'products.view' },
-      { to: '/admin/media', icon: ImageIcon, label: 'Image library', can: 'media.view' },
     ],
   },
   {
@@ -77,44 +86,109 @@ const SECTIONS = [
   },
 ]
 
-function SidebarNav({ onNavigate }) {
-  const can = useAuthStore((state) => state.can)
+/**
+ * One collapsible group.
+ *
+ * Open by default when the page you are on lives inside it, so the sidebar
+ * always shows where you are without anyone having to hunt for it. Collapsing
+ * is remembered for the session only -- a preference this small is not worth
+ * a server round trip, and it should not outlive the tab and confuse someone
+ * who returns tomorrow to a menu they do not remember closing.
+ */
+function NavGroup({ section, containsActive, onNavigate }) {
+  const [open, setOpen] = useState(containsActive)
+
+  // Navigating into a collapsed group opens it, or the active page would be
+  // highlighted somewhere nobody can see.
+  useEffect(() => {
+    if (containsActive) setOpen(true)
+  }, [containsActive])
+
+  const items = section.items.map(({ to, end, icon: Icon, label }) => (
+    <NavLink
+      key={to}
+      to={to}
+      end={end}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        cx(
+          'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+          section.label && 'ml-3',
+          isActive
+            ? 'bg-brand-600 font-medium text-white'
+            : 'text-ink-300 hover:bg-ink-800 hover:text-white',
+        )
+      }
+    >
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {label}
+    </NavLink>
+  ))
+
+  // The ungrouped first section (Dashboard) has no header to collapse under.
+  if (!section.label) {
+    return <div className="flex flex-col gap-1">{items}</div>
+  }
+
+  const panelId = `nav-${section.label.toLowerCase().replace(/\s+/g, '-')}`
 
   return (
-    <nav className="flex flex-col gap-6 p-3">
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-200"
+      >
+        <ChevronRight
+          className={cx('h-3.5 w-3.5 shrink-0 transition-transform', open && 'rotate-90')}
+          aria-hidden="true"
+        />
+        {section.label}
+
+        {/* A closed group holding the current page still says so. */}
+        {!open && containsActive && (
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+        )}
+      </button>
+
+      {open && (
+        <div id={panelId} className="flex flex-col gap-1">
+          {items}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SidebarNav({ onNavigate }) {
+  const can = useAuthStore((state) => state.can)
+  const { pathname } = useLocation()
+
+  return (
+    <nav className="flex flex-col gap-2 p-3">
       {SECTIONS.map((section, index) => {
         const visible = section.items.filter((item) => can(item.can))
 
         if (visible.length === 0) return null
 
-        return (
-          <div key={section.label ?? index} className="flex flex-col gap-1">
-            {section.label && (
-              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-400">
-                {section.label}
-              </p>
-            )}
+        /*
+         * `startsWith` rather than an exact match, so /admin/products/12/edit
+         * still counts as being inside Catalogue. Dashboard is excluded --
+         * its `to` is /admin, which prefixes every other route.
+         */
+        const containsActive = visible.some(
+          (item) => !item.end && pathname.startsWith(item.to),
+        )
 
-            {visible.map(({ to, end, icon: Icon, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  cx(
-                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
-                    isActive
-                      ? 'bg-brand-600 font-medium text-white'
-                      : 'text-ink-300 hover:bg-ink-800 hover:text-white',
-                  )
-                }
-              >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {label}
-              </NavLink>
-            ))}
-          </div>
+        return (
+          <NavGroup
+            key={section.label ?? index}
+            section={{ ...section, items: visible }}
+            containsActive={containsActive}
+            onNavigate={onNavigate}
+          />
         )
       })}
     </nav>
