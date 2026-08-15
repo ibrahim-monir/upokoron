@@ -74,10 +74,16 @@ export function LoginPage() {
             {...register('password')}
           />
 
-          <label className="flex items-center gap-2 text-sm text-ink-700">
-            <input type="checkbox" className="h-4 w-4 rounded border-ink-300" {...register('remember')} />
-            Keep me signed in
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm text-ink-700">
+              <input type="checkbox" className="h-4 w-4 rounded border-ink-300" {...register('remember')} />
+              Keep me signed in
+            </label>
+
+            <Link to="/forgot-password" className="text-sm font-medium text-brand-700 underline underline-offset-4">
+              Forgot password?
+            </Link>
+          </div>
 
           <Button type="submit" loading={isSubmitting} className="w-full justify-center">
             Sign in

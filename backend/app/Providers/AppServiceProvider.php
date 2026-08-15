@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use App\Services\Support\SettingsService;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureModels();
         $this->configureRateLimiting();
         $this->configurePolicies();
+        $this->configurePasswordReset();
     }
 
     private function configureModels(): void
@@ -85,5 +87,19 @@ class AppServiceProvider extends ServiceProvider
         // Role lives in the package's namespace, so convention-based policy
         // discovery does not find RolePolicy on its own.
         Gate::policy(Role::class, RolePolicy::class);
+    }
+
+    private function configurePasswordReset(): void
+    {
+        // The default notification links to a `password.reset` web route,
+        // which does not exist here -- this is an API behind an SPA. Without
+        // this, the notification queue job throws and the "forgot password"
+        // email never goes out.
+        ResetPassword::createUrlUsing(fn (User $user, string $token): string => sprintf(
+            '%s/reset-password?token=%s&email=%s',
+            rtrim((string) config('app.frontend_url'), '/'),
+            $token,
+            urlencode($user->getEmailForPasswordReset()),
+        ));
     }
 }

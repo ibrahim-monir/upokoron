@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { ApiError } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
@@ -86,6 +86,12 @@ export function AdminLoginPage() {
               error={errors.password?.message}
               {...register('password')}
             />
+
+            <p className="-mt-2 text-right text-sm">
+              <Link to="/forgot-password" className="font-medium text-brand-700 underline underline-offset-4">
+                Forgot password?
+              </Link>
+            </p>
 
             <Button type="submit" loading={isSubmitting} className="w-full justify-center">
               Sign in

@@ -18,6 +18,8 @@ import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { AccountPage } from '../features/auth/AccountPage'
 import { AdminLoginPage } from '../features/auth/AdminLoginPage'
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 
 /*
  * The whole admin panel is lazy. A customer browsing the shop should never
@@ -115,6 +117,22 @@ export const router = createBrowserRouter([
         element: (
           <RequireGuest>
             <RegisterPage />
+          </RequireGuest>
+        ),
+      },
+      {
+        path: 'forgot-password',
+        element: (
+          <RequireGuest>
+            <ForgotPasswordPage />
+          </RequireGuest>
+        ),
+      },
+      {
+        path: 'reset-password',
+        element: (
+          <RequireGuest>
+            <ResetPasswordPage />
           </RequireGuest>
         ),
       },
