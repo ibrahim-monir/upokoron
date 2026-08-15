@@ -13,7 +13,7 @@ import {
   useToast,
 } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
-import { DistrictSelect } from '../../components/DistrictSelect'
+import { DistrictSelect, useDistricts } from '../../components/DistrictSelect'
 
 /**
  * Where the shop delivers, and what it charges.
@@ -139,12 +139,52 @@ function AddressTester() {
 }
 
 /** The districts and cities a zone covers, edited as a set. */
-function AreaEditor({ zone, onClose }) {
+function AreaEditor({ zone, allZones, onClose }) {
   const toast = useToast()
   const queryClient = useQueryClient()
+  const districts = useDistricts()
   const [areas, setAreas] = useState(zone.areas.map((area) => ({ ...area })))
   const [district, setDistrict] = useState('')
   const [city, setCity] = useState('')
+
+  // Whole-district coverage already claimed by a DIFFERENT zone, keyed by
+  // lowercase district name -> the zone name that has it. Shown as a warning
+  // rather than blocked outright, since the matcher's "most specific area
+  // wins" rule means an overlap is occasionally deliberate (a city-level
+  // override sitting inside a district another zone already lists).
+  const coveredElsewhere = new Map()
+
+  for (const other of allZones ?? []) {
+    if (other.id === zone.id) continue
+
+    for (const area of other.areas) {
+      if (!area.city) coveredElsewhere.set(area.district.toLowerCase(), other.name)
+    }
+  }
+
+  const selectedWhole = new Set(
+    areas.filter((area) => !area.city).map((area) => area.district.toLowerCase()),
+  )
+
+  const toggleDistrict = (name) => {
+    const key = name.toLowerCase()
+
+    if (selectedWhole.has(key)) {
+      setAreas(areas.filter((area) => !(area.city == null && area.district.toLowerCase() === key)))
+    } else {
+      setAreas([...areas, { district: name, city: null }])
+    }
+  }
+
+  const selectAllRemaining = () => {
+    const divisions = districts.data?.divisions ?? {}
+    const toAdd = Object.values(divisions)
+      .flat()
+      .filter((name) => !selectedWhole.has(name.toLowerCase()) && !coveredElsewhere.has(name.toLowerCase()))
+      .map((name) => ({ district: name, city: null }))
+
+    setAreas([...areas, ...toAdd])
+  }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -194,7 +234,49 @@ function AreaEditor({ zone, onClose }) {
         </button>
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-500">Pick districts</p>
+        <Button type="button" variant="secondary" size="sm" onClick={selectAllRemaining}>
+          Select all remaining
+        </Button>
+      </div>
+
+      <div className="mt-1.5 max-h-56 overflow-y-auto rounded-lg border border-ink-200 bg-white p-2.5">
+        {districts.isLoading ? (
+          <Spinner />
+        ) : (
+          Object.entries(districts.data?.divisions ?? {}).map(([division, names]) => (
+            <div key={division} className="mb-2 last:mb-0">
+              <p className="mb-1 text-xs font-semibold text-ink-500">{division} division</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {names.map((name) => {
+                  const key = name.toLowerCase()
+                  const claimedBy = coveredElsewhere.get(key)
+
+                  return (
+                    <label
+                      key={name}
+                      className="flex items-center gap-1.5 text-sm text-ink-800"
+                      title={claimedBy ? `Also listed in ${claimedBy}` : undefined}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedWhole.has(key)}
+                        onChange={() => toggleDistrict(name)}
+                        className="h-4 w-4 rounded border-ink-300 text-brand-600"
+                      />
+                      {name}
+                      {claimedBy && <span className="text-xs text-warning-700">· also in {claimedBy}</span>}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {areas.length === 0 ? (
           <p className="text-sm text-ink-500">
             No areas listed. {zone.is_fallback
@@ -222,7 +304,11 @@ function AreaEditor({ zone, onClose }) {
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <p className="mt-3 text-xs font-medium uppercase tracking-wide text-ink-500">
+        Or name one city inside a district
+      </p>
+
+      <div className="mt-1.5 flex flex-wrap gap-2">
         {/*
           A zone may only name a real district. Typed free, a misspelling
           creates an area that matches no address ever entered, and the zone
@@ -390,7 +476,7 @@ function RateEditor({ zone, rate, onClose }) {
   )
 }
 
-function ZoneCard({ zone }) {
+function ZoneCard({ zone, allZones }) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const can = useAuthStore((state) => state.can)
@@ -464,7 +550,7 @@ function ZoneCard({ zone }) {
 
       <div className="flex flex-col gap-3 p-4">
         {editing?.kind === 'areas' ? (
-          <AreaEditor zone={zone} onClose={() => setEditing(null)} />
+          <AreaEditor zone={zone} allZones={allZones} onClose={() => setEditing(null)} />
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {zone.areas.length === 0 ? (
@@ -652,7 +738,7 @@ export default function ShippingZonesPage() {
       <AddressTester />
 
       {list.map((zone) => (
-        <ZoneCard key={zone.id} zone={zone} />
+        <ZoneCard key={zone.id} zone={zone} allZones={list} />
       ))}
     </div>
   )
