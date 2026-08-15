@@ -1,0 +1,193 @@
+name: Deploy to production
+
+# Runs on every push to main, and can also be triggered by hand from the
+# Actions tab. Run it BY HAND at least once before trusting the push
+# trigger -- see the note in the "Extract on the server" step below about
+# why the extraction call is the one part of this pipeline that could not
+# be verified against the real host ahead of time.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+env:
+  CPANEL_HOST: premium.mywhiteserver.com
+  CPANEL_USER: upokoron
+  DOMAIN: https://upokoron.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # --------------------------------------------------------- backend
+
+      - name: Install PHP dependencies (no dev, optimized, authoritative)
+        working-directory: backend
+        run: composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction --no-progress
+
+      # A stale composer.lock resolved on a machine running a newer PHP
+      # would sail past this build and only fail on the server, as a 500
+      # with no message. See build.ps1 for the same check.
+      - name: Verify the vendor bundle still targets PHP 8.3
+        working-directory: backend
+        run: |
+          FLOOR=$(grep -oP 'PHP_VERSION_ID >= \K\d+' vendor/composer/platform_check.php)
+          if [ "$FLOOR" -gt 80399 ]; then
+            echo "::error::vendor/ needs PHP $FLOOR, which rules out a PHP 8.3 host. Run 'composer update' so the platform pin (8.3.0) takes effect."
+            exit 1
+          fi
+
+      # --------------------------------------------------------- frontend
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build the React app
+        working-directory: frontend
+        run: npm run build
+
+      # ------------------------------------------------- assemble the bundle
+      #
+      # Ships the FULL vendor/ every time, not the slim update-only bundle
+      # build.ps1 offers for a manual deploy. Composer's classmap-authoritative
+      # mode means ANY new or removed PHP class needs a fresh vendor/ -- we
+      # learned this the hard way deploying by hand, when a slim update left
+      # the server's autoloader unable to find a brand-new Enum class. An
+      # automated pipeline should not have to reason about whether this
+      # particular push changed a class; always shipping vendor/ removes the
+      # question, and 8 MB is nothing for a CI runner to upload.
+
+      - name: Assemble the deploy bundle
+        run: |
+          set -euo pipefail
+
+          STAGE="$RUNNER_TEMP/stage"
+          APP_OUT="$STAGE/laravel"
+          WEB_OUT="$STAGE/public_html"
+          mkdir -p "$APP_OUT" "$WEB_OUT/api" "$WEB_OUT/uploads"
+
+          for item in app bootstrap config database lang resources routes artisan composer.json composer.lock vendor; do
+            cp -r "backend/$item" "$APP_OUT/$item"
+          done
+
+          # bootstrap/cache and storage ship empty -- a cached config baked
+          # from CI's environment must never reach the server, and CI has no
+          # logs worth carrying over.
+          rm -f "$APP_OUT"/bootstrap/cache/*.php
+          for dir in storage/app/private storage/app/public storage/framework/cache/data \
+                     storage/framework/sessions storage/framework/testing storage/framework/views storage/logs; do
+            mkdir -p "$APP_OUT/$dir"
+            printf '*\n!.gitignore\n' > "$APP_OUT/$dir/.gitignore"
+          done
+
+          COMMIT=$(git rev-parse --short HEAD)
+          printf '{"commit":"%s","built_at":"%s"}' "$COMMIT" "$(date -u '+%Y-%m-%d %H:%M')" > "$APP_OUT/build.json"
+
+          cp -r frontend/dist/. "$WEB_OUT/"
+          cp deploy/api-index.php "$WEB_OUT/api/index.php"
+          cp deploy/api.htaccess "$WEB_OUT/api/.htaccess"
+          cp deploy/public_html.htaccess "$WEB_OUT/.htaccess"
+          cp deploy/update.php "$WEB_OUT/update.php"
+
+          for file in robots.txt favicon.ico; do
+            [ -f "backend/public/$file" ] && [ ! -f "$WEB_OUT/$file" ] && cp "backend/public/$file" "$WEB_OUT/$file" || true
+          done
+
+          # uploads/ is not touched here on purpose -- it holds live product
+          # images and must never be overwritten by a code deploy.
+          rmdir "$WEB_OUT/uploads"
+
+          cd "$STAGE"
+          zip -r -q "$RUNNER_TEMP/deploy.zip" laravel public_html
+          echo "Bundle: $(du -h "$RUNNER_TEMP/deploy.zip" | cut -f1)"
+
+      # ------------------------------------------------------------ upload
+      #
+      # Fileman::upload_files is a documented, current UAPI function --
+      # this call is on solid ground.
+
+      - name: Upload the bundle to cPanel
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -f \
+            -H "Authorization: cpanel ${CPANEL_USER}:${{ secrets.CPANEL_API_TOKEN }}" \
+            -F "dir=/home/${CPANEL_USER}" \
+            -F "file-1=@${RUNNER_TEMP}/deploy.zip;filename=deploy.zip" \
+            "https://${CPANEL_HOST}:2083/execute/Fileman/upload_files")
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"failed":0' || { echo "::error::Upload reported a failure."; exit 1; }
+
+      # ------------------------------------------------------------ extract
+      #
+      # NOTE: unlike upload_files, there is no current UAPI function for
+      # extraction -- this has to go through the older cPanel API 2 fileop
+      # call. The parameters below (op=extract, sourcefiles, destfiles=.,
+      # doubledecode=1) match cPanel's own published API 2 reference, and
+      # token auth is documented to work for API 2 as well as UAPI, but this
+      # exact call was NOT tested against the live account before this
+      # workflow was written. Run this workflow BY HAND once (Actions tab ->
+      # Deploy to production -> Run workflow) and read the "Extract" step's
+      # output before ever relying on the push trigger unsupervised.
+
+      - name: Extract on the server
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -f \
+            -H "Authorization: cpanel ${CPANEL_USER}:${{ secrets.CPANEL_API_TOKEN }}" \
+            --get \
+            --data-urlencode "cpanel_jsonapi_user=${CPANEL_USER}" \
+            --data-urlencode "cpanel_jsonapi_apiversion=2" \
+            --data-urlencode "cpanel_jsonapi_module=Fileman" \
+            --data-urlencode "cpanel_jsonapi_func=fileop" \
+            --data-urlencode "op=extract" \
+            --data-urlencode "sourcefiles=deploy.zip" \
+            --data-urlencode "destfiles=." \
+            --data-urlencode "doubledecode=1" \
+            "https://${CPANEL_HOST}:2083/json-api/cpanel")
+          echo "$RESPONSE"
+
+      - name: Remove the uploaded zip
+        continue-on-error: true
+        run: |
+          curl -sS \
+            -H "Authorization: cpanel ${CPANEL_USER}:${{ secrets.CPANEL_API_TOKEN }}" \
+            --get \
+            --data-urlencode "cpanel_jsonapi_user=${CPANEL_USER}" \
+            --data-urlencode "cpanel_jsonapi_apiversion=2" \
+            --data-urlencode "cpanel_jsonapi_module=Fileman" \
+            --data-urlencode "cpanel_jsonapi_func=fileop" \
+            --data-urlencode "op=unlink" \
+            --data-urlencode "sourcefiles=deploy.zip" \
+            "https://${CPANEL_HOST}:2083/json-api/cpanel"
+
+      # -------------------------------------------------- migrate & rebuild
+
+      - name: Run migrations and rebuild caches
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -f -X POST \
+            -d "token=${{ secrets.UPDATE_TOKEN }}" \
+            -d "action=update" \
+            "${DOMAIN}/update.php")
+
+          if echo "$RESPONSE" | grep -q "did not finish"; then
+            echo "$RESPONSE"
+            echo "::error::The update endpoint reported a failure. Previous code is still serving -- nothing live is broken, but this push did not deploy."
+            exit 1
+          fi
+
+          echo "Update applied."
