@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Enums\AuditEvent;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\PasswordChanged;
 use App\Services\Support\AuditService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
@@ -46,6 +47,7 @@ class PasswordController extends Controller
         $user->tokens()->delete();
 
         $this->audit->record(AuditEvent::PasswordChanged, $user);
+        $user->notify(new PasswordChanged());
 
         return response()->json(['message' => 'Password changed. Other devices have been signed out.']);
     }
@@ -88,6 +90,7 @@ class PasswordController extends Controller
                 $user->tokens()->delete();
 
                 $this->audit->record(AuditEvent::PasswordChanged, $user, null, ['via' => 'reset_link']);
+                $user->notify(new PasswordChanged());
 
                 event(new PasswordReset($user));
             }
