@@ -121,8 +121,8 @@ export function Th({ numeric, className, children, ...props }) {
     <th
       scope="col"
       className={cx(
-        'border-b border-ink-200 bg-ink-50 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-ink-600',
-        numeric && 'numeric',
+        'border-b border-ink-200 bg-ink-50 px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-600',
+        numeric ? 'numeric' : 'text-left',
         className,
       )}
       {...props}

@@ -64,7 +64,7 @@ function HeroCarousel() {
       aria-roledescription="carousel"
       aria-label="Promotions"
       className={cx(
-        'relative flex min-h-64 flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br p-6 text-white sm:min-h-[19rem] sm:p-10',
+        'relative flex min-h-64 flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br p-6 text-white sm:min-h-[19rem] sm:p-10 lg:h-[19rem]',
         slide.from,
         slide.to,
       )}
@@ -125,52 +125,54 @@ function CategorySidebar() {
   const categories = query.data ?? []
 
   return (
-    <aside className="hidden w-64 shrink-0 self-start overflow-hidden rounded-lg border border-ink-200 bg-white lg:block">
-      <h2 className="flex items-center gap-2 bg-brand-600 px-4 py-3.5 font-semibold text-white">
+    <aside className="hidden w-64 shrink-0 flex-col overflow-hidden rounded-lg border border-ink-200 bg-white lg:flex lg:h-[19rem]">
+      <h2 className="flex shrink-0 items-center gap-2 bg-brand-600 px-4 py-3.5 font-semibold text-white">
         <SlidersHorizontal className="h-4.5 w-4.5" aria-hidden="true" />
         All Categories
       </h2>
 
-      {query.isLoading ? (
-        <ul className="divide-y divide-ink-100">
-          {Array.from({ length: 7 }).map((_, index) => (
-            <li key={index} className="flex items-center gap-3 p-2.5">
-              <span className="h-10 w-10 animate-pulse rounded bg-ink-100" />
-              <span className="h-3.5 w-24 animate-pulse rounded bg-ink-100" />
-            </li>
-          ))}
-        </ul>
-      ) : categories.length === 0 ? (
-        <p className="p-4 text-sm text-ink-500">No categories yet.</p>
-      ) : (
-        <ul className="divide-y divide-ink-100">
-          {categories.map((category) => (
-            <li key={category.id}>
-              <Link
-                to={`/products?category=${category.slug}`}
-                className="group flex items-center gap-3 p-2.5 transition-colors hover:bg-brand-50"
-              >
-                <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded bg-ink-100 text-sm font-bold text-ink-500">
-                  {category.image ? (
-                    <img src={category.image} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    category.name.charAt(0)
-                  )}
-                </span>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {query.isLoading ? (
+          <ul className="divide-y divide-ink-100">
+            {Array.from({ length: 7 }).map((_, index) => (
+              <li key={index} className="flex items-center gap-3 p-2.5">
+                <span className="h-10 w-10 animate-pulse rounded bg-ink-100" />
+                <span className="h-3.5 w-24 animate-pulse rounded bg-ink-100" />
+              </li>
+            ))}
+          </ul>
+        ) : categories.length === 0 ? (
+          <p className="p-4 text-sm text-ink-500">No categories yet.</p>
+        ) : (
+          <ul className="divide-y divide-ink-100">
+            {categories.map((category) => (
+              <li key={category.id}>
+                <Link
+                  to={`/products?category=${category.slug}`}
+                  className="group flex items-center gap-3 p-2.5 transition-colors hover:bg-brand-50"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded bg-ink-100 text-sm font-bold text-ink-500">
+                    {category.image ? (
+                      <img src={category.image} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      category.name.charAt(0)
+                    )}
+                  </span>
 
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink-800 group-hover:text-brand-700">
-                  {category.name}
-                </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink-800 group-hover:text-brand-700">
+                    {category.name}
+                  </span>
 
-                <ChevronRight
-                  className="h-4 w-4 shrink-0 text-ink-400 group-hover:text-brand-600"
-                  aria-hidden="true"
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+                  <ChevronRight
+                    className="h-4 w-4 shrink-0 text-ink-400 group-hover:text-brand-600"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </aside>
   )
 }

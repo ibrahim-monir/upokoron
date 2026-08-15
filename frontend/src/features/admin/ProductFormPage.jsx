@@ -375,6 +375,14 @@ export default function ProductFormPage() {
               />
 
               <Field
+                label="Link (slug)"
+                placeholder="left blank, made from the name"
+                hint="Changing this on a live product breaks links people have saved."
+                error={errors.slug?.message}
+                {...register('slug')}
+              />
+
+              <Field
                 label="Short description"
                 placeholder="One line, shown under the name"
                 error={errors.short_description?.message}
@@ -410,7 +418,7 @@ export default function ProductFormPage() {
 
             <div className="grid gap-4 p-4 sm:grid-cols-2">
               <Field
-                label="Selling price"
+                label="Regular Price"
                 required
                 type="number"
                 step="0.01"
@@ -420,7 +428,7 @@ export default function ProductFormPage() {
               />
 
               <Field
-                label="Compare-at price"
+                label="Sale Price"
                 type="number"
                 step="0.01"
                 min="0"
@@ -528,14 +536,6 @@ export default function ProductFormPage() {
             </summary>
 
             <div className="grid gap-4 border-t border-ink-100 p-4">
-              <Field
-                label="Link (slug)"
-                placeholder="left blank, made from the name"
-                hint="Changing this on a live product breaks links people have saved."
-                error={errors.slug?.message}
-                {...register('slug')}
-              />
-
               <Field
                 label="Page title"
                 hint="Up to 160 characters. Blank uses the product name."
