@@ -63,7 +63,7 @@ class CategoryController extends Controller
             $products = Product::query()
                 ->published()
                 ->inCategory($category)
-                ->with(['brand:id,name,slug', 'primaryImage', 'defaultVariation'])
+                ->with(['brand:id,name,slug', 'primaryImage', 'defaultVariation.inventory'])
                 ->latest('id')
                 ->limit($perCategory)
                 ->get();
