@@ -72,6 +72,7 @@ jobs:
       # question, and 8 MB is nothing for a CI runner to upload.
 
       - name: Assemble the deploy bundle
+        id: assemble
         run: |
           set -euo pipefail
 
@@ -98,6 +99,7 @@ jobs:
 
           COMMIT=$(git rev-parse --short HEAD)
           printf '{"commit":"%s","built_at":"%s"}' "$COMMIT" "$(date -u '+%Y-%m-%d %H:%M')" > "$APP_OUT/build.json"
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
 
           cp -r frontend/dist/. "$WEB_OUT/"
           cp deploy/api-index.php "$WEB_OUT/api/index.php"
@@ -139,13 +141,13 @@ jobs:
       #
       # NOTE: unlike upload_files, there is no current UAPI function for
       # extraction -- this has to go through the older cPanel API 2 fileop
-      # call. The parameters below (op=extract, sourcefiles, destfiles=.,
-      # doubledecode=1) match cPanel's own published API 2 reference, and
-      # token auth is documented to work for API 2 as well as UAPI, but this
-      # exact call was NOT tested against the live account before this
-      # workflow was written. Run this workflow BY HAND once (Actions tab ->
-      # Deploy to production -> Run workflow) and read the "Extract" step's
-      # output before ever relying on the push trigger unsupervised.
+      # call. The first live run of this workflow proved relative paths
+      # ("destfiles=.") are rejected -- "resolves outside your home
+      # directory" -- so both sourcefiles and destfiles are fully-qualified
+      # here. It also proved the response is HTTP 200 even when the
+      # operation itself failed (cPanel encodes success/failure in the JSON
+      # body, not the status code), which is why the result is parsed
+      # explicitly below instead of trusting curl's exit code.
 
       - name: Extract on the server
         run: |
@@ -158,11 +160,12 @@ jobs:
             --data-urlencode "cpanel_jsonapi_module=Fileman" \
             --data-urlencode "cpanel_jsonapi_func=fileop" \
             --data-urlencode "op=extract" \
-            --data-urlencode "sourcefiles=deploy.zip" \
-            --data-urlencode "destfiles=." \
+            --data-urlencode "sourcefiles=/home/${CPANEL_USER}/deploy.zip" \
+            --data-urlencode "destfiles=/home/${CPANEL_USER}" \
             --data-urlencode "doubledecode=1" \
             "https://${CPANEL_HOST}:2083/json-api/cpanel")
           echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"result":1' || { echo "::error::Extraction failed -- see the response above."; exit 1; }
 
       - name: Remove the uploaded zip
         continue-on-error: true
@@ -175,7 +178,7 @@ jobs:
             --data-urlencode "cpanel_jsonapi_module=Fileman" \
             --data-urlencode "cpanel_jsonapi_func=fileop" \
             --data-urlencode "op=unlink" \
-            --data-urlencode "sourcefiles=deploy.zip" \
+            --data-urlencode "sourcefiles=/home/${CPANEL_USER}/deploy.zip" \
             "https://${CPANEL_HOST}:2083/json-api/cpanel"
 
       # -------------------------------------------------- migrate & rebuild
@@ -195,3 +198,19 @@ jobs:
           fi
 
           echo "Update applied."
+
+      # This is the check that would have caught today's failure: everything
+      # above can report success while public_html quietly still has the
+      # previous build, because update.php's own checks only look at the
+      # Laravel/vendor side, not the static frontend files. Fetching the
+      # status page fresh and grepping for this run's commit is the only
+      # thing that actually confirms the new code is live.
+      - name: Verify the live build matches this commit
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -f "${DOMAIN}/update.php?token=${{ secrets.UPDATE_TOKEN }}")
+          echo "$RESPONSE" | grep -q "${{ steps.assemble.outputs.commit }}" || {
+            echo "::error::The live site still does not report commit ${{ steps.assemble.outputs.commit }}. The deploy did not actually land -- check the Extract step's response."
+            exit 1
+          }
+          echo "Confirmed: production is now running ${{ steps.assemble.outputs.commit }}."
