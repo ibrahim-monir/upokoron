@@ -14,6 +14,7 @@ use App\Services\Inventory\InventoryService;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -22,45 +23,72 @@ class InventoryController extends Controller
     public function __construct(private readonly InventoryService $inventory) {}
 
     /**
-     * Stock levels across the catalogue.
+     * Every stock-tracked variation, not just ones that have moved.
+     *
+     * A product just created has no row in `inventories` yet -- nothing has
+     * happened to it. Left-joining rather than querying `inventories`
+     * directly means it still shows up here, at zero, right after creation:
+     * this list is "what should have stock," not "what has ever had stock."
      */
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()?->can('inventory.view'), 403);
 
-        $rows = Inventory::query()
-            ->with(['variation:id,product_id,sku,name,selling_price', 'variation.product:id,name,slug'])
+        $base = DB::table('product_variations as v')
+            ->join('products as p', 'p.id', '=', 'v.product_id')
+            ->leftJoin('inventories as i', 'i.product_variation_id', '=', 'v.id')
+            ->whereNull('v.deleted_at')
+            ->where('p.is_stock_tracked', true)
             ->when($request->filled('search'), function ($query) use ($request): void {
                 $term = '%'.$request->string('search')->value().'%';
 
-                $query->whereHas('variation', fn ($v) => $v->where('sku', 'like', $term)
-                    ->orWhere('barcode', 'like', $term)
-                    ->orWhereHas('product', fn ($p) => $p->where('name', 'like', $term)));
+                $query->where(fn ($q) => $q->where('v.sku', 'like', $term)
+                    ->orWhere('v.barcode', 'like', $term)
+                    ->orWhere('p.name', 'like', $term));
             })
-            ->when($request->string('filter')->value() === 'low', fn ($q) => $q->lowStock())
-            ->when($request->string('filter')->value() === 'out', fn ($q) => $q->outOfStock())
-            ->when($request->string('filter')->value() === 'in', fn ($q) => $q->inStock())
-            ->orderByDesc('last_movement_at')
-            ->orderBy('id')
-            ->paginate($request->integer('per_page', 25));
+            ->when(
+                $request->string('filter')->value() === 'low',
+                fn ($q) => $q->where('i.reorder_level', '>', 0)->whereColumn('i.quantity', '<=', 'i.reorder_level'),
+            )
+            ->when(
+                $request->string('filter')->value() === 'out',
+                fn ($q) => $q->where(fn ($q2) => $q2->whereNull('i.id')->orWhere('i.available_quantity', '<=', 0)),
+            )
+            ->when(
+                $request->string('filter')->value() === 'in',
+                fn ($q) => $q->whereNotNull('i.id')->where('i.available_quantity', '>', 0),
+            );
+
+        $rows = $base
+            ->orderByRaw('i.last_movement_at is null')
+            ->orderByDesc('i.last_movement_at')
+            ->orderBy('v.id')
+            ->paginate($request->integer('per_page', 25), [
+                'i.id as inventory_id', 'v.id as variation_id', 'v.sku', 'v.name as variation_name',
+                'v.selling_price', 'p.name as product_name',
+                'i.quantity', 'i.reserved_quantity', 'i.available_quantity', 'i.average_cost',
+                'i.stock_value', 'i.reorder_level', 'i.last_movement_at',
+            ]);
 
         return response()->json([
-            'data' => collect($rows->items())->map(fn (Inventory $row) => [
-                'id' => $row->id,
-                'product_variation_id' => $row->product_variation_id,
-                'sku' => $row->variation?->sku,
-                'product' => $row->variation?->product?->name,
-                'variation' => $row->variation?->name,
-                'selling_price' => $row->variation?->selling_price,
-                'quantity' => $row->quantity,
-                'reserved_quantity' => $row->reserved_quantity,
-                'available_quantity' => $row->available_quantity,
-                'average_cost' => $row->average_cost,
-                'stock_value' => $row->stock_value,
-                'reorder_level' => $row->reorder_level,
-                'is_low' => $row->isBelowReorderLevel(),
-                'is_out' => $row->isOutOfStock(),
-                'last_movement_at' => $row->last_movement_at?->toIso8601String(),
+            'data' => collect($rows->items())->map(fn (object $row) => [
+                'id' => $row->inventory_id,
+                'product_variation_id' => $row->variation_id,
+                'sku' => $row->sku,
+                'product' => $row->product_name,
+                'variation' => $row->variation_name,
+                'selling_price' => $row->selling_price,
+                'quantity' => $row->quantity ?? '0.000',
+                'reserved_quantity' => $row->reserved_quantity ?? '0.000',
+                'available_quantity' => $row->available_quantity ?? '0.000',
+                'average_cost' => $row->average_cost ?? '0.000000',
+                'stock_value' => $row->stock_value ?? '0.00',
+                'reorder_level' => $row->reorder_level ?? '0.000',
+                'is_low' => $row->reorder_level > 0 && (float) $row->quantity <= (float) $row->reorder_level,
+                'is_out' => $row->available_quantity === null || (float) $row->available_quantity <= 0,
+                'last_movement_at' => $row->last_movement_at !== null
+                    ? Carbon::parse($row->last_movement_at)->toIso8601String()
+                    : null,
             ]),
             'meta' => [
                 'current_page' => $rows->currentPage(),
@@ -240,14 +268,20 @@ class InventoryController extends Controller
      */
     private function summary(): array
     {
-        $totals = DB::table('inventories')
+        // Matches index()'s left join: a stock-tracked variation with no
+        // inventories row yet still counts as tracked, and as out of stock.
+        $totals = DB::table('product_variations as v')
+            ->join('products as p', 'p.id', '=', 'v.product_id')
+            ->leftJoin('inventories as i', 'i.product_variation_id', '=', 'v.id')
+            ->whereNull('v.deleted_at')
+            ->where('p.is_stock_tracked', true)
             // `lines` is a reserved word in MySQL (LOAD DATA ... LINES
             // TERMINATED BY), so an unquoted alias is a syntax error and this
             // whole summary 500s.
             ->selectRaw('COUNT(*) as tracked_lines')
-            ->selectRaw('COALESCE(SUM(stock_value), 0) as value')
-            ->selectRaw('SUM(CASE WHEN available_quantity <= 0 THEN 1 ELSE 0 END) as out_of_stock')
-            ->selectRaw('SUM(CASE WHEN reorder_level > 0 AND quantity <= reorder_level THEN 1 ELSE 0 END) as low_stock')
+            ->selectRaw('COALESCE(SUM(i.stock_value), 0) as value')
+            ->selectRaw('SUM(CASE WHEN i.id IS NULL OR i.available_quantity <= 0 THEN 1 ELSE 0 END) as out_of_stock')
+            ->selectRaw('SUM(CASE WHEN i.reorder_level > 0 AND i.quantity <= i.reorder_level THEN 1 ELSE 0 END) as low_stock')
             ->first();
 
         return [

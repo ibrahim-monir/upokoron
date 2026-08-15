@@ -117,108 +117,6 @@ function AdjustForm({ row, onDone }) {
   )
 }
 
-/**
- * A product with no stock movement yet has no row in `inventories`, so it
- * never appears in the list above -- there is nothing to click "Adjust" on.
- * This searches the catalogue directly and hands back a variation, which is
- * all AdjustForm actually needs.
- */
-function NewItemPicker({ onPick, onCancel }) {
-  const [search, setSearch] = useState('')
-  const [product, setProduct] = useState(null)
-
-  const results = useQuery({
-    queryKey: ['admin', 'products', 'stock-picker', search],
-    queryFn: () => get('/admin/products', { params: { search, per_page: 10 } }),
-    enabled: search.trim().length > 1,
-  })
-
-  const detail = useQuery({
-    queryKey: ['admin', 'products', 'stock-picker-detail', product?.id],
-    queryFn: () => get(`/admin/products/${product.id}`),
-    enabled: product != null,
-  })
-
-  const variations = detail.data?.product?.variations ?? []
-
-  return (
-    <Card>
-      <CardHeader
-        title="Add a new item to inventory"
-        description="Search for a product that has never had stock, then pick which variation to open a balance for."
-      />
-
-      <div className="flex flex-col gap-3 p-4">
-        {!product ? (
-          <>
-            <Input
-              autoFocus
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by product name or SKU"
-              aria-label="Search products"
-            />
-
-            {results.isFetching && <Spinner />}
-
-            {search.trim().length > 1 && !results.isFetching && (results.data?.data ?? []).length === 0 && (
-              <p className="text-sm text-ink-500">No products match.</p>
-            )}
-
-            <ul className="divide-y divide-ink-100">
-              {(results.data?.data ?? []).map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => setProduct(item)}
-                    className="flex w-full items-center justify-between gap-3 p-2.5 text-left hover:bg-ink-50"
-                  >
-                    <span className="text-sm font-medium text-ink-900">{item.name}</span>
-                    <span className="text-xs text-ink-500">
-                      {item.variations_count} variation{item.variations_count === 1 ? '' : 's'}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : detail.isLoading ? (
-          <Spinner />
-        ) : (
-          <>
-            <p className="text-sm text-ink-600">
-              Pick the variation to stock for <span className="font-medium text-ink-900">{product.name}</span>:
-            </p>
-
-            <ul className="divide-y divide-ink-100">
-              {variations.map((v) => (
-                <li key={v.id}>
-                  <button
-                    type="button"
-                    onClick={() => onPick({ product_variation_id: v.id, sku: v.sku })}
-                    className="flex w-full items-center justify-between gap-3 p-2.5 text-left hover:bg-ink-50"
-                  >
-                    <span className="text-sm font-medium text-ink-900">{v.name || product.name}</span>
-                    <span className="text-xs text-ink-500">{v.sku}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            <Button variant="secondary" size="sm" onClick={() => setProduct(null)} className="self-start">
-              Back to search
-            </Button>
-          </>
-        )}
-
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </Card>
-  )
-}
-
 function Movements({ row, onClose }) {
   const query = useQuery({
     queryKey: ['admin', 'inventory', 'movements', row.product_variation_id],
@@ -294,7 +192,6 @@ export default function InventoryPage() {
   const [search, setSearch] = useState(params.get('search') ?? '')
   const [adjusting, setAdjusting] = useState(null)
   const [viewing, setViewing] = useState(null)
-  const [picking, setPicking] = useState(false)
 
   const query = useList('admin.inventory', '/admin/inventory', {
     search: params.get('search') || undefined,
@@ -353,15 +250,6 @@ export default function InventoryPage() {
 
       {adjusting && <AdjustForm row={adjusting} onDone={() => setAdjusting(null)} />}
       {viewing && <Movements row={viewing} onClose={() => setViewing(null)} />}
-      {picking && (
-        <NewItemPicker
-          onPick={(row) => {
-            setPicking(false)
-            setAdjusting(row)
-          }}
-          onCancel={() => setPicking(false)}
-        />
-      )}
 
       <div className="flex flex-wrap gap-2">
         <form
@@ -396,12 +284,6 @@ export default function InventoryPage() {
             </option>
           ))}
         </Select>
-
-        {can('inventory.opening') && (
-          <Button variant="secondary" onClick={() => setPicking(true)}>
-            New item
-          </Button>
-        )}
       </div>
 
       {query.isError && <ErrorState error={query.error} onRetry={query.refetch} />}
@@ -413,13 +295,8 @@ export default function InventoryPage() {
       ) : rows.length === 0 ? (
         <EmptyState
           icon={Boxes}
-          title="Nothing in stock yet"
-          description="Stock appears once a product has had an opening balance or a purchase."
-          action={
-            can('inventory.opening') && (
-              <Button onClick={() => setPicking(true)}>Add opening stock</Button>
-            )
-          }
+          title="No stock-tracked products yet"
+          description="Every product with stock counting turned on lists here automatically, starting at zero. Create a product to see it appear."
         />
       ) : (
         <>
