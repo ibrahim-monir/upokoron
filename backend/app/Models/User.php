@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Notifications\QueuedResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -71,5 +72,15 @@ class User extends Authenticatable
         return static::where('email', $identifier)
             ->orWhere('phone', $identifier)
             ->first();
+    }
+
+    /**
+     * Overrides the default synchronous notification so a slow or failing
+     * mail transport cannot turn a forgot-password request into a 500 --
+     * see App\Notifications\QueuedResetPassword.
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new QueuedResetPassword($token));
     }
 }
