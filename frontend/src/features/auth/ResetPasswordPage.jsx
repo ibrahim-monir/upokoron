@@ -40,7 +40,7 @@ export function ResetPasswordPage() {
 
   const onSubmit = async (values) => {
     try {
-      await post('/auth/reset-password', { ...values, token, email })
+      await post('/shop/auth/reset-password', { ...values, token, email })
 
       toast.success('Password reset. You can sign in now.')
       navigate('/login', { replace: true })

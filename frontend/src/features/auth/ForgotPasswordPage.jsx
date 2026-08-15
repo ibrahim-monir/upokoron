@@ -28,7 +28,7 @@ export function ForgotPasswordPage() {
 
   const onSubmit = async (values) => {
     try {
-      await post('/auth/forgot-password', values)
+      await post('/shop/auth/forgot-password', values)
       setSentTo(values.email)
     } catch (error) {
       if (error instanceof ApiError) {
