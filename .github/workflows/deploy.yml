@@ -78,10 +78,12 @@ jobs:
           STAGE="$RUNNER_TEMP/stage"
           APP_OUT="$STAGE/laravel"
           WEB_OUT="$STAGE/public_html"
-          mkdir -p "$APP_OUT" "$WEB_OUT/api" "$WEB_OUT/uploads"
+          mkdir -p "$APP_OUT" "$WEB_OUT/api"
 
           for item in app bootstrap config database lang resources routes artisan composer.json composer.lock vendor; do
-            cp -r "backend/$item" "$APP_OUT/$item"
+            if [ -e "backend/$item" ]; then
+              cp -r "backend/$item" "$APP_OUT/$item"
+            fi
           done
 
           # bootstrap/cache and storage ship empty -- a cached config baked
@@ -104,12 +106,14 @@ jobs:
           cp deploy/update.php "$WEB_OUT/update.php"
 
           for file in robots.txt favicon.ico; do
-            [ -f "backend/public/$file" ] && [ ! -f "$WEB_OUT/$file" ] && cp "backend/public/$file" "$WEB_OUT/$file" || true
+            if [ -f "backend/public/$file" ] && [ ! -f "$WEB_OUT/$file" ]; then
+              cp "backend/public/$file" "$WEB_OUT/$file"
+            fi
           done
 
-          # uploads/ is not touched here on purpose -- it holds live product
-          # images and must never be overwritten by a code deploy.
-          rmdir "$WEB_OUT/uploads"
+          # uploads/ is deliberately never created or touched here -- it
+          # holds live product images on the server and must never be
+          # overwritten by a code deploy.
 
           cd "$STAGE"
           zip -r -q "$RUNNER_TEMP/deploy.zip" laravel public_html
