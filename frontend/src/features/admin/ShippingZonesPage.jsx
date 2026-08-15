@@ -408,6 +408,17 @@ function ZoneCard({ zone }) {
     },
   })
 
+  const makeFallback = useMutation({
+    mutationFn: () => api.put(`/admin/shipping/zones/${zone.id}`, { is_fallback: true }),
+    onSuccess() {
+      toast.success(`${zone.name} is now the default zone.`)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shipping'] })
+    },
+    onError(error) {
+      toast.error(error?.message ?? 'Could not set that as the default.')
+    },
+  })
+
   const editable = can('shipping.manage')
 
   return (
@@ -423,10 +434,31 @@ function ZoneCard({ zone }) {
         </div>
 
         {editable && (
-          <Button variant="secondary" size="sm" onClick={() => setEditing({ kind: 'areas' })}>
-            <MapPin className="h-4 w-4" aria-hidden="true" />
-            Areas ({zone.areas.length})
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            {!zone.is_fallback && (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={makeFallback.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Make ${zone.name} the default zone? It will cover every address not listed in another zone, and no other zone will be the default.`,
+                    )
+                  ) {
+                    makeFallback.mutate()
+                  }
+                }}
+              >
+                Make default
+              </Button>
+            )}
+
+            <Button variant="secondary" size="sm" onClick={() => setEditing({ kind: 'areas' })}>
+              <MapPin className="h-4 w-4" aria-hidden="true" />
+              Areas ({zone.areas.length})
+            </Button>
+          </div>
         )}
       </div>
 
