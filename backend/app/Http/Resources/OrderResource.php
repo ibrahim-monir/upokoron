@@ -53,10 +53,17 @@ class OrderResource extends JsonResource
                 'district' => $this->ship_district,
                 'postcode' => $this->ship_postcode,
                 'method' => $this->shipping_method_name,
+
+                // The rate's CURRENT estimate, not one frozen at order time --
+                // there is no column for that. Close enough for "roughly when
+                // should this arrive", wrong tool for a delivery promise.
+                'estimate' => $this->whenLoaded('shippingRate', fn (): ?string => $this->shippingRate?->estimateLabel()),
             ],
 
             'subtotal' => $this->subtotal,
             'discount_total' => $this->discount_total,
+            'coupon_code' => $this->coupon_code,
+            'coupon_discount' => $this->coupon_discount,
             'shipping_charge' => $this->shipping_charge,
             'extra_charge' => $this->extra_charge,
             'total' => $this->total,
@@ -83,6 +90,13 @@ class OrderResource extends JsonResource
                 'unit_price' => $item->unit_price,
                 'line_total' => $item->line_total,
                 'line_discount' => $item->line_discount,
+
+                // The variation can be re-imaged or deleted after the sale;
+                // this is simply whatever it looks like now, not a frozen
+                // copy -- there is nowhere on the order to freeze it.
+                'image' => $item->relationLoaded('variation')
+                    ? $item->variation?->image?->url
+                    : null,
             ])),
 
             'history' => $this->whenLoaded('history', fn () => $this->history->map(fn (OrderStatusHistory $h): array => [

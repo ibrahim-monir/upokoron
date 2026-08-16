@@ -198,7 +198,9 @@ class CheckoutController extends Controller
 
         return response()->json([
             'message' => 'Order placed.',
-            'data' => new OrderResource($order->load(['items', 'paymentMethod', 'shippingZone'])),
+            'data' => new OrderResource($order->load([
+                'items.variation.image', 'paymentMethod', 'shippingZone', 'shippingRate',
+            ])),
         ], 201);
     }
 
@@ -242,7 +244,7 @@ class CheckoutController extends Controller
     public function showOrder(Request $request, string $number): JsonResponse
     {
         $order = $this->findForCaller($request, $number, [
-            'items', 'paymentMethod', 'history', 'payments',
+            'items.variation.image', 'paymentMethod', 'history', 'payments', 'shippingRate',
         ]);
 
         return response()->json(['data' => new OrderResource($order)]);

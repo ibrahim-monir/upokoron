@@ -160,7 +160,7 @@ export function CheckoutPage() {
 
     placeOrder.mutate(payload, {
       onSuccess: (order) =>
-        navigate(`/orders/${order.number}?placed=1&phone=${encodeURIComponent(phone)}`),
+        navigate(`/order-complete/${order.number}?phone=${encodeURIComponent(phone)}`),
       onError: (error) => {
         // 422 puts the message on the field it belongs to; anything else is a
         // business rule -- out of stock, address not covered -- and belongs

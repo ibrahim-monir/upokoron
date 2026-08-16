@@ -12,6 +12,7 @@ import { ProductDetailPage } from '../features/storefront/ProductDetailPage'
 import { ContactPage, ContentPage } from '../features/storefront/ContentPage'
 import { CartPage } from '../features/cart/CartPage'
 import { CheckoutPage } from '../features/checkout/CheckoutPage'
+import { OrderCompletePage } from '../features/checkout/OrderCompletePage'
 import { OrderDetailPage } from '../features/checkout/OrderDetailPage'
 import { OrdersPage } from '../features/checkout/OrdersPage'
 import { LoginPage } from '../features/auth/LoginPage'
@@ -78,6 +79,11 @@ export const router = createBrowserRouter([
       // API also demands the delivery phone number, which the page carries in
       // the URL after checkout.
       { path: 'orders/:number', element: <OrderDetailPage /> },
+
+      // The receipt shown right after checkout -- a different page from the
+      // one above, because "your order is placed!" stops being true the
+      // moment the order ships or is cancelled.
+      { path: 'order-complete/:number', element: <OrderCompletePage /> },
 
       // The LIST is different: "every order this person ever placed" needs an
       // account to scope it to.
