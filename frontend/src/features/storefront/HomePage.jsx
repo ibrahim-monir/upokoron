@@ -182,7 +182,7 @@ function CategorySidebar() {
             {categories.map((category) => (
               <li key={category.id}>
                 <Link
-                  to={`/products?category=${category.slug}`}
+                  to={`/category/${category.slug}`}
                   className="group flex items-center gap-3 p-2.5 transition-colors hover:bg-brand-50"
                 >
                   <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded bg-ink-100 text-sm font-bold text-ink-500">
@@ -218,7 +218,10 @@ function CategorySection({ section }) {
         <h2 className="text-lg font-bold uppercase tracking-wide text-ink-900">{section.name}</h2>
 
         <Link
-          to={`/products?category=${section.slug}`}
+          // The "Latest products" fallback section has no real category
+          // (slug ''), so it points at the plain listing instead of a
+          // /category/ URL an empty slug could never match.
+          to={section.slug ? `/category/${section.slug}` : '/products'}
           className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
         >
           See More

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { PackageOpen } from 'lucide-react'
 import { get } from '../../lib/api'
 import { EmptyState, ErrorState, Pagination, Select } from '../../components/ui'
@@ -15,11 +15,14 @@ const SORTS = [
 ]
 
 export function ProductListPage() {
+  // /category/:slug is the canonical link now; ?category= still works for
+  // anything still pointing at the old /products?category= form.
+  const { slug } = useParams()
   const [params, setParams] = useSearchParams()
 
   const search = params.get('search') ?? ''
   const sort = params.get('sort') ?? ''
-  const category = params.get('category') ?? ''
+  const category = slug || params.get('category') || ''
   const page = Number(params.get('page') ?? 1)
 
   const query = useQuery({

@@ -110,7 +110,7 @@ function BannerForm({ form, setForm, onClose }) {
           label="Button link"
           name="link"
           defaultValue={form.link}
-          placeholder="/products?category=audio"
+          placeholder="/category/audio"
           hint="A path within this shop, starting with /."
         />
 

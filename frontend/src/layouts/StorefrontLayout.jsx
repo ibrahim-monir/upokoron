@@ -267,7 +267,7 @@ function CategoryBar() {
               onMouseLeave={() => setOpenId((current) => (current === category.id ? null : current))}
             >
               <Link
-                to={`/products?category=${category.slug}`}
+                to={`/category/${category.slug}`}
                 className="flex items-center gap-1 whitespace-nowrap px-3 py-2.5 text-sm font-medium text-ink-700 hover:bg-ink-50 hover:text-brand-700"
               >
                 {category.name}
@@ -293,7 +293,7 @@ function CategoryBar() {
                       {category.name}
                     </span>
                     <Link
-                      to={`/products?category=${category.slug}`}
+                      to={`/category/${category.slug}`}
                       className="whitespace-nowrap text-xs font-medium text-brand-700 hover:underline"
                     >
                       View all
@@ -309,7 +309,7 @@ function CategoryBar() {
                     {category.children.map((child) => (
                       <li key={child.id}>
                         <Link
-                          to={`/products?category=${child.slug}`}
+                          to={`/category/${child.slug}`}
                           className="block truncate rounded-md px-3 py-2 text-sm text-ink-700 hover:bg-brand-50 hover:text-brand-700"
                         >
                           {child.name}
@@ -407,7 +407,7 @@ function CategoriesHeader({ settings, cartCount, user, logout, navigate, menuOpe
               {categoryList.map((category) => (
                 <NavLink
                   key={category.id}
-                  to={`/products?category=${category.slug}`}
+                  to={`/category/${category.slug}`}
                   className="text-sm font-medium text-white"
                   onClick={() => setMenuOpen(false)}
                 >

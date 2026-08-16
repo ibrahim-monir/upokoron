@@ -63,6 +63,7 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'products', element: <ProductListPage /> },
       { path: 'products/:slug', element: <ProductDetailPage /> },
+      { path: 'category/:slug', element: <ProductListPage /> },
 
       // Guests included: a shopper fills a basket, and buys, before deciding
       // whether to make an account. Requiring one to check out loses sales,
