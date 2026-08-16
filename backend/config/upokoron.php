@@ -170,9 +170,12 @@ return [
     | Document number formats. Consumed by DocumentNumberService, which
     | allocates numbers under a row lock so concurrent requests cannot
     | collide. reset: none | yearly | monthly
+    | format: standard (PREFIX-period-number) | compact (MMYYnumber, monthly reset only)
     */
     'sequences' => [
-        'order' => ['prefix' => 'ORD', 'padding' => 6, 'reset' => 'yearly'],
+        // e.g. 08260001 for the first order of August 2026 -- short enough
+        // to read out over the phone, which "ORD-2026-000001" was not.
+        'order' => ['prefix' => 'ORD', 'padding' => 4, 'reset' => 'monthly', 'format' => 'compact'],
         'purchase' => ['prefix' => 'PUR', 'padding' => 5, 'reset' => 'yearly'],
         'purchase_receipt' => ['prefix' => 'PRC', 'padding' => 5, 'reset' => 'yearly'],
         'purchase_return' => ['prefix' => 'PRT', 'padding' => 5, 'reset' => 'yearly'],

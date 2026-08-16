@@ -109,7 +109,7 @@ class OrderLifecycleTest extends TestCase
         $this->assertSame('60.00', $order->shipping_charge);
         $this->assertSame('2060.00', $order->total);
         $this->assertSame(OrderStatus::Pending, $order->status);
-        $this->assertStringStartsWith('ORD-', $order->number);
+        $this->assertMatchesRegularExpression('/^\d{8}$/', $order->number);
     }
 
     public function test_placing_an_order_posts_nothing_to_the_ledger(): void

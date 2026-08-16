@@ -59,7 +59,7 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table): void {
             $table->id();
 
-            // Human-facing and permanent, e.g. ORD-2627-000123.
+            // Human-facing and permanent, e.g. 08260123 (month, year, running number).
             $table->string('number', 40)->unique();
 
             $table->foreignId('customer_id')->nullable()

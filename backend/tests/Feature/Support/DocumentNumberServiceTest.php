@@ -27,8 +27,16 @@ class DocumentNumberServiceTest extends TestCase
     {
         Carbon::setTestNow('2026-08-09 12:00:00');
 
-        $this->assertSame('ORD-2026-000001', $this->numbers->next('order'));
-        $this->assertSame('ORD-2026-000002', $this->numbers->next('order'));
+        $this->assertSame('PUR-2026-00001', $this->numbers->next('purchase'));
+        $this->assertSame('PUR-2026-00002', $this->numbers->next('purchase'));
+    }
+
+    public function test_it_formats_a_compact_monthly_sequence(): void
+    {
+        Carbon::setTestNow('2026-08-09 12:00:00');
+
+        $this->assertSame('08260001', $this->numbers->next('order'));
+        $this->assertSame('08260002', $this->numbers->next('order'));
     }
 
     public function test_it_formats_a_non_resetting_sequence_without_a_year(): void
@@ -45,7 +53,7 @@ class DocumentNumberServiceTest extends TestCase
         $this->numbers->next('order');
 
         $this->assertSame('PUR-2026-00001', $this->numbers->next('purchase'));
-        $this->assertSame('ORD-2026-000003', $this->numbers->next('order'));
+        $this->assertSame('08260003', $this->numbers->next('order'));
     }
 
     public function test_a_yearly_sequence_restarts_in_the_new_year(): void
@@ -54,26 +62,39 @@ class DocumentNumberServiceTest extends TestCase
         // local time. A bare UTC timestamp late on 31 December already falls
         // into the next year here, which would make this test lie.
         Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00', 'Asia/Dhaka'));
-        $this->assertSame('ORD-2026-000001', $this->numbers->next('order'));
+        $this->assertSame('PUR-2026-00001', $this->numbers->next('purchase'));
 
         Carbon::setTestNow(Carbon::parse('2027-01-15 12:00:00', 'Asia/Dhaka'));
-        $this->assertSame('ORD-2027-000001', $this->numbers->next('order'));
+        $this->assertSame('PUR-2027-00001', $this->numbers->next('purchase'));
 
         // The 2026 counter is untouched and resumes where it left off.
         Carbon::setTestNow(Carbon::parse('2026-06-16 12:00:00', 'Asia/Dhaka'));
-        $this->assertSame('ORD-2026-000002', $this->numbers->next('order'));
+        $this->assertSame('PUR-2026-00002', $this->numbers->next('purchase'));
+    }
+
+    public function test_a_monthly_sequence_restarts_each_month(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-20 12:00:00', 'Asia/Dhaka'));
+        $this->assertSame('08260001', $this->numbers->next('order'));
+
+        Carbon::setTestNow(Carbon::parse('2026-09-01 12:00:00', 'Asia/Dhaka'));
+        $this->assertSame('09260001', $this->numbers->next('order'));
+
+        // August's counter is untouched and resumes where it left off.
+        Carbon::setTestNow(Carbon::parse('2026-08-21 12:00:00', 'Asia/Dhaka'));
+        $this->assertSame('08260002', $this->numbers->next('order'));
     }
 
     /**
-     * Year boundaries are evaluated in Dhaka time, not UTC. An order placed at
-     * 05:00 on 1 January in Dhaka is 19:00 on 31 December UTC -- numbering it
-     * into the previous year would put it in the wrong fiscal period.
+     * Period boundaries are evaluated in Dhaka time, not UTC. An order placed
+     * at 01:00 on 1 January in Dhaka is still 31 December in UTC -- numbering
+     * it into the previous period would put it in the wrong month.
      */
     public function test_the_period_is_decided_in_business_local_time(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-12-31 19:00:00', 'UTC'));
 
-        $this->assertSame('ORD-2027-000001', $this->numbers->next('order'));
+        $this->assertSame('01270001', $this->numbers->next('order'));
     }
 
     public function test_it_never_issues_the_same_number_twice(): void
@@ -87,7 +108,7 @@ class DocumentNumberServiceTest extends TestCase
         }
 
         $this->assertCount(200, array_unique($issued));
-        $this->assertSame('ORD-2026-000200', end($issued));
+        $this->assertSame('08260200', end($issued));
         $this->assertSame(201, DocumentSequence::firstWhere('key', 'order')->next_number);
     }
 
@@ -95,9 +116,9 @@ class DocumentNumberServiceTest extends TestCase
     {
         Carbon::setTestNow('2026-08-09 12:00:00');
 
-        $this->assertSame('ORD-2026-000001', $this->numbers->peek('order'));
-        $this->assertSame('ORD-2026-000001', $this->numbers->peek('order'));
-        $this->assertSame('ORD-2026-000001', $this->numbers->next('order'));
+        $this->assertSame('08260001', $this->numbers->peek('order'));
+        $this->assertSame('08260001', $this->numbers->peek('order'));
+        $this->assertSame('08260001', $this->numbers->next('order'));
     }
 
     public function test_an_unknown_sequence_key_fails_loudly(): void
@@ -111,7 +132,7 @@ class DocumentNumberServiceTest extends TestCase
     {
         Carbon::setTestNow('2026-08-09 12:00:00');
 
-        $this->assertSame('ORD-2026-000001', $this->numbers->next('order'));
+        $this->assertSame('08260001', $this->numbers->next('order'));
 
         try {
             \DB::transaction(function (): void {
@@ -123,7 +144,7 @@ class DocumentNumberServiceTest extends TestCase
         }
 
         // The failed document released its number, so there is no gap.
-        $this->assertSame('ORD-2026-000002', $this->numbers->next('order'));
+        $this->assertSame('08260002', $this->numbers->next('order'));
     }
 
     protected function tearDown(): void

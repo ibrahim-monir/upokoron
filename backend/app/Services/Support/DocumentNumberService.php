@@ -26,7 +26,8 @@ use InvalidArgumentException;
 class DocumentNumberService
 {
     /**
-     * Allocate the next number for a sequence key, e.g. `order` -> ORD-2026-000141.
+     * Allocate the next number for a sequence key, e.g. `order` -> 08260141,
+     * `purchase` -> PUR-2026-00141.
      */
     public function next(string $key, ?CarbonInterface $date = null): string
     {
@@ -141,6 +142,16 @@ class DocumentNumberService
     private function format(array $config, string $reset, int $year, int $month, int $number): string
     {
         $padded = str_pad((string) $number, (int) ($config['padding'] ?? 6), '0', STR_PAD_LEFT);
+
+        /*
+         * `compact` drops the prefix and separators in favour of a bare
+         * MMYY + running number, e.g. 08260001 for the first order of
+         * August 2026. Only meaningful with a monthly reset -- there is no
+         * month to encode otherwise.
+         */
+        if (($config['format'] ?? 'standard') === 'compact' && $reset === 'monthly') {
+            return sprintf('%02d%02d%s', $month, $year % 100, $padded);
+        }
 
         return match ($reset) {
             'monthly' => sprintf('%s-%04d%02d-%s', $config['prefix'], $year, $month, $padded),
