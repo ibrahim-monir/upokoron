@@ -161,10 +161,12 @@ export function ProductDetailPage() {
     },
   ]
 
-  // Feature/Description rows for the Additional Information tab. Weight,
-  // dimensions, and brand were already on the product resource but never
-  // shown anywhere on this page -- surfaced here rather than left unused.
+  // Feature/Description rows for the Additional Information tab. The
+  // owner's own rows come first since they're deliberately written for this
+  // product; weight, dimensions, and brand follow, then anything from the
+  // attribute system.
   const additionalInfo = [
+    ...(product.additional_info ?? []).map((row) => [row.feature, row.description]),
     ...(product.weight ? [['Item Weight', `${product.weight} kg`]] : []),
     ...(product.dimensions
       ? [[

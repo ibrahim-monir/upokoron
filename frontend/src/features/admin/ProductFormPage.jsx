@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Plus, X } from 'lucide-react'
 import { get, post, put } from '../../lib/api'
 import { ApiError } from '../../lib/api'
 import { applyServerErrors } from '../auth/applyServerErrors'
@@ -146,6 +146,14 @@ export default function ProductFormPage() {
    */
   const [attributes, setAttributes] = useState({})
 
+  /*
+   * Free-form Feature/Description rows for the storefront's Additional
+   * Information tab. Held outside react-hook-form like images and
+   * attributes are, since it is a variable-length list rather than a
+   * single field.
+   */
+  const [additionalInfo, setAdditionalInfo] = useState([])
+
   const categories = useQuery({
     queryKey: ['admin', 'categories', 'options'],
     queryFn: () => get('/admin/categories'),
@@ -250,6 +258,7 @@ export default function ProductFormPage() {
 
     setImages(loaded)
     setOriginalImages(loaded)
+    setAdditionalInfo(product.additional_info ?? [])
   }, [existing.data, reset])
 
   const type = watch('type')
@@ -278,6 +287,13 @@ export default function ProductFormPage() {
     if (values.type === 'variable') {
       payload.attributes = chosen
     }
+
+    // Half-filled rows (a feature typed with no description, or an empty
+    // row never removed) are dropped rather than sent -- the API requires
+    // both sides of any row it receives.
+    payload.additional_info = additionalInfo.filter(
+      (row) => row.feature.trim() !== '' && row.description.trim() !== '',
+    )
 
     try {
       let productId = id
@@ -525,6 +541,62 @@ export default function ProductFormPage() {
                 error={errors.warranty?.message}
                 {...register('warranty')}
               />
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Additional information"
+              description="Feature/description rows shown in their own tab on the product page -- for things worth stating that don't need a reusable attribute, like a chair's seat material."
+            />
+
+            <div className="flex flex-col gap-2 p-4">
+              {additionalInfo.map((row, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={row.feature}
+                    onChange={(event) =>
+                      setAdditionalInfo((rows) =>
+                        rows.map((r, i) => (i === index ? { ...r, feature: event.target.value } : r)),
+                      )
+                    }
+                    placeholder="Seat Material"
+                    aria-label="Feature"
+                    className="w-48"
+                  />
+                  <Input
+                    value={row.description}
+                    onChange={(event) =>
+                      setAdditionalInfo((rows) =>
+                        rows.map((r, i) => (i === index ? { ...r, description: event.target.value } : r)),
+                      )
+                    }
+                    placeholder="Leather"
+                    aria-label="Description"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setAdditionalInfo((rows) => rows.filter((_, i) => i !== index))}
+                    aria-label="Remove row"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="w-fit"
+                onClick={() => setAdditionalInfo((rows) => [...rows, { feature: '', description: '' }])}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add row
+              </Button>
             </div>
           </Card>
 

@@ -62,6 +62,7 @@ class ProductResource extends JsonResource
                 fn () => ['length' => $this->length, 'width' => $this->width, 'height' => $this->height],
             ),
             'warranty' => $this->warranty,
+            'additional_info' => $this->additional_info ?? [],
 
             'seo' => $this->when($request->routeIs('*.show'), fn () => [
                 'meta_title' => $this->meta_title,

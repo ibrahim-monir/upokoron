@@ -25,7 +25,7 @@ class Product extends Model
         'name', 'slug', 'category_id', 'brand_id', 'unit_id', 'type',
         'short_description', 'description', 'is_stock_tracked',
         'status', 'is_featured', 'published_at',
-        'weight', 'length', 'width', 'height', 'warranty',
+        'weight', 'length', 'width', 'height', 'warranty', 'additional_info',
         'meta_title', 'meta_description', 'meta_keywords', 'canonical_url',
         'created_by',
     ];
@@ -41,6 +41,7 @@ class Product extends Model
             'weight' => 'decimal:3',
             'sold_count' => 'decimal:3',
             'rating_avg' => 'decimal:2',
+            'additional_info' => 'array',
         ];
     }
 

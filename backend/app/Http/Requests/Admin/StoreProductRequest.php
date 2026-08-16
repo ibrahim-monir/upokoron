@@ -44,6 +44,12 @@ class StoreProductRequest extends FormRequest
             'height' => ['nullable', 'numeric', 'min:0'],
             'warranty' => ['nullable', 'string', 'max:120'],
 
+            // Free-form Feature/Description rows for the storefront's
+            // Additional Information tab.
+            'additional_info' => ['sometimes', 'array'],
+            'additional_info.*.feature' => ['required', 'string', 'max:80'],
+            'additional_info.*.description' => ['required', 'string', 'max:255'],
+
             'meta_title' => ['nullable', 'string', 'max:160'],
             'meta_description' => ['nullable', 'string', 'max:320'],
             'meta_keywords' => ['nullable', 'string', 'max:255'],
