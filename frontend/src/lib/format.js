@@ -65,6 +65,40 @@ export function dateTime(value) {
   })
 }
 
+/**
+ * The value a `datetime-local` input wants, computed in the shop's own
+ * timezone rather than the admin's browser.
+ *
+ * A `datetime-local` input has no timezone of its own -- `new Date(value)`
+ * plus the browser-local getters (`getHours()` etc.) would render the
+ * admin's own wall-clock time, not Dhaka's. Submitted back unchanged, that
+ * silently drifts a publish date or a coupon's schedule by whatever offset
+ * the admin's machine happens to be in every time the form is saved. The
+ * backend (`App\Support\LocalDateTime`) interprets whatever this produces
+ * as Dhaka time, so the two must agree on that.
+ */
+export function datetimeLocalValue(value) {
+  if (!value) return ''
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return ''
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const get = (type) => parts.find((part) => part.type === type)?.value
+
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+}
+
 export function relativeTime(value) {
   if (!value) return '—'
 

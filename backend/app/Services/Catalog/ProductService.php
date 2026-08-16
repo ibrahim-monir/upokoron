@@ -9,6 +9,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\AttributeValue;
 use App\Models\Product;
 use App\Models\ProductVariation;
+use App\Support\LocalDateTime;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -100,8 +101,8 @@ class ProductService
             'selling_price' => $data['selling_price'] ?? $existing->first()?->selling_price ?? '0.00',
             'compare_at_price' => $data['compare_at_price'] ?? null,
             'special_price' => $data['special_price'] ?? null,
-            'special_starts_at' => $data['special_starts_at'] ?? null,
-            'special_ends_at' => $data['special_ends_at'] ?? null,
+            'special_starts_at' => LocalDateTime::toUtc($data['special_starts_at'] ?? null),
+            'special_ends_at' => LocalDateTime::toUtc($data['special_ends_at'] ?? null),
             'barcode' => $data['barcode'] ?? null,
             'weight' => $data['weight'] ?? null,
             'is_default' => true,
@@ -201,8 +202,8 @@ class ProductService
                 'selling_price' => $override['selling_price'] ?? $data['selling_price'] ?? '0.00',
                 'compare_at_price' => $override['compare_at_price'] ?? $data['compare_at_price'] ?? null,
                 'special_price' => $override['special_price'] ?? $data['special_price'] ?? null,
-                'special_starts_at' => $override['special_starts_at'] ?? $data['special_starts_at'] ?? null,
-                'special_ends_at' => $override['special_ends_at'] ?? $data['special_ends_at'] ?? null,
+                'special_starts_at' => LocalDateTime::toUtc($override['special_starts_at'] ?? $data['special_starts_at'] ?? null),
+                'special_ends_at' => LocalDateTime::toUtc($override['special_ends_at'] ?? $data['special_ends_at'] ?? null),
                 'barcode' => $override['barcode'] ?? null,
                 'weight' => $override['weight'] ?? $data['weight'] ?? null,
                 'is_default' => $position === 0,
@@ -287,6 +288,16 @@ class ProductService
             'weight', 'length', 'width', 'height', 'warranty', 'additional_info',
             'meta_title', 'meta_description', 'meta_keywords', 'canonical_url',
         ])->all();
+
+        // The admin form submits a bare wall-clock string with no timezone
+        // of its own. Read as UTC (Carbon's default), it drifts by whatever
+        // offset the admin's own browser happens to be in -- every edit of
+        // an already-published product pushed its publish date further into
+        // the future until the storefront quietly 404'd it. Converted here,
+        // from the shop's own timezone, exactly once.
+        if (array_key_exists('published_at', $attributes)) {
+            $attributes['published_at'] = LocalDateTime::toUtc($attributes['published_at']);
+        }
 
         // Publishing without an explicit date means "now", so a product does
         // not sit invisible because nobody filled the field in.

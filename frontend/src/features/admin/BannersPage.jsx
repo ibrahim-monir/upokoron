@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ArrowDown, ArrowUp, Image as ImageIcon, Megaphone, Plus } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
+import { datetimeLocalValue } from '../../lib/format'
 import { useList, useWrite } from './useResource'
 import { useAuthStore } from '../../stores/authStore'
 import { MediaPicker } from './media/MediaLibrary'
@@ -23,18 +24,6 @@ const THEMES = [
   { value: 'navy', label: 'Deep navy', swatch: 'from-brand-700 to-navy-900' },
   { value: 'contrast', label: 'High contrast', swatch: 'from-navy-800 to-brand-800' },
 ]
-
-function forInput(value) {
-  if (!value) return ''
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return ''
-
-  const pad = (n) => String(n).padStart(2, '0')
-
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
 
 const emptyForm = { eyebrow: '', title: '', body: '', cta_label: 'Shop now', link: '/products', theme: 'brand', image: '', starts_at: '', ends_at: '', is_active: true }
 
@@ -166,7 +155,7 @@ function BannerForm({ form, setForm, onClose }) {
           label="Starts"
           name="starts_at"
           type="datetime-local"
-          defaultValue={forInput(form.starts_at)}
+          defaultValue={datetimeLocalValue(form.starts_at)}
           hint="Blank = shows immediately."
         />
 
@@ -174,7 +163,7 @@ function BannerForm({ form, setForm, onClose }) {
           label="Ends"
           name="ends_at"
           type="datetime-local"
-          defaultValue={forInput(form.ends_at)}
+          defaultValue={datetimeLocalValue(form.ends_at)}
           hint="Blank = runs indefinitely."
         />
 

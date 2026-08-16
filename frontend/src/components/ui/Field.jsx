@@ -58,13 +58,23 @@ export const Field = forwardRef(function Field(
   )
 })
 
+/**
+ * The default is applied only when the caller names no width of its own --
+ * see the identical guard on Select below for why. Without it, an input
+ * asked for a fixed width (e.g. two side-by-side inputs in a row) silently
+ * renders at its container's full width instead, and its flex sibling gets
+ * squeezed into whatever is left.
+ */
 export const Input = forwardRef(function Input({ invalid, className, ...props }, ref) {
+  const setsOwnWidth = /(^|\s)(w-|min-w-|max-w-|flex-1|grow)/.test(className ?? '')
+
   return (
     <input
       ref={ref}
       aria-invalid={invalid ? 'true' : undefined}
       className={cx(
-        'h-10 w-full rounded-lg border bg-white px-3 text-sm text-ink-900 transition-colors',
+        'h-10 rounded-lg border bg-white px-3 text-sm text-ink-900 transition-colors',
+        setsOwnWidth ? null : 'w-full',
         'placeholder:text-ink-400 disabled:bg-ink-100',
         invalid ? 'border-danger-500' : 'border-ink-300 hover:border-ink-400',
         className,

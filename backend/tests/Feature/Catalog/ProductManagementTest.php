@@ -460,4 +460,46 @@ class ProductManagementTest extends TestCase
 
         $this->assertSame(0, Product::published()->count());
     }
+
+    public function test_a_publish_date_is_read_in_the_shops_own_timezone(): void
+    {
+        $this->actingAsRole('owner');
+
+        $productId = $this->postJson('/api/v1/admin/products', $this->simplePayload([
+            'published_at' => '2026-08-16T09:30',
+        ]))->assertCreated()->json('product.id');
+
+        // 09:30 in Dhaka (UTC+6) is 03:30 UTC.
+        $this->assertSame('2026-08-16 03:30:00', Product::find($productId)->published_at->toDateTimeString());
+    }
+
+    /**
+     * The admin form round-trips a product's publish date as a bare
+     * "2026-08-16T09:30" wall-clock string with no timezone attached. Read
+     * back as UTC instead of Dhaka time, every re-save of an untouched date
+     * field silently pushed it six hours further into the future -- and,
+     * eventually, past "now", which knocked the product off the storefront
+     * with no error anywhere.
+     */
+    public function test_resaving_a_published_product_does_not_drift_its_publish_date(): void
+    {
+        $this->actingAsRole('owner');
+
+        $productId = $this->postJson('/api/v1/admin/products', $this->simplePayload())
+            ->assertCreated()->json('product.id');
+
+        $product = Product::find($productId);
+        $this->assertTrue($product->published_at->isPast());
+
+        // Exactly what the admin form sends: the product's own published_at,
+        // rendered as a Dhaka wall-clock string, resubmitted unchanged.
+        $dhakaLocal = $product->published_at->clone()->setTimezone('Asia/Dhaka')->format('Y-m-d\TH:i');
+
+        $this->putJson("/api/v1/admin/products/{$productId}", $this->simplePayload([
+            'published_at' => $dhakaLocal,
+        ]))->assertOk();
+
+        $this->assertTrue($product->refresh()->published_at->isPast());
+        $this->getJson("/api/v1/shop/products/{$product->slug}")->assertOk();
+    }
 }

@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Plus, X } from 'lucide-react'
 import { get, post, put } from '../../lib/api'
 import { ApiError } from '../../lib/api'
+import { datetimeLocalValue } from '../../lib/format'
 import { applyServerErrors } from '../auth/applyServerErrors'
 import {
   Button,
@@ -110,18 +111,6 @@ const schema = z
  * empty box for anything else -- so an offer with dates set would look like
  * an offer with none, and be wiped on the next save.
  */
-function forInput(value) {
-  if (!value) return ''
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return ''
-
-  const pad = (n) => String(n).padStart(2, '0')
-
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
 export default function ProductFormPage() {
   const { id } = useParams()
   const isEdit = Boolean(id)
@@ -245,13 +234,13 @@ export default function ProductFormPage() {
       // datetime-local wants "YYYY-MM-DDTHH:mm"; the API sends ISO 8601 with
       // an offset, which the control silently refuses to display.
       special_price: variation?.special_price ?? '',
-      special_starts_at: forInput(variation?.special_starts_at),
-      special_ends_at: forInput(variation?.special_ends_at),
+      special_starts_at: datetimeLocalValue(variation?.special_starts_at),
+      special_ends_at: datetimeLocalValue(variation?.special_ends_at),
 
       slug: product.slug ?? '',
       meta_title: product.meta_title ?? '',
       meta_description: product.meta_description ?? '',
-      published_at: forInput(product.published_at),
+      published_at: datetimeLocalValue(product.published_at),
     })
 
     const loaded = imagesFromProduct(product)

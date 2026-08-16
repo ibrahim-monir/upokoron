@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Tag, Trash2, X } from 'lucide-react'
 import { api, get } from '../../lib/api'
-import { cx, money } from '../../lib/format'
+import { cx, datetimeLocalValue, money } from '../../lib/format'
 import { Badge, Button, ErrorState, Field, Select, Spinner, useToast } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -27,19 +27,6 @@ function useCoupons() {
   })
 }
 
-/** `2026-08-16T10:30:00+06:00` <-> the value a `datetime-local` input wants. */
-function toLocalInput(iso) {
-  if (!iso) return ''
-
-  const date = new Date(iso)
-
-  if (Number.isNaN(date.getTime())) return ''
-
-  const pad = (n) => String(n).padStart(2, '0')
-
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
 function CouponForm({ coupon, onClose }) {
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -53,8 +40,8 @@ function CouponForm({ coupon, onClose }) {
     min_order_total: coupon?.min_order_total ?? '',
     usage_limit: coupon?.usage_limit ?? '',
     usage_limit_per_customer: coupon?.usage_limit_per_customer ?? '',
-    starts_at: toLocalInput(coupon?.starts_at),
-    expires_at: toLocalInput(coupon?.expires_at),
+    starts_at: datetimeLocalValue(coupon?.starts_at),
+    expires_at: datetimeLocalValue(coupon?.expires_at),
     is_active: coupon?.is_active ?? true,
   })
 

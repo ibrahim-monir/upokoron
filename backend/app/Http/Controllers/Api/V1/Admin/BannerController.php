@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Support\LocalDateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -79,7 +80,7 @@ class BannerController extends Controller
      */
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'eyebrow' => ['nullable', 'string', 'max:60'],
             'title' => ['required', 'string', 'max:120'],
             'body' => ['nullable', 'string', 'max:200'],
@@ -87,10 +88,26 @@ class BannerController extends Controller
             'link' => ['sometimes', 'string', 'max:255', 'starts_with:/'],
             'theme' => ['sometimes', Rule::in(self::THEMES)],
             'image' => ['nullable', 'string', 'max:255'],
+            // 'date' validates the raw wall-clock string the admin typed;
+            // the before/after comparison below runs on that same string,
+            // so it stays correct however it is later converted to UTC.
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'position' => ['sometimes', 'integer', 'min:0', 'max:65535'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        // Converted after validation, not before -- the rules above compare
+        // the admin's own wall-clock strings, which is what "starts before
+        // it ends" actually means to them.
+        if (array_key_exists('starts_at', $data)) {
+            $data['starts_at'] = LocalDateTime::toUtc($data['starts_at']);
+        }
+
+        if (array_key_exists('ends_at', $data)) {
+            $data['ends_at'] = LocalDateTime::toUtc($data['ends_at']);
+        }
+
+        return $data;
     }
 }

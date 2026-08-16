@@ -9,6 +9,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Support\LocalDateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -99,10 +100,20 @@ class CouponController extends Controller
             'usage_limit' => ['nullable', 'integer', 'min:1'],
             'usage_limit_per_customer' => ['nullable', 'integer', 'min:1'],
             'customer_group_id' => ['nullable', Rule::exists('customer_groups', 'id')],
+            // 'date' and 'after' compare the admin's own wall-clock strings;
+            // conversion to UTC happens below, after that comparison.
             'starts_at' => ['nullable', 'date'],
             'expires_at' => ['nullable', 'date', 'after:starts_at'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        if (array_key_exists('starts_at', $data)) {
+            $data['starts_at'] = LocalDateTime::toUtc($data['starts_at']);
+        }
+
+        if (array_key_exists('expires_at', $data)) {
+            $data['expires_at'] = LocalDateTime::toUtc($data['expires_at']);
+        }
 
         // A percentage over 100 is never intentional, and the fixed-amount
         // case has no such ceiling.
