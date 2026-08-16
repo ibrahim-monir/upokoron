@@ -37,6 +37,7 @@ class CartService
         private readonly ReservationService $reservations,
         private readonly PricingService $pricing,
         private readonly SettingsService $settings,
+        private readonly CouponService $coupons,
     ) {}
 
     /**
@@ -163,7 +164,7 @@ class CartService
      * Prices are worked out here, from the catalogue, every single time. The
      * cart stores no money at all.
      *
-     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, weight_kg: Quantity, item_count: int, has_unheld: bool}
+     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, weight_kg: Quantity, item_count: int, has_unheld: bool}
      */
     public function summary(Cart $cart, ?Customer $customer = null): array
     {
@@ -172,6 +173,7 @@ class CartService
             'items.variation.image',
             'items.variation.inventory',
             'items.reservation',
+            'coupon',
         ]);
 
         $priced = [];
@@ -223,16 +225,100 @@ class CartService
             ];
         }
 
+        $subtotal = $this->pricing->subtotal($priced);
+
         return [
             'cart' => $cart,
             'lines' => $lines,
             'priced' => $priced,
-            'subtotal' => $this->pricing->subtotal($priced),
+            'subtotal' => $subtotal,
             'discount' => $this->pricing->totalDiscount($priced),
+            'coupon' => $this->couponSummary($cart, $subtotal, $customer),
             'weight_kg' => $this->pricing->totalWeight($priced),
             'item_count' => count($lines),
             'has_unheld' => $hasUnheld,
         ];
+    }
+
+    /**
+     * Apply a coupon to the cart. Only the code is stored; the discount
+     * itself is worked out fresh on every read, the same as everything else
+     * in this class.
+     */
+    public function applyCoupon(Cart $cart, string $code, ?Customer $customer = null): Cart
+    {
+        $coupon = $this->coupons->find($code);
+
+        if ($coupon === null) {
+            throw new BusinessRuleException('That coupon code was not found.', 'coupon_not_found');
+        }
+
+        $subtotal = $this->pricing->subtotal(
+            $this->pricing->priceAll($this->itemsToPrice($cart), $customer),
+        );
+
+        $this->coupons->assertRedeemable($coupon, $subtotal, $customer);
+
+        $cart->forceFill(['coupon_id' => $coupon->id])->save();
+
+        return $cart->refresh();
+    }
+
+    public function removeCoupon(Cart $cart): void
+    {
+        $cart->forceFill(['coupon_id' => null])->save();
+    }
+
+    /**
+     * @return iterable<array{variation: ProductVariation, quantity: Quantity}>
+     */
+    private function itemsToPrice(Cart $cart): iterable
+    {
+        $cart->loadMissing('items.variation');
+
+        foreach ($cart->items as $item) {
+            if ($item->variation !== null) {
+                yield ['variation' => $item->variation, 'quantity' => $item->quantity()];
+            }
+        }
+    }
+
+    /**
+     * The coupon applied to this cart, revalidated against the current
+     * basket. A coupon that stopped qualifying -- an item removed, the
+     * window closed -- is reported as invalid with a reason rather than
+     * silently dropped, so the shopper is told rather than surprised at
+     * checkout.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function couponSummary(Cart $cart, Money $subtotal, ?Customer $customer): ?array
+    {
+        $coupon = $cart->coupon;
+
+        if ($coupon === null) {
+            return null;
+        }
+
+        try {
+            $this->coupons->assertRedeemable($coupon, $subtotal, $customer);
+
+            return [
+                'id' => $coupon->id,
+                'code' => $coupon->code,
+                'discount' => $this->coupons->discountFor($coupon, $subtotal)->value(),
+                'is_valid' => true,
+                'message' => null,
+            ];
+        } catch (BusinessRuleException $e) {
+            return [
+                'id' => $coupon->id,
+                'code' => $coupon->code,
+                'discount' => '0.00',
+                'is_valid' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ import {
   Boxes,
   ChevronDown,
   ChevronRight,
+  CreditCard,
   FileText,
   Image as ImageIcon,
   LayoutDashboard,
@@ -18,6 +19,7 @@ import {
   Shapes,
   ShieldCheck,
   Store,
+  Tag,
   Truck,
   Users,
   X,
@@ -61,6 +63,7 @@ const SECTIONS = [
     items: [
       { to: '/admin/orders', icon: ReceiptText, label: 'Orders', can: 'orders.view' },
       { to: '/admin/shipping', icon: Truck, label: 'Delivery zones', can: 'shipping.manage' },
+      { to: '/admin/payment-methods', icon: CreditCard, label: 'Payment methods', can: 'payments.manage' },
     ],
   },
   {
@@ -69,7 +72,10 @@ const SECTIONS = [
   },
   {
     label: 'Marketing',
-    items: [{ to: '/admin/banners', icon: Megaphone, label: 'Home page banners', can: 'banners.manage' }],
+    items: [
+      { to: '/admin/banners', icon: Megaphone, label: 'Home page banners', can: 'banners.manage' },
+      { to: '/admin/coupons', icon: Tag, label: 'Coupons', can: 'coupons.manage' },
+    ],
   },
   {
     label: 'Money',

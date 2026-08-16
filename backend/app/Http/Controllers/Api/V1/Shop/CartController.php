@@ -104,6 +104,28 @@ class CartController extends Controller
         return $this->respond($cart->refresh(), $request);
     }
 
+    public function applyCoupon(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:40'],
+        ]);
+
+        $cart = $this->cart($request);
+
+        $this->carts->applyCoupon($cart, $data['code'], $this->customer($request));
+
+        return $this->respond($cart->refresh(), $request);
+    }
+
+    public function removeCoupon(Request $request): JsonResponse
+    {
+        $cart = $this->cart($request);
+
+        $this->carts->removeCoupon($cart);
+
+        return $this->respond($cart->refresh(), $request);
+    }
+
     private function cart(Request $request): Cart
     {
         return $this->carts->resolve($this->cartToken($request), $this->customer($request));
@@ -125,6 +147,7 @@ class CartController extends Controller
                 'item_count' => $summary['item_count'],
                 'subtotal' => $summary['subtotal']->value(),
                 'discount' => $summary['discount']->value(),
+                'coupon' => $summary['coupon'],
                 'weight_kg' => $summary['weight_kg']->value(),
 
                 // True when a hold has lapsed. The UI shows the line as no

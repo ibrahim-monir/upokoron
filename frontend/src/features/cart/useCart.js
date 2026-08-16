@@ -81,6 +81,22 @@ export function useClearCart() {
   })
 }
 
+export function useApplyCoupon() {
+  return useCartMutation(async (code) => {
+    const { data } = await api.post('/shop/cart/coupon', { code })
+
+    return data
+  })
+}
+
+export function useRemoveCoupon() {
+  return useCartMutation(async () => {
+    const { data } = await api.delete('/shop/cart/coupon')
+
+    return data
+  })
+}
+
 /**
  * Delivery charge for an address.
  *

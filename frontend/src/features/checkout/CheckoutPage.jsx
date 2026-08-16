@@ -109,17 +109,27 @@ export function CheckoutPage() {
   const options = shippingOptions.data?.options ?? []
   const rate = options.find((o) => o.id === rateId) ?? null
 
+  const coupon = data?.coupon ?? null
+  const couponDiscount = coupon?.is_valid ? Number(coupon.discount) : 0
+
   const totals = useMemo(() => {
     const subtotal = Number(data?.subtotal ?? 0)
     const delivery = Number(rate?.charge ?? 0)
     const extra = Number(method?.extra_charge ?? 0)
 
-    return { subtotal, delivery, extra, total: subtotal + delivery + extra }
-  }, [data?.subtotal, rate?.charge, method?.extra_charge])
+    // `subtotal` is already net of item-level discounts; only the coupon
+    // subtracts further here.
+    return { subtotal, delivery, extra, total: subtotal - couponDiscount + delivery + extra }
+  }, [data?.subtotal, rate?.charge, method?.extra_charge, couponDiscount])
 
   const submit = form.handleSubmit((values) => {
     if (!rateId) {
       toast.error('Choose a delivery option first.')
+      return
+    }
+
+    if (coupon && !coupon.is_valid) {
+      toast.error(coupon.message ?? 'That coupon no longer applies. Remove it in your cart and try again.')
       return
     }
 
@@ -395,6 +405,17 @@ export function CheckoutPage() {
                 <dd className="tabular text-ink-900">{money(totals.subtotal)}</dd>
               </div>
 
+              {coupon && (
+                <div className="flex justify-between">
+                  <dt className={coupon.is_valid ? 'text-ink-600' : 'text-warning-700'}>
+                    Coupon ({coupon.code})
+                  </dt>
+                  <dd className={cx('tabular', coupon.is_valid ? 'text-accent-600' : 'text-warning-700')}>
+                    {coupon.is_valid ? `− ${money(couponDiscount)}` : (coupon.message ?? 'no longer applies')}
+                  </dd>
+                </div>
+              )}
+
               <div className="flex justify-between">
                 <dt className="text-ink-600">Delivery</dt>
                 <dd className="tabular text-ink-900">
@@ -425,7 +446,7 @@ export function CheckoutPage() {
               type="submit"
               className="mt-4 w-full"
               loading={placeOrder.isPending}
-              disabled={!rateId || !methodId || data.has_unheld_items}
+              disabled={!rateId || !methodId || data.has_unheld_items || (coupon && !coupon.is_valid)}
             >
               <Check className="h-4 w-4" aria-hidden="true" />
               Place order

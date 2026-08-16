@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Cart;
+use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -96,6 +97,31 @@ class OrderService
         $subtotal = $summary['subtotal'];
         $requiresCod = $data->paymentMethod->type->isCollectedOnDelivery();
 
+        /*
+         * The coupon was already chosen -- applied to the cart on an earlier
+         * request -- so there is nothing to read from $data here. What
+         * matters is that it is still good: the summary just revalidated it
+         * against the live basket, and a coupon that stopped qualifying is
+         * refused rather than quietly dropped, so the customer is not
+         * charged more than the total they were just shown.
+         */
+        $couponId = null;
+        $couponCode = null;
+        $couponDiscount = Money::zero();
+
+        if ($summary['coupon'] !== null) {
+            if (! $summary['coupon']['is_valid']) {
+                throw new BusinessRuleException(
+                    $summary['coupon']['message'] ?? 'That coupon no longer applies. Remove it and try again.',
+                    'coupon_no_longer_valid',
+                );
+            }
+
+            $couponId = $summary['coupon']['id'];
+            $couponCode = $summary['coupon']['code'];
+            $couponDiscount = Money::of($summary['coupon']['discount']);
+        }
+
         // Re-priced here rather than trusted from the quote the browser saw.
         $shippingCharge = $this->shipping->chargeForRate(
             rate: $data->shippingRate,
@@ -105,7 +131,7 @@ class OrderService
         );
 
         $extraCharge = Money::of($data->paymentMethod->extra_charge);
-        $total = $subtotal->plus($shippingCharge)->plus($extraCharge);
+        $total = $subtotal->plus($shippingCharge)->plus($extraCharge)->minus($couponDiscount);
 
         if (! $data->paymentMethod->is_active || ! $data->paymentMethod->acceptsTotal($total)) {
             throw new BusinessRuleException(
@@ -118,6 +144,7 @@ class OrderService
         return DB::transaction(function () use (
             $cart, $data, $customer, $placedBy, $summary, $shippingFields,
             $zone, $subtotal, $shippingCharge, $extraCharge, $total,
+            $couponId, $couponCode, $couponDiscount,
         ): Order {
             $order = new Order;
 
@@ -144,8 +171,12 @@ class OrderService
                 'shipping_rate_id' => $data->shippingRate->id,
                 'shipping_method_name' => $data->shippingRate->name,
 
+                'coupon_id' => $couponId,
+                'coupon_code' => $couponCode,
+
                 'subtotal' => $subtotal->value(),
                 'discount_total' => $summary['discount']->value(),
+                'coupon_discount' => $couponDiscount->value(),
                 'shipping_charge' => $shippingCharge->value(),
                 'extra_charge' => $extraCharge->value(),
                 'total' => $total->value(),
@@ -155,6 +186,13 @@ class OrderService
                 'placed_at' => now(),
                 'placed_by' => $placedBy?->getKey(),
             ])->save();
+
+            // Written through the query builder rather than the model, so
+            // this survives concurrent orders redeeming the same code
+            // without one overwriting the other's increment.
+            if ($couponId !== null) {
+                Coupon::whereKey($couponId)->increment('used_count');
+            }
 
             foreach ($summary['priced'] as $line) {
                 $this->writeItem($order, $line->variation, $line);

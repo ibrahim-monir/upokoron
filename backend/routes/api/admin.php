@@ -9,11 +9,13 @@ use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\BannerController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
+use App\Http\Controllers\Api\V1\Admin\CouponController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController;
 use App\Http\Controllers\Api\V1\Admin\JournalEntryController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\OrderController;
+use App\Http\Controllers\Api\V1\Admin\PaymentMethodController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
@@ -173,4 +175,18 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
         ->name('shipping.rates.update');
     Route::delete('shipping/zones/{zone}/rates/{rate}', [ShippingZoneController::class, 'destroyRate'])
         ->name('shipping.rates.destroy');
+
+    // How the shop gets paid.
+    Route::get('payment-methods', [PaymentMethodController::class, 'index'])->name('payment-methods.index');
+    Route::post('payment-methods', [PaymentMethodController::class, 'store'])->name('payment-methods.store');
+    Route::put('payment-methods/{paymentMethod}', [PaymentMethodController::class, 'update'])
+        ->name('payment-methods.update');
+    Route::delete('payment-methods/{paymentMethod}', [PaymentMethodController::class, 'destroy'])
+        ->name('payment-methods.destroy');
+
+    // Discount codes.
+    Route::get('coupons', [CouponController::class, 'index'])->name('coupons.index');
+    Route::post('coupons', [CouponController::class, 'store'])->name('coupons.store');
+    Route::put('coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
+    Route::delete('coupons/{coupon}', [CouponController::class, 'destroy'])->name('coupons.destroy');
 });

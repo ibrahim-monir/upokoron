@@ -78,6 +78,9 @@ Route::put('cart/items/{item}', [CartController::class, 'update'])->name('cart.i
 Route::delete('cart/items/{item}', [CartController::class, 'destroy'])->name('cart.items.destroy');
 Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
 
+Route::post('cart/coupon', [CartController::class, 'applyCoupon'])->name('cart.coupon.apply');
+Route::delete('cart/coupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');
+
 /*
 | Delivery charges. Public, because "what does delivery cost to my area?" is
 | a question people ask before they are willing to register.

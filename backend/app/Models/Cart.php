@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Cart extends Model
 {
     protected $fillable = [
-        'token', 'customer_id', 'status', 'expires_at', 'last_activity_at',
+        'token', 'customer_id', 'coupon_id', 'status', 'expires_at', 'last_activity_at',
     ];
 
     protected function casts(): array
@@ -38,6 +38,11 @@ class Cart extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function scopeActive(Builder $query): Builder

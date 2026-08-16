@@ -77,6 +77,7 @@ class CheckoutController extends Controller
                 'item_count' => $summary['item_count'],
                 'subtotal' => $subtotal->value(),
                 'discount' => $summary['discount']->value(),
+                'coupon' => $summary['coupon'],
                 'has_unheld_items' => $summary['has_unheld'],
                 'addresses' => $addresses,
 

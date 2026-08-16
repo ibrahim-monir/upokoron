@@ -39,6 +39,7 @@ class Order extends Model
             'payment_status' => PaymentStatus::class,
             'subtotal' => 'decimal:2',
             'discount_total' => 'decimal:2',
+            'coupon_discount' => 'decimal:2',
             'shipping_charge' => 'decimal:2',
             'extra_charge' => 'decimal:2',
             'total' => 'decimal:2',
@@ -88,6 +89,11 @@ class Order extends Model
     public function shippingRate(): BelongsTo
     {
         return $this->belongsTo(ShippingRate::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     /** What the customer still owes. Never negative. */
