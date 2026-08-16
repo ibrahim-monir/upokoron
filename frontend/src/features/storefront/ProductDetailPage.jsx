@@ -161,7 +161,23 @@ export function ProductDetailPage() {
     },
   ]
 
-  const specEntries = product.specifications ? Object.entries(product.specifications) : []
+  // Feature/Description rows for the Additional Information tab. Weight,
+  // dimensions, and brand were already on the product resource but never
+  // shown anywhere on this page -- surfaced here rather than left unused.
+  const additionalInfo = [
+    ...(product.weight ? [['Item Weight', `${product.weight} kg`]] : []),
+    ...(product.dimensions
+      ? [[
+          'Dimensions',
+          `${product.dimensions.length ?? '—'}L x ${product.dimensions.width ?? '—'}W x ${product.dimensions.height ?? '—'}H cm`,
+        ]]
+      : []),
+    ...(product.brand?.name ? [['Brand', product.brand.name]] : []),
+    ...Object.entries(product.specifications ?? {}).map(([name, values]) => [
+      name,
+      Array.isArray(values) ? values.join(', ') : String(values),
+    ]),
+  ]
 
   return (
     <div className="flex flex-col gap-10">
@@ -454,17 +470,25 @@ export function ProductDetailPage() {
           )}
 
           {tab === 'additional' &&
-            (specEntries.length > 0 ? (
-              <dl className="divide-y divide-ink-100 rounded-card border border-ink-200 bg-white">
-                {specEntries.map(([name, values]) => (
-                  <div key={name} className="grid grid-cols-3 gap-4 px-4 py-2.5 text-sm">
-                    <dt className="text-ink-500">{name}</dt>
-                    <dd className="col-span-2 text-ink-800">
-                      {Array.isArray(values) ? values.join(', ') : String(values)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+            (additionalInfo.length > 0 ? (
+              <div className="overflow-hidden rounded-card border border-ink-200">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-brand-600 text-left text-white">
+                      <th scope="col" className="px-4 py-2.5 font-semibold">Feature</th>
+                      <th scope="col" className="px-4 py-2.5 font-semibold">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {additionalInfo.map(([name, value], index) => (
+                      <tr key={name} className={index % 2 === 1 ? 'bg-ink-50' : 'bg-white'}>
+                        <td className="px-4 py-2.5 text-ink-600">{name}</td>
+                        <td className="px-4 py-2.5 text-ink-900">{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="text-sm text-ink-500">No additional information for this product.</p>
             ))}
