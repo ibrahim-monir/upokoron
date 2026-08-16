@@ -75,6 +75,7 @@ final class Permissions
                 'customers.ledger' => 'View customer ledger',
             ],
             'Marketing' => [
+                'banners.manage' => 'Manage home page banners',
                 'coupons.manage' => 'Manage coupons',
                 'discounts.manage' => 'Manage discount campaigns',
                 'rewards.view' => 'View reward points',
@@ -153,7 +154,7 @@ final class Permissions
                 'orders.cancel', 'orders.payment',
                 'returns.view', 'returns.manage', 'returns.refund',
                 'customers.view', 'customers.manage', 'customers.ledger',
-                'coupons.manage', 'discounts.manage',
+                'banners.manage', 'coupons.manage', 'discounts.manage',
                 'rewards.view', 'affiliate.view', 'affiliate.manage',
                 'expenses.view', 'expenses.manage',
                 'reports.sales', 'reports.inventory',

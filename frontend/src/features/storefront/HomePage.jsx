@@ -8,56 +8,78 @@ import { EmptyState } from '../../components/ui'
 import { ProductCard, ProductCardSkeleton } from './ProductCard'
 
 /*
- * Promotional slides.
- *
- * Drawn in CSS rather than loaded as artwork: there is no banner module yet,
- * and shipping a hardcoded <img> of a sale that is not running would be a lie
- * on the shop's most prominent surface. When banners are built this reads
- * from the API instead.
+ * Colour themes a banner may be saved with (Admin -> Marketing -> Home page
+ * banners). Written out literally rather than built from the key, because
+ * Tailwind's JIT compiler only generates CSS for class names it can find as
+ * plain text in source -- a `from-${theme}-600` built at runtime would
+ * resolve to nothing.
  */
-const SLIDES = [
-  {
-    eyebrow: 'Shopping fest',
-    title: 'Electronics\nfor everyone',
-    body: 'Audio, charging, and computer accessories stocked in Dhaka.',
-    cta: 'Shop now',
-    from: 'from-brand-600',
-    to: 'to-brand-900',
-  },
-  {
-    eyebrow: 'Cash on delivery',
-    title: 'Pay when it\narrives',
-    body: 'No advance payment. Check the product, then hand over the cash.',
-    cta: 'Browse products',
-    from: 'from-brand-700',
-    to: 'to-navy-900',
-  },
-  {
-    eyebrow: 'Genuine products',
-    title: 'Genuine stock,\nwith warranty',
-    body: 'Every item comes from the brand or its authorised distributor.',
-    cta: 'See the range',
-    from: 'from-navy-800',
-    to: 'to-brand-800',
-  },
-]
+const THEMES = {
+  brand: { from: 'from-brand-600', to: 'to-brand-900' },
+  navy: { from: 'from-brand-700', to: 'to-navy-900' },
+  contrast: { from: 'from-navy-800', to: 'to-brand-800' },
+}
+
+function useStoreSettingsForHero() {
+  return useQuery({
+    queryKey: ['shop', 'settings'],
+    queryFn: () => get('/shop/settings'),
+    staleTime: 5 * 60 * 1000,
+    select: (response) => response.data,
+  })
+}
 
 function HeroCarousel() {
   const [index, setIndex] = useState(0)
+  const settings = useStoreSettingsForHero()
+
+  const banners = useQuery({
+    queryKey: ['shop', 'banners'],
+    queryFn: () => get('/shop/banners'),
+    select: (response) => response.data,
+  })
+
+  // No banners configured yet: a plain welcome slide from the store's own
+  // name and tagline, rather than either a blank gap at the top of the page
+  // or a promotion that is not real.
+  const slides =
+    banners.data && banners.data.length > 0
+      ? banners.data
+      : [
+          {
+            id: 'welcome',
+            eyebrow: null,
+            title: settings.data?.store_name ?? 'Welcome',
+            body: settings.data?.store_tagline ?? null,
+            cta_label: 'Shop now',
+            link: '/products',
+            theme: 'brand',
+            image: null,
+          },
+        ]
 
   useEffect(() => {
     // Respect a reduced-motion preference: no auto-advance for anyone who
     // asked the OS to stop things moving on their own.
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    if (reduced) return
+    if (reduced || slides.length <= 1) return
 
-    const timer = setInterval(() => setIndex((current) => (current + 1) % SLIDES.length), 6000)
+    const timer = setInterval(() => setIndex((current) => (current + 1) % slides.length), 6000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [slides.length])
 
-  const slide = SLIDES[index]
+  if (banners.isLoading) {
+    return (
+      <div className="min-h-64 animate-pulse rounded-lg bg-ink-100 sm:min-h-[19rem] lg:h-[19rem]" />
+    )
+  }
+
+  // The list can shrink (a banner deleted, or one just expired) while a
+  // stale index from a longer list is still selected.
+  const slide = slides[index] ?? slides[0]
+  const theme = THEMES[slide.theme] ?? THEMES.brand
 
   return (
     <section
@@ -65,10 +87,18 @@ function HeroCarousel() {
       aria-label="Promotions"
       className={cx(
         'relative flex min-h-64 flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br p-6 text-white sm:min-h-[19rem] sm:p-10 lg:h-[19rem]',
-        slide.from,
-        slide.to,
+        theme.from,
+        theme.to,
       )}
     >
+      {slide.image && (
+        <img
+          src={slide.image}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-40"
+        />
+      )}
+
       {/* Dot grid, echoing the sample's banner texture. */}
       <div
         aria-hidden="true"
@@ -80,36 +110,40 @@ function HeroCarousel() {
       />
 
       <div className="relative max-w-lg">
-        <p className="text-sm font-semibold uppercase tracking-wider text-white/75">{slide.eyebrow}</p>
+        {slide.eyebrow && (
+          <p className="text-sm font-semibold uppercase tracking-wider text-white/75">{slide.eyebrow}</p>
+        )}
         <h1 className="mt-2 whitespace-pre-line text-3xl font-bold leading-tight sm:text-4xl">
           {slide.title}
         </h1>
-        <p className="mt-3 text-white/85">{slide.body}</p>
+        {slide.body && <p className="mt-3 text-white/85">{slide.body}</p>}
 
         <Link
-          to="/products"
+          to={slide.link ?? '/products'}
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"
         >
-          {slide.cta}
+          {slide.cta_label ?? 'Shop now'}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
 
-      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
-        {SLIDES.map((item, i) => (
-          <button
-            key={item.eyebrow}
-            type="button"
-            onClick={() => setIndex(i)}
-            aria-label={`Show slide ${i + 1}`}
-            aria-current={i === index}
-            className={cx(
-              'h-1.5 rounded-full transition-all',
-              i === index ? 'w-7 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/75',
-            )}
-          />
-        ))}
-      </div>
+      {slides.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
+          {slides.map((item, i) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={`Show slide ${i + 1}`}
+              aria-current={i === index}
+              className={cx(
+                'h-1.5 rounded-full transition-all',
+                i === index ? 'w-7 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/75',
+              )}
+            />
+          ))}
+        </div>
+      )}
     </section>
   )
 }

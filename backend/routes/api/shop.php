@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Auth\PasswordController;
 use App\Http\Controllers\Api\V1\Auth\ProfileController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Shop\AddressController;
+use App\Http\Controllers\Api\V1\Shop\BannerController;
 use App\Http\Controllers\Api\V1\Shop\CartController;
 use App\Http\Controllers\Api\V1\Shop\CategoryController;
 use App\Http\Controllers\Api\V1\Shop\CheckoutController;
@@ -21,6 +22,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('settings', [SettingController::class, 'publicSettings'])
     ->name('settings');
+
+Route::get('banners', [BannerController::class, 'index'])
+    ->name('banners.index');
 
 /*
 | Public product catalog.

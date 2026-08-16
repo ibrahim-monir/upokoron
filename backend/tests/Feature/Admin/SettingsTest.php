@@ -17,7 +17,12 @@ class SettingsTest extends TestCase
     {
         $settings = app(SettingsService::class);
 
-        $this->assertDatabaseCount('settings', 0);
+        // Not an empty table -- a couple of settings (store_favicon among
+        // them) are seeded by migration so they reach an already-installed
+        // shop without a manual db:seed step. The actual precondition this
+        // test cares about is that these two keys specifically have no row.
+        $this->assertDatabaseMissing('settings', ['key' => 'revenue_recognition_point']);
+        $this->assertDatabaseMissing('settings', ['key' => 'reservation_ttl_minutes']);
         $this->assertSame('delivered', $settings->get('revenue_recognition_point'));
         $this->assertSame(30, $settings->int('reservation_ttl_minutes'));
     }

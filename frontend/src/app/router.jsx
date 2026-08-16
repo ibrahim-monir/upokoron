@@ -212,6 +212,11 @@ export const router = createBrowserRouter([
       },
 
       {
+        path: 'banners',
+        element: guarded('banners.manage', lazyAdmin(() => import('../features/admin/BannersPage'))),
+      },
+
+      {
         path: 'accounts',
         element: guarded('accounting.view', lazyAdmin(() => import('../features/admin/AccountsPage'))),
       },

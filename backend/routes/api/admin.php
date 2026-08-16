@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Admin\AccountController;
 use App\Http\Controllers\Api\V1\Admin\AccountingReportController;
 use App\Http\Controllers\Api\V1\Admin\AttributeController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
+use App\Http\Controllers\Api\V1\Admin\BannerController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
@@ -72,6 +73,10 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('units', UnitController::class)->except('show');
+
+    // Home page hero slides.
+    Route::apiResource('banners', BannerController::class)->except('show');
+    Route::post('banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
 
     // Preview the variations an attribute selection would create, before
     // committing to generating them.

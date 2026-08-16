@@ -9,6 +9,7 @@ import {
   Image as ImageIcon,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Menu,
   Package,
   ReceiptText,
@@ -65,6 +66,10 @@ const SECTIONS = [
   {
     label: 'Stock',
     items: [{ to: '/admin/inventory', icon: Boxes, label: 'Inventory', can: 'inventory.view' }],
+  },
+  {
+    label: 'Marketing',
+    items: [{ to: '/admin/banners', icon: Megaphone, label: 'Home page banners', can: 'banners.manage' }],
   },
   {
     label: 'Money',
