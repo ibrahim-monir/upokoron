@@ -275,13 +275,42 @@ function CategoryBar() {
               </Link>
 
               {hasChildren && openId === category.id && (
-                <div className="absolute left-0 top-full z-40 min-w-56 rounded-b-lg border border-t-0 border-ink-200 bg-white py-2 shadow-raised">
-                  <ul className="flex flex-col">
+                <div
+                  className={cx(
+                    'absolute left-0 top-full z-40 rounded-b-lg border border-t-0 border-ink-200 bg-white shadow-raised',
+                    category.children.length > 4 ? 'w-96' : 'w-64',
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3 border-b border-ink-100 px-4 py-2.5">
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
+                      {category.image ? (
+                        <img src={category.image} alt="" className="h-5 w-5 rounded object-cover" />
+                      ) : (
+                        <span className="grid h-5 w-5 place-items-center rounded bg-brand-50 text-[10px] font-bold text-brand-600">
+                          {category.name.charAt(0)}
+                        </span>
+                      )}
+                      {category.name}
+                    </span>
+                    <Link
+                      to={`/products?category=${category.slug}`}
+                      className="whitespace-nowrap text-xs font-medium text-brand-700 hover:underline"
+                    >
+                      View all
+                    </Link>
+                  </div>
+
+                  <ul
+                    className={cx(
+                      'grid gap-0.5 p-2',
+                      category.children.length > 4 ? 'grid-cols-2' : 'grid-cols-1',
+                    )}
+                  >
                     {category.children.map((child) => (
                       <li key={child.id}>
                         <Link
                           to={`/products?category=${child.slug}`}
-                          className="block px-4 py-2 text-sm text-ink-700 hover:bg-brand-50 hover:text-brand-700"
+                          className="block truncate rounded-md px-3 py-2 text-sm text-ink-700 hover:bg-brand-50 hover:text-brand-700"
                         >
                           {child.name}
                         </Link>
@@ -307,12 +336,18 @@ function CategoriesHeader({ settings, cartCount, user, logout, navigate, menuOpe
       <TopBar settings={settings} />
 
       <header className="sticky top-0 z-30 bg-brand-600 shadow-sm">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-3 sm:px-4 lg:gap-5">
+        <div className="mx-auto grid h-16 max-w-[1400px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 sm:px-4 lg:gap-5">
           <Logo settings={settings} variant="light" />
 
-          <SearchBar className="hidden max-w-sm flex-1 md:block lg:max-w-md" />
+          {/* The middle grid column, not a flex sibling -- flex-1 grew to
+              fill leftover space but stayed pinned to the logo's edge inside
+              it, so the search bar looked left-aligned rather than centred
+              whenever the logo and the icon cluster were different widths. */}
+          <div className="hidden justify-center md:flex">
+            <SearchBar className="w-full max-w-md" />
+          </div>
 
-          <div className="ml-auto flex items-center gap-3 lg:gap-4">
+          <div className="flex items-center gap-3 lg:gap-4">
             <div className="hidden items-center gap-4 sm:flex">
               <IconCounter icon={ShoppingCart} to="/cart" label="Cart" count={cartCount} />
               <IconCounter icon={Heart} to="/products" />
