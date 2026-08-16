@@ -202,6 +202,28 @@ export default function CategoriesPage() {
 
   const categories = query.data?.data ?? []
 
+  /*
+   * A one-click toggle rather than opening the form for a single checkbox.
+   * The endpoint's validation requires the rest of the fields on every
+   * update, so the row's current values travel along -- only is_featured
+   * actually changes.
+   */
+  const toggleFeatured = (category) => {
+    remove.mutate({
+      method: 'put',
+      url: `/admin/categories/${category.id}`,
+      body: {
+        name: category.name,
+        slug: category.slug,
+        parent_id: category.parent_id,
+        description: category.description,
+        image: category.image,
+        is_active: category.is_active,
+        is_featured: !category.is_featured,
+      },
+    })
+  }
+
   const reorder = useMutation({
     mutationFn: (order) => api.post('/admin/categories/reorder', { order }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin.categories'] }),
@@ -414,7 +436,26 @@ export default function CategoriesPage() {
                         </Badge>
                       </Td>
                       <Td>
-                        {category.is_featured ? (
+                        {editable ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleFeatured(category)}
+                            disabled={remove.isPending}
+                            title={category.is_featured ? 'Remove from home page' : 'Show on home page'}
+                            className={cx(
+                              'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50',
+                              category.is_featured
+                                ? 'bg-warning-50 text-warning-700 hover:bg-warning-100'
+                                : 'text-ink-400 hover:bg-ink-100 hover:text-ink-600',
+                            )}
+                          >
+                            <Star
+                              className={cx('h-3.5 w-3.5', category.is_featured && 'fill-current')}
+                              aria-hidden="true"
+                            />
+                            {category.is_featured ? 'Featured' : 'Off'}
+                          </button>
+                        ) : category.is_featured ? (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-warning-700">
                             <Star className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
                             Featured
