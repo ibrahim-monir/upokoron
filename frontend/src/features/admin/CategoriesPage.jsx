@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Plus, Shapes } from 'lucide-react'
+import { Image as ImageIcon, Plus, Shapes } from 'lucide-react'
 import { useList, useWrite } from './useResource'
 import { useAuthStore } from '../../stores/authStore'
+import { MediaPicker } from './media/MediaLibrary'
 import {
   Badge,
   Button,
@@ -22,6 +23,7 @@ export default function CategoriesPage() {
   const query = useList('admin.categories', '/admin/categories')
   const write = useWrite('admin.categories', { onSuccess: () => setForm(null) })
   const [form, setForm] = useState(null)
+  const [pickingImage, setPickingImage] = useState(false)
 
   const categories = query.data?.data ?? []
 
@@ -31,6 +33,8 @@ export default function CategoriesPage() {
     const data = new FormData(event.currentTarget)
     const body = {
       name: data.get('name'),
+      slug: data.get('slug') || null,
+      image: form.image || null,
       parent_id: data.get('parent_id') || null,
       is_active: true,
     }
@@ -53,7 +57,7 @@ export default function CategoriesPage() {
         </div>
 
         {can('categories.manage') && (
-          <Button onClick={() => setForm({ name: '', parent_id: '' })}>
+          <Button onClick={() => setForm({ name: '', slug: '', image: '', parent_id: '' })}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             New category
           </Button>
@@ -62,9 +66,57 @@ export default function CategoriesPage() {
 
       {form && (
         <Card>
+          <MediaPicker
+            open={pickingImage}
+            onClose={() => setPickingImage(false)}
+            onSelect={(item) => {
+              setForm((current) => ({ ...current, image: item.url }))
+              setPickingImage(false)
+            }}
+            folder="categories"
+            title="Choose an image"
+          />
+
           <CardHeader title={form.id ? 'Edit category' : 'New category'} />
           <form onSubmit={submit} className="grid gap-4 p-4 sm:grid-cols-2">
             <Field label="Name" name="name" required defaultValue={form.name} />
+
+            <Field
+              label="Slug"
+              name="slug"
+              defaultValue={form.slug}
+              placeholder="left blank, made from the name"
+              hint="Changing this on a live category breaks links people have saved."
+            />
+
+            <Field label="Image" hint="Shown in the category menu and on the storefront.">
+              {() => (
+                <div className="flex items-center gap-3">
+                  <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-ink-50">
+                    {form.image ? (
+                      <img src={form.image} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <ImageIcon className="h-5 w-5 text-ink-400" aria-hidden="true" />
+                    )}
+                  </span>
+
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setPickingImage(true)}>
+                    {form.image ? 'Change' : 'Choose'}
+                  </Button>
+
+                  {form.image && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setForm((current) => ({ ...current, image: '' }))}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              )}
+            </Field>
 
             <Field label="Parent category">
               {({ id }) => (
@@ -134,7 +186,15 @@ export default function CategoriesPage() {
                     <div className="flex justify-end gap-3">
                       <button
                         type="button"
-                        onClick={() => setForm({ id: category.id, name: category.name, parent_id: category.parent_id ?? '' })}
+                        onClick={() =>
+                          setForm({
+                            id: category.id,
+                            name: category.name,
+                            slug: category.slug ?? '',
+                            image: category.image ?? '',
+                            parent_id: category.parent_id ?? '',
+                          })
+                        }
                         className="text-sm font-medium text-brand-700 hover:underline"
                       >
                         Edit
