@@ -49,9 +49,17 @@ class CategoryController extends Controller
 
         $categories = Category::query()
             ->active()
+            ->where('is_featured', true)
             ->orderBy('position')
             ->orderBy('name')
             ->get();
+
+        // Nothing has been marked to feature yet -- fall back to every
+        // active category rather than leaving the home page with no
+        // sections at all until someone visits the admin and opts in.
+        if ($categories->isEmpty()) {
+            $categories = Category::query()->active()->orderBy('position')->orderBy('name')->get();
+        }
 
         $sections = [];
 

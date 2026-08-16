@@ -120,6 +120,44 @@ class TaxonomyTest extends TestCase
             ->assertJsonPath('code', 'category_has_children');
     }
 
+    public function test_categories_can_be_reordered(): void
+    {
+        $this->actingAsRole('owner');
+
+        $a = Category::factory()->create(['position' => 0]);
+        $b = Category::factory()->create(['position' => 1]);
+        $c = Category::factory()->create(['position' => 2]);
+
+        $this->postJson('/api/v1/admin/categories/reorder', ['order' => [$c->id, $a->id, $b->id]])
+            ->assertOk();
+
+        $this->assertSame(0, $c->fresh()->position);
+        $this->assertSame(1, $a->fresh()->position);
+        $this->assertSame(2, $b->fresh()->position);
+    }
+
+    /**
+     * A batch clearing out several empty categories should not be blocked
+     * just because one of them turns out to still have products under it.
+     */
+    public function test_bulk_delete_skips_categories_that_still_have_products(): void
+    {
+        $this->actingAsRole('owner');
+
+        $empty = Category::factory()->create();
+        $inUse = Category::factory()->create();
+        Product::factory()->create(['category_id' => $inUse->id]);
+
+        $response = $this->postJson('/api/v1/admin/categories/bulk', [
+            'action' => 'delete',
+            'ids' => [$empty->id, $inUse->id],
+        ])->assertOk();
+
+        $this->assertStringContainsString('1 category deleted', $response->json('message'));
+        $this->assertSoftDeleted('categories', ['id' => $empty->id]);
+        $this->assertDatabaseHas('categories', ['id' => $inUse->id, 'deleted_at' => null]);
+    }
+
     public function test_descendant_ids_walks_the_whole_branch(): void
     {
         $root = Category::factory()->create();

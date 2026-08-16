@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Exceptions\BusinessRuleException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
@@ -81,6 +82,69 @@ class CategoryController extends Controller
         $this->categories->delete($category);
 
         return response()->json(['message' => 'Category deleted.']);
+    }
+
+    /**
+     * Reposition a set of siblings.
+     *
+     * `order` is only ever the ids of one parent's children (or one set of
+     * root categories) -- position is compared within depth+parent, never
+     * globally, so writing anything wider would not reflect what the
+     * storefront actually sorts by.
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->can('categories.manage'), 403);
+
+        $validated = $request->validate([
+            'order' => ['required', 'array', 'min:1'],
+            'order.*' => ['required', 'integer', Rule::exists('categories', 'id')->whereNull('deleted_at')],
+        ]);
+
+        foreach ($validated['order'] as $index => $id) {
+            Category::whereKey($id)->update(['position' => $index]);
+        }
+
+        return response()->json(['message' => 'Order saved.']);
+    }
+
+    /**
+     * Bulk delete. Categories with children or products refuse individually
+     * rather than failing the whole batch -- a shop clearing out ten empty
+     * categories should not be blocked by one that turns out not to be
+     * empty.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->can('categories.manage'), 403);
+
+        $data = $request->validate([
+            'action' => ['required', Rule::in(['delete'])],
+            'ids' => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $categories = Category::whereIn('id', $data['ids'])->get();
+
+        $deleted = 0;
+        $skipped = [];
+
+        foreach ($categories as $category) {
+            try {
+                $this->categories->delete($category);
+                $deleted++;
+            } catch (BusinessRuleException) {
+                $skipped[] = $category->name;
+            }
+        }
+
+        $message = "{$deleted} categor".($deleted === 1 ? 'y' : 'ies').' deleted.';
+
+        if ($skipped !== []) {
+            $message .= ' Skipped (has sub-categories or products): '.implode(', ', $skipped).'.';
+        }
+
+        return response()->json(['message' => $message]);
     }
 
     /**

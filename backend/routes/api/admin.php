@@ -72,6 +72,8 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::delete('media/{medium}', [MediaController::class, 'destroy'])->name('media.destroy');
 
     Route::apiResource('categories', CategoryController::class);
+    Route::post('categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
+    Route::post('categories/bulk', [CategoryController::class, 'bulk'])->name('categories.bulk');
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('attributes', AttributeController::class);
     Route::apiResource('units', UnitController::class)->except('show');
