@@ -26,6 +26,10 @@ const MULTILINE = ['page_about', 'page_privacy', 'page_terms', 'store_address', 
 const IMAGE_KEYS = ['store_logo', 'store_favicon']
 
 const CHOICES = {
+  store_header_style: [
+    { value: 'categories', label: 'Categories — top bar, search, category mega menu' },
+    { value: 'classic', label: 'Classic — logo, search, Shop/Offers/Contact' },
+  ],
   revenue_recognition_point: [
     { value: 'delivered', label: 'On delivery (recommended for COD)' },
     { value: 'shipped', label: 'On shipment' },

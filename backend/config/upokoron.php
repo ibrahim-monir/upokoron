@@ -65,6 +65,20 @@ return [
             'store_whatsapp' => '',
             'store_address' => '',
 
+            // Shown next to store_phone in the header top bar. Free text
+            // ("9am - 9pm, everyday") rather than structured hours -- a
+            // shop's real hours ("closed Fridays except by WhatsApp") rarely
+            // fit a rigid schedule picker anyway.
+            'store_support_hours' => '',
+
+            // Which header the storefront renders. 'classic': logo, search,
+            // and a Shop/Offers/Contact nav in one bar. 'categories': a
+            // support-info top bar, then a plain search bar with no category
+            // button, then every top-level category along the bottom with
+            // its children in a hover mega menu. Both stay in the codebase
+            // so this is a one-setting switch, not a rebuild.
+            'store_header_style' => 'categories',
+
             // Falls back to /logo.png in the frontend's public folder when
             // blank, so dropping the file in is enough to brand the site.
             'store_logo' => '',
