@@ -4,6 +4,7 @@ import { Heart, LogIn, Menu, MessageCircle, Search, ShoppingCart, User, X } from
 import { useState } from 'react'
 import { get } from '../lib/api'
 import { cx } from '../lib/format'
+import { useFavicon } from '../lib/useFavicon'
 import { useAuthStore } from '../stores/authStore'
 import { Logo } from '../components/Logo'
 import { useCartCount } from '../features/cart/useCart'
@@ -86,6 +87,8 @@ export function StorefrontLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const storeName = settings?.store_name ?? 'Upokoron'
+
+  useFavicon(settings?.store_favicon)
 
   return (
     <div className="flex min-h-screen flex-col bg-ink-50">

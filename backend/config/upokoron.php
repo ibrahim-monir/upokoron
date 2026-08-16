@@ -69,6 +69,12 @@ return [
             // blank, so dropping the file in is enough to brand the site.
             'store_logo' => '',
 
+            // Falls back to the static /favicon.svg shipped in the bundle
+            // when blank. Swapped in client-side (see useFavicon), since the
+            // browser tab icon is set once at page load and cannot come from
+            // a build-time file for every store this codebase might run.
+            'store_favicon' => '',
+
             // Social profiles. Blank means "we are not on that platform", and
             // the footer hides the icon rather than linking nowhere.
             'store_facebook' => '',

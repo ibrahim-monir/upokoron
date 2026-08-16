@@ -23,7 +23,7 @@ const GROUP_LABELS = {
 const MULTILINE = ['page_about', 'page_privacy', 'page_terms', 'store_address', 'store_description']
 
 /** Settings that hold an image URL, so they get a picker instead of a text box. */
-const IMAGE_KEYS = ['store_logo']
+const IMAGE_KEYS = ['store_logo', 'store_favicon']
 
 const CHOICES = {
   revenue_recognition_point: [
