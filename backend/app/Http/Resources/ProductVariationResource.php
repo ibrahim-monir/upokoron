@@ -56,6 +56,25 @@ class ProductVariationResource extends JsonResource
                 false,
             ),
 
+            /*
+             * The back-office view of the same row: what is physically on the
+             * shelf, what it cost, and when to reorder. Gated on the route
+             * because this resource also serves the storefront, which must
+             * only ever see `available_quantity` above.
+             */
+            'stock' => $this->when(
+                $request->routeIs('admin.*') && $this->relationLoaded('inventory'),
+                fn () => [
+                    'quantity' => $this->inventory?->quantity ?? '0.000',
+                    'reserved_quantity' => $this->inventory?->reserved_quantity ?? '0.000',
+                    'reorder_level' => $this->inventory?->reorder_level ?? '0.000',
+                    'average_cost' => $this->inventory?->average_cost ?? '0.000000',
+                    // Distinguishes "never stocked" from "sold down to zero".
+                    // Only the first may be entered as an opening balance.
+                    'has_movements' => $this->inventory?->last_movement_at !== null,
+                ],
+            ),
+
             'weight' => $this->weight,
             'is_default' => $this->is_default,
             'is_active' => $this->is_active,

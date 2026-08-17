@@ -9,6 +9,9 @@ use App\Models\AttributeValue;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariation;
+use App\Services\Inventory\InventoryService;
+use Database\Seeders\ChartOfAccountsSeeder;
+use Database\Seeders\FiscalYearSeeder;
 use Database\Seeders\UnitSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -73,6 +76,79 @@ class ProductManagementTest extends TestCase
         $this->assertCount(1, $product->variations);
         $this->assertTrue($product->variations->first()->is_default);
         $this->assertSame('1200.00', $product->variations->first()->selling_price);
+    }
+
+    /**
+     * The product form edits stock as a real ledger movement, so it has to
+     * know what is on hand before it can work out the difference.
+     */
+    public function test_the_admin_product_carries_its_on_hand_stock(): void
+    {
+        $this->actingAsRole('owner');
+
+        $id = $this->postJson('/api/v1/admin/products', $this->simplePayload())
+            ->json('product.id');
+
+        $this->seed(ChartOfAccountsSeeder::class);
+        $this->seed(FiscalYearSeeder::class);
+
+        app(InventoryService::class)->openingStock(
+            Product::find($id)->variations->first(),
+            '12',
+            '2400.00',
+        );
+
+        $this->getJson("/api/v1/admin/products/{$id}")
+            ->assertOk()
+            ->assertJsonPath('data.variations.0.stock.quantity', '12.000')
+            ->assertJsonPath('data.variations.0.stock.average_cost', '200.000000')
+            ->assertJsonPath('data.variations.0.stock.has_movements', true);
+    }
+
+    /**
+     * A variation that has never moved is not the same as one that sold out.
+     * Only the first may be entered as an opening balance, so the difference
+     * has to survive the trip to the browser.
+     */
+    public function test_stock_reports_no_movements_before_anything_happens(): void
+    {
+        $this->actingAsRole('owner');
+
+        $id = $this->postJson('/api/v1/admin/products', $this->simplePayload())
+            ->json('product.id');
+
+        $this->getJson("/api/v1/admin/products/{$id}")
+            ->assertOk()
+            ->assertJsonPath('data.variations.0.stock.quantity', '0.000')
+            ->assertJsonPath('data.variations.0.stock.has_movements', false);
+    }
+
+    /**
+     * The storefront loads the same inventory row to grey out sold-out items,
+     * and shares this resource with the admin. Without the route gate that
+     * hands every shopper the cost price and the on-hand count.
+     */
+    public function test_the_storefront_is_never_told_cost_or_on_hand_stock(): void
+    {
+        $this->seed(ChartOfAccountsSeeder::class);
+        $this->seed(FiscalYearSeeder::class);
+
+        $product = Product::factory()->create(['category_id' => $this->category->id]);
+
+        app(InventoryService::class)->openingStock(
+            $product->variations()->first(),
+            '12',
+            '2400.00',
+        );
+
+        $listing = $this->getJson('/api/v1/shop/products')->assertOk();
+
+        $listing->assertJsonMissingPath('data.0.default_variation.stock');
+        $this->assertStringNotContainsString('average_cost', $listing->getContent());
+
+        $detail = $this->getJson("/api/v1/shop/products/{$product->slug}")->assertOk();
+
+        $this->assertStringNotContainsString('average_cost', $detail->getContent());
     }
 
     public function test_a_sku_is_generated_when_none_is_given(): void

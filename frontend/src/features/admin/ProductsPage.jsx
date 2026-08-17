@@ -1,7 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ImageOff, Package, Plus, Search, X } from 'lucide-react'
+import {
+  Archive,
+  BarChart3,
+  CheckCircle2,
+  ChevronDown,
+  Edit3,
+  ImageOff,
+  MoreHorizontal,
+  Package,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  Tag,
+  X,
+  XCircle,
+} from 'lucide-react'
 import { useList, useWrite } from './useResource'
 import { api, get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
@@ -31,11 +47,11 @@ export default function ProductsPage() {
   const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState(params.get('search') ?? '')
   const [selected, setSelected] = useState(new Set())
+  const [actionsOpen, setActionsOpen] = useState(null)
 
   const bulk = useMutation({
     mutationFn: async (payload) => {
       const { data } = await api.post('/admin/products/bulk', payload)
-
       return data
     },
   })
@@ -55,29 +71,19 @@ export default function ProductsPage() {
   })
 
   const remove = useWrite('admin.products')
+  const products = query.data?.data ?? []
+  const total = query.data?.meta?.total ?? 0
 
   const update = (patch) => {
     const next = new URLSearchParams(params)
-
     Object.entries(patch).forEach(([key, value]) => {
       if (!value) next.delete(key)
       else next.set(key, String(value))
     })
-
     if (!('page' in patch)) next.delete('page')
-
     setParams(next)
   }
 
-  const products = query.data?.data ?? []
-
-  /*
-   * Selection is cleared whenever the filters change.
-   *
-   * Keeping it would let someone tick six products, filter to a different
-   * category, and then act on rows they can no longer see -- which is how a
-   * bulk archive hits the wrong forty products.
-   */
   const filterKey = params.toString()
 
   useEffect(() => {
@@ -87,14 +93,13 @@ export default function ProductsPage() {
   const toggle = (id) => {
     setSelected((previous) => {
       const next = new Set(previous)
-
       next.has(id) ? next.delete(id) : next.add(id)
-
       return next
     })
   }
 
-  const allOnPageSelected = products.length > 0 && products.every((product) => selected.has(product.id))
+  const allOnPageSelected =
+    products.length > 0 && products.every((product) => selected.has(product.id))
 
   const runBulk = (payload, question) => {
     if (question && !window.confirm(question)) return
@@ -114,126 +119,190 @@ export default function ProductsPage() {
     )
   }
 
+  const stats = useMemo(() => {
+    const active = products.filter((p) => p.status === 'active').length
+    const draft = products.filter((p) => p.status === 'draft').length
+    const archived = products.filter((p) => p.status === 'archived').length
+
+    return [
+      {
+        label: 'All products',
+        value: total,
+        icon: Package,
+        tone: 'text-slate-700 bg-slate-100',
+      },
+      {
+        label: 'Active',
+        value: active,
+        icon: CheckCircle2,
+        tone: 'text-emerald-700 bg-emerald-50',
+      },
+      {
+        label: 'Draft',
+        value: draft,
+        icon: Sparkles,
+        tone: 'text-amber-700 bg-amber-50',
+      },
+      {
+        label: 'Archived',
+        value: archived,
+        icon: Archive,
+        tone: 'text-slate-600 bg-slate-100',
+      },
+    ]
+  }, [products, total])
+
+  const hasFilters = [...params.keys()].some((key) => key !== 'page')
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5">
+      {/* Header */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900">Products</h1>
-          <p className="mt-0.5 text-sm text-ink-500">{query.data?.meta?.total ?? 0} in the catalogue</p>
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
+            <span>Catalogue</span>
+            <span>/</span>
+            <span className="text-slate-600">Products</span>
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+            Products
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage your catalogue, inventory visibility and product status.
+          </p>
         </div>
 
         {can('products.create') && (
-          <Button onClick={() => navigate('/admin/products/new')}>
+          <Button
+            onClick={() => navigate('/admin/products/new')}
+            className="h-10 shrink-0"
+          >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            New product
+            Add product
           </Button>
         )}
-      </div>
+      </section>
 
-      {/*
-        One row, not a stacked block. The filters are a single toolbar: they
-        wrap only on a phone, and on anything wider they stay inline so the
-        table starts near the top of the screen instead of being pushed down
-        by its own controls.
-      */}
-      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault()
-            update({ search })
-          }}
-          className="relative min-w-48 flex-1"
-        >
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-            aria-hidden="true"
-          />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search name, SKU or barcode"
-            aria-label="Search products"
-            className="pl-9"
-          />
-        </form>
+      {/* Overview */}
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {stats.map(({ label, value, icon: Icon, tone }) => (
+          <div
+            key={label}
+            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium text-slate-500">{label}</p>
+                <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                  {value.toLocaleString()}
+                </p>
+              </div>
+              <span className={cx('grid h-9 w-9 place-items-center rounded-lg', tone)}>
+                <Icon className="h-4 w-4" />
+              </span>
+            </div>
+          </div>
+        ))}
+      </section>
 
-        <Select
-          value={params.get('status') ?? ''}
-          onChange={(event) => update({ status: event.target.value })}
-          aria-label="Filter by status"
-          className="w-32 shrink-0"
-        >
-          <option value="">Status</option>
-          <option value="active">Active</option>
-          <option value="draft">Draft</option>
-          <option value="archived">Archived</option>
-        </Select>
-
-        <Select
-          value={params.get('category_id') ?? ''}
-          onChange={(event) => update({ category_id: event.target.value })}
-          aria-label="Filter by category"
-          className="w-40 shrink-0"
-        >
-          <option value="">Category</option>
-          {(categories.data?.data ?? []).map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </Select>
-
-        {/*
-          Measured on what can actually be sold, not what is on the shelf:
-          stock sitting in someone else's basket is not available to anyone
-          else, so "out of stock" means out of sellable stock.
-        */}
-        <Select
-          value={params.get('stock') ?? ''}
-          onChange={(event) => update({ stock: event.target.value })}
-          aria-label="Filter by stock"
-          className="w-36 shrink-0"
-        >
-          <option value="">Stock</option>
-          <option value="in">In stock</option>
-          <option value="low">Running low</option>
-          <option value="out">Out of stock</option>
-        </Select>
-
-        {/* Only once something is filtered, so the row is not carrying a dead
-            button the rest of the time. */}
-        {[...params.keys()].some((key) => key !== 'page') && (
-          <button
-            type="button"
-            onClick={() => {
-              setSearch('')
-              setParams(new URLSearchParams())
+      {/* Filters */}
+      <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              update({ search })
             }}
-            className="inline-flex h-10 shrink-0 items-center gap-1 rounded-lg px-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900"
+            className="relative min-w-0 flex-1"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
-            Clear
-          </button>
-        )}
-      </div>
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by product name, SKU or barcode..."
+              aria-label="Search products"
+              className="h-10 border-slate-200 bg-slate-50 pl-9 focus:bg-white"
+            />
+          </form>
 
-      {/*
-        The bulk bar only exists while something is ticked, so the page is not
-        carrying a row of disabled buttons the rest of the time.
-      */}
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <Select
+                value={params.get('status') ?? ''}
+                onChange={(event) => update({ status: event.target.value })}
+                aria-label="Filter by status"
+                className="h-10 w-32 pl-9"
+              >
+                <option value="">All status</option>
+                <option value="active">Active</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </Select>
+            </div>
+
+            <Select
+              value={params.get('category_id') ?? ''}
+              onChange={(event) => update({ category_id: event.target.value })}
+              aria-label="Filter by category"
+              className="h-10 w-40"
+            >
+              <option value="">All categories</option>
+              {(categories.data?.data ?? []).map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              value={params.get('stock') ?? ''}
+              onChange={(event) => update({ stock: event.target.value })}
+              aria-label="Filter by stock"
+              className="h-10 w-36"
+            >
+              <option value="">All stock</option>
+              <option value="in">In stock</option>
+              <option value="low">Running low</option>
+              <option value="out">Out of stock</option>
+            </Select>
+
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('')
+                  setParams(new URLSearchParams())
+                }}
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-card border border-brand-300 bg-brand-50 p-3">
-          <p className="text-sm font-medium text-ink-900">
-            {selected.size} selected
-          </p>
-
-          <button
-            type="button"
-            onClick={() => setSelected(new Set())}
-            className="text-sm text-ink-600 underline hover:text-ink-900"
-          >
-            Clear
-          </button>
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              {selected.size} product{selected.size > 1 ? 's' : ''} selected
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="text-xs font-medium text-slate-500 hover:text-slate-900"
+            >
+              Clear selection
+            </button>
+          </div>
 
           <div className="ml-auto flex flex-wrap gap-2">
             {can('products.update') && (
@@ -287,117 +356,214 @@ export default function ProductsPage() {
       {query.isError && <ErrorState error={query.error} onRetry={query.refetch} />}
 
       {query.isLoading ? (
-        <div className="grid place-items-center py-16">
-          <Spinner />
+        <div className="rounded-xl border border-slate-200 bg-white py-20">
+          <div className="grid place-items-center">
+            <Spinner />
+          </div>
         </div>
       ) : products.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title="No products yet"
-          description="Add your first product to start building the catalogue."
-        />
+        <div className="rounded-xl border border-slate-200 bg-white">
+          <EmptyState
+            icon={Package}
+            title="No products found"
+            description="Try changing your filters or add your first product."
+          />
+        </div>
       ) : (
-        <>
-          <TableWrap>
-            <thead>
-              <tr>
-                <Th className="w-10">
-                  <input
-                    type="checkbox"
-                    checked={allOnPageSelected}
-                    onChange={(event) =>
-                      setSelected(
-                        event.target.checked
-                          ? new Set(products.map((product) => product.id))
-                          : new Set(),
-                      )
-                    }
-                    aria-label="Select every product on this page"
-                    className="h-4 w-4 rounded border-ink-300 text-brand-600"
-                  />
-                </Th>
-                <Th>Product</Th>
-                <Th>Category</Th>
-                <Th>Type</Th>
-                <Th numeric>Variations</Th>
-                <Th numeric>Price</Th>
-                <Th>Status</Th>
-                <Th />
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr
-                  key={product.id}
-                  className={cx('hover:bg-ink-50', selected.has(product.id) && 'bg-brand-50')}
-                >
-                  <Td>
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Product catalogue</h2>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Showing {products.length} of {total.toLocaleString()} products
+              </p>
+            </div>
+
+            <div className="hidden items-center gap-1.5 text-xs text-slate-400 sm:flex">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Live catalogue
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <TableWrap>
+              <thead>
+                <tr className="bg-slate-50/80">
+                  <Th className="w-10">
                     <input
                       type="checkbox"
-                      checked={selected.has(product.id)}
-                      onChange={() => toggle(product.id)}
-                      aria-label={`Select ${product.name}`}
-                      className="h-4 w-4 rounded border-ink-300 text-brand-600"
+                      checked={allOnPageSelected}
+                      onChange={(event) =>
+                        setSelected(
+                          event.target.checked
+                            ? new Set(products.map((product) => product.id))
+                            : new Set(),
+                        )
+                      }
+                      aria-label="Select every product on this page"
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600"
                     />
-                  </Td>
-                  <Td>
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-ink-100">
-                        {product.primary_image ? (
-                          <img src={product.primary_image} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <ImageOff className="h-4 w-4 text-ink-400" aria-hidden="true" />
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-ink-900">{product.name}</p>
-                        <p className="truncate text-xs text-ink-500">
-                          {product.default_variation?.sku ?? product.slug}
-                        </p>
+                  </Th>
+                  <Th>Product</Th>
+                  <Th>Category</Th>
+                  <Th>Type</Th>
+                  <Th numeric>Variations</Th>
+                  <Th numeric>Price</Th>
+                  <Th>Status</Th>
+                  <Th className="w-12" />
+                </tr>
+              </thead>
+
+              <tbody>
+                {products.map((product) => (
+                  <tr
+                    key={product.id}
+                    className={cx(
+                      'group border-t border-slate-100 transition-colors hover:bg-slate-50/70',
+                      selected.has(product.id) && 'bg-brand-50/50',
+                    )}
+                  >
+                    <Td>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(product.id)}
+                        onChange={() => toggle(product.id)}
+                        aria-label={`Select ${product.name}`}
+                        className="h-4 w-4 rounded border-slate-300 text-brand-600"
+                      />
+                    </Td>
+
+                    <Td>
+                      <div className="flex min-w-[250px] items-center gap-3">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                          {product.primary_image ? (
+                            <img
+                              src={product.primary_image}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <ImageOff className="h-4 w-4 text-slate-400" />
+                          )}
+                        </span>
+
+                        <div className="min-w-0">
+                          <Link
+                            to={`/admin/products/${product.id}/edit`}
+                            className="block truncate text-sm font-semibold text-slate-900 hover:text-brand-700"
+                          >
+                            {product.name}
+                          </Link>
+                          <div className="mt-0.5 flex items-center gap-1.5">
+                            <span className="text-[11px] text-slate-400">
+                              SKU
+                            </span>
+                            <span className="truncate text-xs font-medium text-slate-500">
+                              {product.default_variation?.sku ?? product.slug}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </Td>
-                  <Td>{product.category?.name ?? '—'}</Td>
-                  <Td>{product.type === 'variable' ? 'Variable' : 'Simple'}</Td>
-                  <Td numeric>{product.variations_count ?? 1}</Td>
-                  <Td numeric>{money(product.default_variation?.effective_price ?? 0)}</Td>
-                  <Td>
-                    <Badge tone={STATUS_TONE[product.status] ?? 'neutral'}>{product.status_label}</Badge>
-                  </Td>
-                  <Td className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {can('products.update') && (
-                        <Link
-                          to={`/admin/products/${product.id}/edit`}
-                          className="text-sm font-medium text-brand-700 hover:underline"
-                        >
-                          Edit
-                        </Link>
-                      )}
-                      {can('products.delete') && (
+                    </Td>
+
+                    <Td>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <Tag className="h-3.5 w-3.5 text-slate-400" />
+                        {product.category?.name ?? 'Uncategorized'}
+                      </span>
+                    </Td>
+
+                    <Td>
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                        {product.type === 'variable' ? 'Variable' : 'Simple'}
+                      </span>
+                    </Td>
+
+                    <Td numeric>
+                      <span className="text-sm font-medium text-slate-700">
+                        {product.variations_count ?? 1}
+                      </span>
+                    </Td>
+
+                    <Td numeric>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {money(product.default_variation?.effective_price ?? 0)}
+                      </span>
+                    </Td>
+
+                    <Td>
+                      <Badge tone={STATUS_TONE[product.status] ?? 'neutral'}>
+                        {product.status_label}
+                      </Badge>
+                    </Td>
+
+                    <Td className="text-right">
+                      <div className="relative flex justify-end">
                         <button
                           type="button"
-                          onClick={() => {
-                            // Archives rather than deletes: order history
-                            // references this product.
-                            if (window.confirm(`Archive “${product.name}”? Its history is kept.`)) {
-                              remove.mutate({ method: 'delete', url: `/admin/products/${product.id}` })
-                            }
-                          }}
-                          className="text-sm font-medium text-danger-700 hover:underline"
+                          onClick={() =>
+                            setActionsOpen((value) =>
+                              value === product.id ? null : product.id,
+                            )
+                          }
+                          className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 opacity-70 transition hover:bg-slate-100 hover:text-slate-900 group-hover:opacity-100"
+                          aria-label={`Actions for ${product.name}`}
                         >
-                          Archive
+                          <MoreHorizontal className="h-4 w-4" />
                         </button>
-                      )}
-                    </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrap>
 
-          <Pagination meta={query.data?.meta} onPage={(page) => update({ page })} />
-        </>
+                        {actionsOpen === product.id && (
+                          <div className="absolute right-0 top-9 z-20 w-36 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-left shadow-xl">
+                            {can('products.update') && (
+                              <Link
+                                to={`/admin/products/${product.id}/edit`}
+                                onClick={() => setActionsOpen(null)}
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                Edit product
+                              </Link>
+                            )}
+
+                            {can('products.delete') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActionsOpen(null)
+                                  if (
+                                    window.confirm(
+                                      `Archive “${product.name}”? Its history is kept.`,
+                                    )
+                                  ) {
+                                    remove.mutate({
+                                      method: 'delete',
+                                      url: `/admin/products/${product.id}`,
+                                    })
+                                  }
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                Archive
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableWrap>
+          </div>
+
+          <div className="border-t border-slate-100 px-4 py-3">
+            <Pagination
+              meta={query.data?.meta}
+              onPage={(page) => update({ page })}
+            />
+          </div>
+        </section>
       )}
     </div>
   )

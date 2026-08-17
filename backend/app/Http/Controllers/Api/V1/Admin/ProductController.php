@@ -171,6 +171,9 @@ class ProductController extends Controller
         return new ProductResource($product->load([
             'category', 'brand', 'unit', 'categories', 'images',
             'variations.attributeValues.attribute',
+            // The edit form shows the on-hand figure and edits it as a real
+            // stock movement, so it needs the current level to diff against.
+            'variations.inventory',
             'attributeValues.attribute',
         ]));
     }
