@@ -1,9 +1,13 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
+  Gift,
   Heart,
   ImageOff,
   Minus,
@@ -14,12 +18,15 @@ import {
   Star,
   Truck,
 } from 'lucide-react'
-import { get } from '../../lib/api'
+import { ApiError, get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
-import { Button, ErrorState, PageLoader, useToast } from '../../components/ui'
+import { Badge, Button, ErrorState, PageLoader, Pagination, Spinner, Textarea, useToast } from '../../components/ui'
 import { FacebookIcon, WhatsAppIcon, XIcon } from '../../components/BrandIcons'
+import { useAuthStore } from '../../stores/authStore'
+import { applyServerErrors } from '../auth/applyServerErrors'
 import { useAddToCart } from '../cart/useCart'
 import { ProductCard, ProductCardSkeleton } from './ProductCard'
+import { useDeleteReview, useMyReview, useProductReviews, useSubmitReview, useUpdateReview } from './useReviews'
 
 // Same claims HomePage makes, not new ones -- a product page inventing its
 // own "24/7 support" or "free shipping" would contradict whatever this shop
@@ -53,6 +60,245 @@ function StarRating({ value, count }) {
       <span className="tabular text-ink-600">
         {rating.toFixed(1)} ({count ?? 0} review{count === 1 ? '' : 's'})
       </span>
+    </div>
+  )
+}
+
+const reviewSchema = z.object({
+  title: z.string().max(150).optional().or(z.literal('')),
+  comment: z.string().min(1, 'Write a few words about the product.').max(2000),
+})
+
+function RatingInput({ value, onChange, error }) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-ink-800">
+        Your rating
+        <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
+      </label>
+      <div className="mt-1.5 flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            aria-label={`${n} star${n === 1 ? '' : 's'}`}
+            aria-pressed={n === value}
+          >
+            <Star
+              className={cx('h-6 w-6', n <= value ? 'fill-amber-400 text-amber-400' : 'text-ink-300')}
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      </div>
+      {error && <p className="mt-1 text-xs text-danger-700">{error}</p>}
+    </div>
+  )
+}
+
+/** Write a new review, or edit the customer's existing one. */
+function ReviewForm({ slug, existing, onDone }) {
+  const toast = useToast()
+  const submit = useSubmitReview(slug)
+  const update = useUpdateReview(slug)
+  const isEditing = Boolean(existing)
+  const mutation = isEditing ? update : submit
+
+  const [rating, setRating] = useState(existing?.rating ?? 0)
+  const [ratingError, setRatingError] = useState(null)
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(reviewSchema),
+    defaultValues: { title: existing?.title ?? '', comment: existing?.comment ?? '' },
+  })
+
+  const onSubmit = async (values) => {
+    if (rating < 1) {
+      setRatingError('Pick a rating.')
+      return
+    }
+    setRatingError(null)
+
+    try {
+      await mutation.mutateAsync(isEditing ? { reviewId: existing.id, rating, ...values } : { rating, ...values })
+      toast.success(isEditing ? 'Review updated. It will show once approved again.' : 'Thanks! Your review will show once approved.')
+      onDone?.()
+    } catch (error) {
+      if (error instanceof ApiError) {
+        applyServerErrors(error, setError, toast)
+        return
+      }
+      toast.error('Could not save your review.')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3 rounded-card border border-ink-200 p-4" noValidate>
+      <RatingInput value={rating} onChange={setRating} error={ratingError} />
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="review-title" className="text-sm font-medium text-ink-800">Title</label>
+        <input
+          id="review-title"
+          className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 hover:border-ink-400"
+          placeholder="Sum up your review"
+          {...register('title')}
+        />
+        {errors.title?.message && <p className="text-xs text-danger-700">{errors.title.message}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="review-comment" className="text-sm font-medium text-ink-800">
+          Your review
+          <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
+        </label>
+        <Textarea id="review-comment" invalid={Boolean(errors.comment)} {...register('comment')} />
+        {errors.comment?.message && <p className="text-xs text-danger-700">{errors.comment.message}</p>}
+      </div>
+
+      <div className="flex gap-2">
+        <Button type="submit" loading={mutation.isPending}>
+          {isEditing ? 'Update review' : 'Submit review'}
+        </Button>
+        {isEditing && (
+          <Button type="button" variant="secondary" onClick={onDone}>
+            Cancel
+          </Button>
+        )}
+      </div>
+    </form>
+  )
+}
+
+function ReviewItem({ review, isMine, onEdit, onDelete, deleting }) {
+  return (
+    <div className="flex flex-col gap-2 border-b border-ink-100 py-4 last:border-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={cx('h-4 w-4', i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-ink-300')}
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+
+          {review.is_verified_purchase && <Badge tone="success">Verified Purchase</Badge>}
+
+          {review.status_label && review.status !== 'approved' && (
+            <Badge tone={review.status === 'rejected' ? 'danger' : 'warning'}>{review.status_label}</Badge>
+          )}
+        </div>
+
+        {isMine && (
+          <div className="flex gap-3 text-xs">
+            <button type="button" onClick={onEdit} className="font-medium text-brand-700 hover:underline">
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              className="font-medium text-danger-700 hover:underline disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
+
+      {review.title && <p className="font-semibold text-ink-900">{review.title}</p>}
+      <p className="text-sm leading-relaxed text-ink-700">{review.comment}</p>
+      <p className="text-xs text-ink-400">
+        {review.customer_name ?? 'Customer'}
+        {review.created_at ? ` · ${new Date(review.created_at).toLocaleDateString()}` : ''}
+      </p>
+    </div>
+  )
+}
+
+/** The Review tab: the rating summary, the customer's own review (or a form to write one), and the approved review list. */
+function ReviewsPanel({ product }) {
+  const slug = product.slug
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const toast = useToast()
+  const [page, setPage] = useState(1)
+  const [editing, setEditing] = useState(false)
+
+  const reviewsQuery = useProductReviews(slug, { page })
+  const myReviewQuery = useMyReview(slug, { enabled: isAuthenticated })
+  const deleteReview = useDeleteReview(slug)
+
+  const reviews = reviewsQuery.data?.data ?? []
+  const myReview = myReviewQuery.data?.data ?? null
+  const canReview = myReviewQuery.data?.can_review ?? false
+
+  const handleDelete = () => {
+    if (!myReview) return
+    if (!window.confirm('Delete your review?')) return
+
+    deleteReview.mutate(myReview.id, {
+      onSuccess: () => toast.success('Review removed.'),
+      onError: (error) => toast.error(error?.message ?? 'Could not delete your review.'),
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <StarRating value={product.rating_avg} count={product.rating_count} />
+
+      {isAuthenticated ? (
+        myReview && !editing ? (
+          <div>
+            <p className="mb-2 text-sm font-medium text-ink-800">Your review</p>
+            <div className="rounded-card border border-ink-200 px-4">
+              <ReviewItem
+                review={myReview}
+                isMine
+                onEdit={() => setEditing(true)}
+                onDelete={handleDelete}
+                deleting={deleteReview.isPending}
+              />
+            </div>
+          </div>
+        ) : myReview && editing ? (
+          <ReviewForm slug={slug} existing={myReview} onDone={() => setEditing(false)} />
+        ) : canReview ? (
+          <ReviewForm slug={slug} />
+        ) : (
+          !myReviewQuery.isLoading && (
+            <p className="text-sm text-ink-500">You can review this product once it has been delivered to you.</p>
+          )
+        )
+      ) : (
+        <p className="text-sm text-ink-500">
+          <Link to="/login" className="font-medium text-brand-700 underline underline-offset-4">
+            Sign in
+          </Link>{' '}
+          to write a review.
+        </p>
+      )}
+
+      {reviewsQuery.isLoading ? (
+        <Spinner />
+      ) : reviews.length === 0 ? (
+        <p className="text-sm text-ink-500">No reviews yet.</p>
+      ) : (
+        <div>
+          {reviews.map((review) => (
+            <ReviewItem key={review.id} review={review} />
+          ))}
+          <Pagination meta={reviewsQuery.data?.meta} onPage={setPage} />
+        </div>
+      )}
     </div>
   )
 }
@@ -278,7 +524,25 @@ export function ProductDetailPage() {
             {hasDiscount && <span className="tabular text-lg text-ink-400 line-through">{money(wasPrice)}</span>}
           </div>
 
-          {product.short_description && <p className="text-ink-600">{product.short_description}</p>}
+          {Number(selected?.reward_points) > 0 && (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-accent-600">
+              <Gift className="h-4 w-4" aria-hidden="true" />
+              Earn {selected.reward_points} reward points on this purchase
+            </p>
+          )}
+
+          {product.short_description &&
+            (product.short_description_style === 'list' ? (
+              <ul className="list-disc space-y-1 pl-5 text-ink-600">
+                {product.short_description
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter(Boolean)
+                  .map((line, index) => <li key={index}>{line}</li>)}
+              </ul>
+            ) : (
+              <p className="text-ink-600">{product.short_description}</p>
+            ))}
 
           {variations.length > 1 && (
             <fieldset className="flex flex-col gap-2">
@@ -465,11 +729,22 @@ export function ProductDetailPage() {
         </div>
 
         <div className="max-w-3xl py-5">
-          {tab === 'description' && (
-            <p className="whitespace-pre-line leading-relaxed text-ink-700">
-              {product.description || 'No description has been written for this product yet.'}
-            </p>
-          )}
+          {tab === 'description' &&
+            (product.description ? (
+              // Written with the admin's rich text editor and stored as HTML;
+              // a description saved before that editor existed is plain text
+              // and gets the old line-break treatment instead.
+              /<[a-z][\s\S]*>/i.test(product.description) ? (
+                <div
+                  className="prose-content leading-relaxed text-ink-700"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+              ) : (
+                <p className="whitespace-pre-line leading-relaxed text-ink-700">{product.description}</p>
+              )
+            ) : (
+              <p className="text-sm text-ink-500">No description has been written for this product yet.</p>
+            ))}
 
           {tab === 'additional' &&
             (additionalInfo.length > 0 ? (
@@ -495,14 +770,7 @@ export function ProductDetailPage() {
               <p className="text-sm text-ink-500">No additional information for this product.</p>
             ))}
 
-          {tab === 'review' &&
-            (Number(product.rating_count) > 0 ? (
-              <div className="flex items-center gap-3">
-                <StarRating value={product.rating_avg} count={product.rating_count} />
-              </div>
-            ) : (
-              <p className="text-sm text-ink-500">No reviews yet.</p>
-            ))}
+          {tab === 'review' && <ReviewsPanel product={product} />}
         </div>
       </div>
 

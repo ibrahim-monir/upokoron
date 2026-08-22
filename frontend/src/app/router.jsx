@@ -220,6 +220,14 @@ export const router = createBrowserRouter([
         path: 'coupons',
         element: guarded('coupons.manage', lazyAdmin(() => import('../features/admin/CouponsPage'))),
       },
+      {
+        path: 'reviews',
+        element: guarded('reviews.view', lazyAdmin(() => import('../features/admin/ReviewsPage'))),
+      },
+      {
+        path: 'rewards',
+        element: guarded('rewards.view', lazyAdmin(() => import('../features/admin/RewardsPage'))),
+      },
 
       {
         path: 'inventory',

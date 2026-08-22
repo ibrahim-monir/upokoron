@@ -23,7 +23,7 @@ class Product extends Model
 
     protected $fillable = [
         'name', 'slug', 'category_id', 'brand_id', 'unit_id', 'type',
-        'short_description', 'description', 'is_stock_tracked',
+        'short_description', 'short_description_style', 'description', 'is_stock_tracked',
         'status', 'is_featured', 'published_at',
         'weight', 'length', 'width', 'height', 'warranty', 'additional_info',
         'meta_title', 'meta_description', 'meta_keywords', 'canonical_url',
@@ -82,6 +82,31 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('position');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /**
+     * Recompute rating_avg/rating_count from approved reviews.
+     *
+     * Called after any write that could change what "approved" means for
+     * this product (a review approved, rejected, edited or deleted) rather
+     * than kept incrementally in sync -- a straight recount from the source
+     * of truth cannot drift.
+     */
+    public function refreshRatingSummary(): void
+    {
+        $stats = $this->reviews()->approved()
+            ->selectRaw('COUNT(*) as count, COALESCE(AVG(rating), 0) as avg')
+            ->first();
+
+        $this->forceFill([
+            'rating_count' => (int) $stats->count,
+            'rating_avg' => round((float) $stats->avg, 2),
+        ])->save();
     }
 
     public function primaryImage(): HasOne

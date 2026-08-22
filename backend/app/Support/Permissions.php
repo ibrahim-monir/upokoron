@@ -84,6 +84,10 @@ final class Permissions
                 'affiliate.manage' => 'Manage affiliates',
                 'affiliate.payout' => 'Pay affiliate commissions',
             ],
+            'Reviews' => [
+                'reviews.view' => 'View product reviews',
+                'reviews.moderate' => 'Approve, reject or delete reviews',
+            ],
             'Money' => [
                 'expenses.view' => 'View expenses',
                 'expenses.manage' => 'Record expenses',
@@ -155,7 +159,8 @@ final class Permissions
                 'returns.view', 'returns.manage', 'returns.refund',
                 'customers.view', 'customers.manage', 'customers.ledger',
                 'banners.manage', 'coupons.manage', 'discounts.manage',
-                'rewards.view', 'affiliate.view', 'affiliate.manage',
+                'rewards.view', 'rewards.adjust', 'affiliate.view', 'affiliate.manage',
+                'reviews.view', 'reviews.moderate',
                 'expenses.view', 'expenses.manage',
                 'reports.sales', 'reports.inventory',
                 'shipping.manage', 'payments.manage',
@@ -200,6 +205,7 @@ final class Permissions
                 'returns.view', 'returns.manage',
                 'customers.view', 'customers.manage',
                 'rewards.view',
+                'reviews.view', 'reviews.moderate',
             ],
 
             // Storefront accounts. No admin permissions at all.

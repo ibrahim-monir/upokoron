@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\V1\Admin\OrderController;
 use App\Http\Controllers\Api\V1\Admin\PaymentMethodController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
+use App\Http\Controllers\Api\V1\Admin\RewardController;
+use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
 use App\Http\Controllers\Api\V1\Admin\ShippingZoneController;
@@ -100,6 +102,11 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy'])->name('products.images.destroy');
     Route::post('products/{product}/images/{image}/primary', [ProductImageController::class, 'makePrimary'])->name('products.images.primary');
     Route::post('products/{product}/images/reorder', [ProductImageController::class, 'reorder'])->name('products.images.reorder');
+
+    // Review moderation.
+    Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::put('reviews/{review}/status', [ReviewController::class, 'updateStatus'])->name('reviews.status');
+    Route::delete('reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 
     /*
     |----------------------------------------------------------------------
@@ -191,4 +198,12 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::post('coupons', [CouponController::class, 'store'])->name('coupons.store');
     Route::put('coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
     Route::delete('coupons/{coupon}', [CouponController::class, 'destroy'])->name('coupons.destroy');
+
+    // Loyalty points.
+    Route::get('rewards/settings', [RewardController::class, 'settings'])->name('rewards.settings');
+    Route::put('rewards/settings', [RewardController::class, 'updateSettings'])->name('rewards.settings.update');
+    Route::get('rewards/customers', [RewardController::class, 'customers'])->name('rewards.customers');
+    Route::get('rewards/customers/{customer}/history', [RewardController::class, 'history'])
+        ->name('rewards.customers.history');
+    Route::post('rewards/adjustments', [RewardController::class, 'adjust'])->name('rewards.adjustments');
 });
