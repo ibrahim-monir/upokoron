@@ -30,6 +30,7 @@ class ProductResource extends JsonResource
             'published_at' => $this->published_at?->toIso8601String(),
 
             'short_description' => $this->short_description,
+            'short_description_style' => $this->short_description_style,
             'description' => $this->when(
                 $request->routeIs('*.show'),
                 fn () => $this->description,

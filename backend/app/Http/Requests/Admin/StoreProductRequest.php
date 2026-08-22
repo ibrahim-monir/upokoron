@@ -31,6 +31,7 @@ class StoreProductRequest extends FormRequest
             'type' => ['required', Rule::in(['simple', 'variable'])],
 
             'short_description' => ['nullable', 'string', 'max:500'],
+            'short_description_style' => ['nullable', Rule::in(['paragraph', 'list'])],
             'description' => ['nullable', 'string', 'max:65000'],
             'is_stock_tracked' => ['sometimes', 'boolean'],
 
