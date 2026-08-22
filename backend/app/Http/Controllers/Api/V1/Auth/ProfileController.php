@@ -7,12 +7,15 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
+use App\Services\Rewards\RewardPointsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly RewardPointsService $rewards) {}
+
     public function show(Request $request): UserResource
     {
         return new UserResource(
@@ -30,8 +33,10 @@ class ProfileController extends Controller
             // The customer profile mirrors the contact details so admin-side
             // customer screens do not have to join through users to show a
             // phone number.
-            $user->customer?->update($request->safe()->only(['name', 'email', 'phone']));
+            $user->customer?->update($request->safe()->only(['name', 'email', 'phone', 'date_of_birth']));
         });
+
+        $this->rewards->awardProfileCompletion($user->customer?->fresh());
 
         return response()->json([
             'message' => 'Profile updated.',

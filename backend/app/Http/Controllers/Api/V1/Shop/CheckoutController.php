@@ -16,6 +16,7 @@ use App\Services\Cart\CartService;
 use App\Services\Order\OrderService;
 use App\Services\Order\OrderStatusService;
 use App\Services\Order\PlaceOrderData;
+use App\Services\Rewards\RewardPointsService;
 use App\Services\Shipping\ShippingService;
 use App\Support\Districts;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,7 @@ class CheckoutController extends Controller
         private readonly OrderService $orders,
         private readonly OrderStatusService $statuses,
         private readonly ShippingService $shipping,
+        private readonly RewardPointsService $rewards,
     ) {}
 
     /**
@@ -78,6 +80,8 @@ class CheckoutController extends Controller
                 'subtotal' => $subtotal->value(),
                 'discount' => $summary['discount']->value(),
                 'coupon' => $summary['coupon'],
+                'reward_points' => $summary['reward_points'],
+                'reward_points_balance' => $customer === null ? null : $this->rewards->balance($customer),
                 'has_unheld_items' => $summary['has_unheld'],
                 'addresses' => $addresses,
 

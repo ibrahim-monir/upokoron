@@ -36,3 +36,8 @@ Schedule::command('reservations:release-expired --reconcile')
 Schedule::command('accounting:check')
     ->dailyAt('02:00')
     ->emailOutputOnFailure(config('mail.from.address'));
+
+// Birthday bonuses and point expiry both turn on the calendar date, not on
+// anything a request triggers.
+Schedule::command('rewards:process')
+    ->dailyAt('00:30');

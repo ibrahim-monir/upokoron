@@ -17,6 +17,7 @@ use App\Models\ProductVariation;
 use App\Models\StockReservation;
 use App\Services\Cart\CartService;
 use App\Services\Pricing\PricedLine;
+use App\Services\Rewards\RewardPointsService;
 use App\Services\Shipping\ShippingService;
 use App\Services\Support\DocumentNumberService;
 use App\Support\Money;
@@ -44,6 +45,7 @@ class OrderService
         private readonly CartService $carts,
         private readonly ShippingService $shipping,
         private readonly DocumentNumberService $numbers,
+        private readonly RewardPointsService $rewards,
     ) {}
 
     /**
@@ -122,6 +124,26 @@ class OrderService
             $couponDiscount = Money::of($summary['coupon']['discount']);
         }
 
+        /*
+         * Same story as the coupon: the redemption was requested on the cart
+         * earlier and revalidated by the summary just now, against whatever
+         * the customer's balance and this subtotal are at this moment.
+         */
+        $rewardPointsUsed = 0;
+        $rewardPointsDiscount = Money::zero();
+
+        if ($summary['reward_points'] !== null) {
+            if (! $summary['reward_points']['is_valid']) {
+                throw new BusinessRuleException(
+                    $summary['reward_points']['message'] ?? 'That points redemption no longer applies. Remove it and try again.',
+                    'reward_points_no_longer_valid',
+                );
+            }
+
+            $rewardPointsUsed = $summary['reward_points']['points'];
+            $rewardPointsDiscount = Money::of($summary['reward_points']['discount']);
+        }
+
         // Re-priced here rather than trusted from the quote the browser saw.
         $shippingCharge = $this->shipping->chargeForRate(
             rate: $data->shippingRate,
@@ -131,7 +153,8 @@ class OrderService
         );
 
         $extraCharge = Money::of($data->paymentMethod->extra_charge);
-        $total = $subtotal->plus($shippingCharge)->plus($extraCharge)->minus($couponDiscount);
+        $total = $subtotal->plus($shippingCharge)->plus($extraCharge)
+            ->minus($couponDiscount)->minus($rewardPointsDiscount);
 
         if (! $data->paymentMethod->is_active || ! $data->paymentMethod->acceptsTotal($total)) {
             throw new BusinessRuleException(
@@ -145,6 +168,7 @@ class OrderService
             $cart, $data, $customer, $placedBy, $summary, $shippingFields,
             $zone, $subtotal, $shippingCharge, $extraCharge, $total,
             $couponId, $couponCode, $couponDiscount,
+            $rewardPointsUsed, $rewardPointsDiscount,
         ): Order {
             $order = new Order;
 
@@ -177,6 +201,8 @@ class OrderService
                 'subtotal' => $subtotal->value(),
                 'discount_total' => $summary['discount']->value(),
                 'coupon_discount' => $couponDiscount->value(),
+                'reward_points_used' => $rewardPointsUsed,
+                'reward_points_discount' => $rewardPointsDiscount->value(),
                 'shipping_charge' => $shippingCharge->value(),
                 'extra_charge' => $extraCharge->value(),
                 'total' => $total->value(),
@@ -192,6 +218,10 @@ class OrderService
             // without one overwriting the other's increment.
             if ($couponId !== null) {
                 Coupon::whereKey($couponId)->increment('used_count');
+            }
+
+            if ($rewardPointsUsed > 0 && $customer !== null) {
+                $this->rewards->redeem($customer, $rewardPointsUsed, $order);
             }
 
             foreach ($summary['priced'] as $line) {

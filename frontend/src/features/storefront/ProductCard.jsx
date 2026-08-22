@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Heart, ImageOff, Star } from 'lucide-react'
+import { Gift, Heart, ImageOff, Star } from 'lucide-react'
 import { money } from '../../lib/format'
 import { AddToCart } from '../cart/AddToCart'
 
@@ -75,16 +75,25 @@ export function ProductCard({ product }) {
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-ink-500">
-          <Star
-            className={rating > 0 ? 'h-3.5 w-3.5 fill-amber-400 text-amber-400' : 'h-3.5 w-3.5 text-ink-300'}
-            aria-hidden="true"
-          />
-          <span className="tabular">
-            {rating.toFixed(1)}/5 ({product.rating_count ?? 0})
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className="tabular">{sold % 1 === 0 ? sold : sold.toFixed(0)} Sold</span>
+        <div className="flex items-center justify-between gap-2 text-xs text-ink-500">
+          <div className="flex items-center gap-1.5">
+            <Star
+              className={rating > 0 ? 'h-3.5 w-3.5 fill-amber-400 text-amber-400' : 'h-3.5 w-3.5 text-ink-300'}
+              aria-hidden="true"
+            />
+            <span className="tabular">
+              {rating.toFixed(1)}/5 ({product.rating_count ?? 0})
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="tabular">{sold % 1 === 0 ? sold : sold.toFixed(0)} Sold</span>
+          </div>
+
+          {Number(variation?.reward_points) > 0 && (
+            <span className="flex shrink-0 items-center gap-1 font-medium text-accent-600">
+              <Gift className="h-3.5 w-3.5" aria-hidden="true" />
+              +{variation.reward_points} pts
+            </span>
+          )}
         </div>
 
         {/*

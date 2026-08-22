@@ -32,6 +32,7 @@ class CustomerResource extends JsonResource
             ]),
             'total_orders' => (int) $this->total_orders,
             'total_spent' => (string) $this->total_spent,
+            'reward_points_balance' => (int) $this->reward_points_balance,
             'last_order_at' => $this->last_order_at?->toIso8601String(),
             'is_blocked' => $this->is_blocked,
             'addresses' => CustomerAddressResource::collection($this->whenLoaded('addresses')),

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowRight,
+  Gift,
   ImageOff,
   Minus,
   Plus,
@@ -16,12 +17,15 @@ import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Input, Spinner, useToast } from '../../components/ui'
 import { DistrictSelect } from '../../components/DistrictSelect'
 import { TrustBadges } from '../../components/TrustBadges'
+import { useAuthStore } from '../../stores/authStore'
 import {
   useApplyCoupon,
   useCart,
   useClearCart,
+  useRedeemRewardPoints,
   useRemoveCartItem,
   useRemoveCoupon,
+  useRemoveRewardPoints,
   useShippingQuote,
   useUpdateCartItem,
 } from './useCart'
@@ -228,6 +232,83 @@ function CouponBox({ coupon }) {
   )
 }
 
+/** Spend loyalty points for a discount, the same one-code-in-one-click-out shape as the coupon box beside it. */
+function RewardPointsBox({ rewardPoints, balance }) {
+  const toast = useToast()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const [points, setPoints] = useState('')
+
+  const redeem = useRedeemRewardPoints()
+  const remove = useRemoveRewardPoints()
+
+  if (!isAuthenticated) return null
+
+  if (rewardPoints) {
+    return (
+      <div
+        className={cx(
+          'flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm',
+          rewardPoints.is_valid
+            ? 'border-accent-500/40 bg-accent-50 text-accent-700'
+            : 'border-warning-500/40 bg-warning-50 text-warning-700',
+        )}
+      >
+        <span className="flex items-center gap-1.5 font-medium">
+          <Gift className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          {rewardPoints.is_valid ? (
+            <>
+              {rewardPoints.points} points applied — you save {money(rewardPoints.discount)}
+            </>
+          ) : (
+            <>{rewardPoints.points} points: {rewardPoints.message ?? 'no longer applies'}</>
+          )}
+        </span>
+        <button
+          type="button"
+          onClick={() => remove.mutate()}
+          disabled={remove.isPending}
+          className="font-medium underline underline-offset-2 disabled:opacity-50"
+        >
+          Remove
+        </button>
+      </div>
+    )
+  }
+
+  if (balance <= 0) return null
+
+  return (
+    <form
+      className="flex gap-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+
+        const requested = parseInt(points, 10)
+        if (!requested || requested <= 0) return
+
+        redeem.mutate(requested, {
+          onSuccess: () => setPoints(''),
+          onError: (error) => toast.error(error?.message ?? 'Those points could not be redeemed.'),
+        })
+      }}
+    >
+      <Input
+        type="number"
+        min="1"
+        value={points}
+        onChange={(event) => setPoints(event.target.value)}
+        placeholder={`Redeem points (you have ${balance})`}
+        aria-label="Reward points to redeem"
+        className="min-w-0 flex-1"
+      />
+      <Button type="submit" variant="secondary" loading={redeem.isPending} disabled={!points}>
+        <Gift className="h-4 w-4" aria-hidden="true" />
+        Redeem
+      </Button>
+    </form>
+  )
+}
+
 export function CartPage() {
   const toast = useToast()
   const cart = useCart()
@@ -287,11 +368,13 @@ export function CartPage() {
   const discount = Number(data.discount)
   const coupon = data.coupon
   const couponDiscount = coupon?.is_valid ? Number(coupon.discount) : 0
+  const rewardPoints = data.reward_points
+  const rewardPointsDiscount = rewardPoints?.is_valid ? Number(rewardPoints.discount) : 0
   const delivery = option ? Number(option.charge) : null
   // `subtotal` is already net of item-level discounts (that is what "You
-  // save" reports against list price), so only the coupon and delivery
-  // adjust it further here.
-  const total = subtotal - couponDiscount + (delivery ?? 0)
+  // save" reports against list price), so only the coupon, redeemed points
+  // and delivery adjust it further here.
+  const total = subtotal - couponDiscount - rewardPointsDiscount + (delivery ?? 0)
 
   return (
     <div className="flex flex-col gap-4">
@@ -335,8 +418,9 @@ export function CartPage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-            <div className="w-full sm:w-auto sm:min-w-72">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-72">
               <CouponBox coupon={coupon} />
+              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
             </div>
 
             <button
@@ -381,6 +465,13 @@ export function CartPage() {
                 <div className="flex justify-between">
                   <dt className="text-ink-600">Coupon ({coupon.code})</dt>
                   <dd className="tabular font-medium text-accent-600">− {money(couponDiscount)}</dd>
+                </div>
+              )}
+
+              {rewardPointsDiscount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-ink-600">Points ({rewardPoints.points})</dt>
+                  <dd className="tabular font-medium text-accent-600">− {money(rewardPointsDiscount)}</dd>
                 </div>
               )}
 

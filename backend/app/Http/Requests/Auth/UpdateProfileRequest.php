@@ -26,6 +26,7 @@ class UpdateProfileRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'email' => ['nullable', 'email:rfc', 'max:190', Rule::unique('users', 'email')->ignore($id)],
             'phone' => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/', Rule::unique('users', 'phone')->ignore($id)],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
         ];
     }
 

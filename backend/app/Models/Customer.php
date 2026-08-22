@@ -58,4 +58,9 @@ class Customer extends Model
     {
         return $this->hasOne(CustomerAddress::class)->where('is_default_shipping', true);
     }
+
+    public function rewardPointTransactions(): HasMany
+    {
+        return $this->hasMany(RewardPointTransaction::class);
+    }
 }

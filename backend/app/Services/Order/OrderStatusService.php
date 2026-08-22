@@ -15,6 +15,7 @@ use App\Services\Accounting\JournalLine;
 use App\Services\Accounting\JournalService;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\ReservationService;
+use App\Services\Rewards\RewardPointsService;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 
@@ -49,6 +50,7 @@ class OrderStatusService
         private readonly InventoryService $inventory,
         private readonly ReservationService $reservations,
         private readonly JournalService $journal,
+        private readonly RewardPointsService $rewards,
     ) {}
 
     /**
@@ -257,6 +259,8 @@ class OrderStatusService
             lines: $lines,
             memo: "Order {$order->number} delivered",
         );
+
+        $this->rewards->awardPurchase($order);
     }
 
     /**

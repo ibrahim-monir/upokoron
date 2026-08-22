@@ -97,6 +97,22 @@ export function useRemoveCoupon() {
   })
 }
 
+export function useRedeemRewardPoints() {
+  return useCartMutation(async (points) => {
+    const { data } = await api.post('/shop/cart/reward-points', { points })
+
+    return data
+  })
+}
+
+export function useRemoveRewardPoints() {
+  return useCartMutation(async () => {
+    const { data } = await api.delete('/shop/cart/reward-points')
+
+    return data
+  })
+}
+
 /**
  * Delivery charge for an address.
  *

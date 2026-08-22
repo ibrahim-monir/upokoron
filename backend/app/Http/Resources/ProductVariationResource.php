@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\ProductVariation;
+use App\Services\Rewards\RewardPointsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,6 +35,16 @@ class ProductVariationResource extends JsonResource
             // storefront never computes this itself.
             'effective_price' => $this->effectivePrice()->value(),
             'is_on_sale' => $this->hasActiveSpecialPrice(),
+
+            // How many loyalty points buying this variation, at this price,
+            // would earn -- a preview of what awardPurchase() will actually
+            // credit once the order is delivered. Left off entirely rather
+            // than sent as 0/false, so the storefront does not have to know
+            // the difference between "the program is off" and "worth nothing".
+            'reward_points' => $this->when(
+                app(RewardPointsService::class)->shouldShowOnProductPage(),
+                fn () => app(RewardPointsService::class)->pointsForAmount($this->effectivePrice()),
+            ),
 
             /*
              * What a shopper can actually have, with everyone else's held
