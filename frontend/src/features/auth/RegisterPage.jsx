@@ -130,7 +130,7 @@ export function RegisterPage() {
 
         <p className="mt-5 text-center text-sm text-ink-600">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-brand-700 underline underline-offset-4">
+          <Link to="/login" className="font-medium text-brand-800 underline underline-offset-4">
             Sign in
           </Link>
         </p>

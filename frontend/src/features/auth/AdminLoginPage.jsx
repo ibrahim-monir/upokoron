@@ -88,7 +88,7 @@ export function AdminLoginPage() {
             />
 
             <p className="-mt-2 text-right text-sm">
-              <Link to="/forgot-password" className="font-medium text-brand-700 underline underline-offset-4">
+              <Link to="/forgot-password" className="font-medium text-brand-800 underline underline-offset-4">
                 Forgot password?
               </Link>
             </p>

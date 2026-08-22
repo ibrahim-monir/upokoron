@@ -36,9 +36,13 @@ import { statusTone } from '../checkout/orderStatus'
 
 const FALLBACK_STATUSES = [
   { value: 'pending', label: 'Pending' },
+  { value: 'on_hold', label: 'On hold' },
   { value: 'confirmed', label: 'Confirmed' },
+  { value: 'processing', label: 'Processing' },
   { value: 'packed', label: 'Packed' },
+  { value: 'ready_to_ship', label: 'Ready to ship' },
   { value: 'shipped', label: 'Shipped' },
+  { value: 'out_for_delivery', label: 'Out for delivery' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'returned', label: 'Returned' },
@@ -180,7 +184,7 @@ function StatusEditor({ order, onDone }) {
 
         <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-800">
               <Clock3 className="h-5 w-5" />
             </div>
 
@@ -251,7 +255,7 @@ function StatusEditor({ order, onDone }) {
                         'rounded-full px-3 py-1.5 text-xs font-semibold transition',
                         active
                           ? 'bg-brand-600 text-white shadow-sm'
-                          : 'bg-white text-ink-500 ring-1 ring-inset ring-ink-200 hover:bg-brand-50 hover:text-brand-700',
+                          : 'bg-white text-ink-500 ring-1 ring-inset ring-ink-200 hover:bg-brand-50 hover:text-brand-800',
                       ].join(' ')}
                     >
                       {option.label}
@@ -304,7 +308,7 @@ function StatusEditor({ order, onDone }) {
 
 function Metric({ icon: Icon, label, value, tone = 'brand' }) {
   const tones = {
-    brand: 'bg-brand-50 text-brand-700',
+    brand: 'bg-brand-50 text-brand-800',
     success: 'bg-success-50 text-success-700',
     warning: 'bg-warning-50 text-warning-700',
     ink: 'bg-ink-100 text-ink-700',
@@ -831,7 +835,7 @@ function PrintInvoiceButton({ order }) {
       type="button"
       onClick={printInvoice}
       disabled={printing}
-      className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-100 disabled:cursor-wait disabled:opacity-60"
+      className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3.5 text-sm font-semibold text-brand-800 shadow-sm transition hover:border-brand-300 hover:bg-brand-100 disabled:cursor-wait disabled:opacity-60"
     >
       <Printer className="h-4 w-4" />
       {printing ? 'Preparing…' : 'Print Invoice'}
@@ -909,7 +913,7 @@ export default function AdminOrderDetailPage() {
           <div className="flex items-start gap-3">
             <Link
               to="/admin/orders"
-              className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-ink-200 bg-white text-ink-500 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+              className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-ink-200 bg-white text-ink-500 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800"
               aria-label="Back to orders"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -1172,7 +1176,7 @@ export default function AdminOrderDetailPage() {
           <aside className="space-y-5 xl:sticky xl:top-20">
             <SectionCard title="Customer" icon={UserRound}>
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-full bg-brand-50 text-brand-700">
+                <div className="grid h-11 w-11 place-items-center rounded-full bg-brand-50 text-brand-800">
                   <UserRound className="h-5 w-5" />
                 </div>
 
@@ -1242,7 +1246,7 @@ export default function AdminOrderDetailPage() {
                 <div className="border-t border-ink-100 pt-3">
                   <div className="flex justify-between gap-4">
                     <dt className="font-bold text-ink-900">Total</dt>
-                    <dd className="tabular text-lg font-bold text-brand-700">
+                    <dd className="tabular text-lg font-bold text-brand-800">
                       {money(order.total)}
                     </dd>
                   </div>
@@ -1278,7 +1282,7 @@ export default function AdminOrderDetailPage() {
             <SectionCard title="Delivery" icon={Truck}>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-700">
+                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-800">
                     <Truck className="h-4 w-4" />
                   </div>
                   <div>

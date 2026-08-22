@@ -97,7 +97,7 @@ export function OrderDetailPage() {
 
           <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
             <dt className="text-ink-900">Total</dt>
-            <dd className="tabular text-brand-700">{money(data.total)}</dd>
+            <dd className="tabular text-brand-800">{money(data.total)}</dd>
           </div>
 
           {Number(data.due_total) > 0 && (
@@ -112,7 +112,7 @@ export function OrderDetailPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-card border border-ink-200 bg-white p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-            <Truck className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            <Truck className="h-4 w-4 text-brand-800" aria-hidden="true" />
             Delivering to
           </h2>
           <p className="mt-2 text-sm text-ink-800">{data.shipping.name}</p>
@@ -135,7 +135,7 @@ export function OrderDetailPage() {
 
         <div className="rounded-card border border-ink-200 bg-white p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-            <Package className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            <Package className="h-4 w-4 text-brand-800" aria-hidden="true" />
             Progress
           </h2>
 

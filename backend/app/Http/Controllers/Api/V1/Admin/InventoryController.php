@@ -39,6 +39,16 @@ class InventoryController extends Controller
             ->leftJoin('inventories as i', 'i.product_variation_id', '=', 'v.id')
             ->whereNull('v.deleted_at')
             ->where('p.is_stock_tracked', true)
+            /*
+             * Every SKU under one product -- what an expanded row in the
+             * products table asks for. The stock-tracked condition above
+             * still applies, so a product with counting turned off expands
+             * to nothing, which is the honest answer for it.
+             */
+            ->when(
+                $request->filled('product_id'),
+                fn ($q) => $q->where('p.id', $request->integer('product_id')),
+            )
             ->when($request->filled('search'), function ($query) use ($request): void {
                 $term = '%'.$request->string('search')->value().'%';
 

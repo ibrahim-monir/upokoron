@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, ChevronRight, PackageOpen, ShieldCheck, SlidersHorizontal, Truck } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Flame, SlidersHorizontal } from 'lucide-react'
 import { get } from '../../lib/api'
 import { cx } from '../../lib/format'
 import { EmptyState } from '../../components/ui'
-import { ProductCard, ProductCardSkeleton } from './ProductCard'
+import { PRODUCT_GRID, ProductCard, ProductCardSkeleton } from './ProductCard'
 
 /*
  * Colour themes a banner may be saved with (Admin -> Marketing -> Home page
@@ -72,7 +72,7 @@ function HeroCarousel() {
 
   if (banners.isLoading) {
     return (
-      <div className="min-h-64 animate-pulse rounded-lg bg-ink-100 sm:min-h-[19rem] lg:h-[19rem]" />
+      <div className="min-h-64 animate-pulse rounded-lg bg-ink-100 sm:min-h-[25rem] lg:h-[25rem]" />
     )
   }
 
@@ -86,7 +86,7 @@ function HeroCarousel() {
       aria-roledescription="carousel"
       aria-label="Promotions"
       className={cx(
-        'relative flex min-h-64 flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br p-6 text-white sm:min-h-[19rem] sm:p-10 lg:h-[19rem]',
+        'relative flex min-h-64 flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br p-6 text-white sm:min-h-[25rem] sm:p-10 lg:h-[25rem]',
         theme.from,
         theme.to,
       )}
@@ -120,7 +120,7 @@ function HeroCarousel() {
 
         <Link
           to={slide.link ?? '/products'}
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 transition-colors hover:bg-brand-50"
         >
           {slide.cta_label ?? 'Shop now'}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -159,7 +159,7 @@ function CategorySidebar() {
   const categories = query.data ?? []
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col overflow-hidden rounded-lg border border-ink-200 bg-white lg:flex lg:h-[19rem]">
+    <aside className="hidden w-64 shrink-0 flex-col overflow-hidden rounded-lg border border-ink-200 bg-white lg:flex lg:h-[25rem]">
       <h2 className="flex shrink-0 items-center gap-2 bg-brand-600 px-4 py-3.5 font-semibold text-white">
         <SlidersHorizontal className="h-4.5 w-4.5" aria-hidden="true" />
         All Categories
@@ -193,12 +193,12 @@ function CategorySidebar() {
                     )}
                   </span>
 
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink-800 group-hover:text-brand-700">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink-800 group-hover:text-brand-800">
                     {category.name}
                   </span>
 
                   <ChevronRight
-                    className="h-4 w-4 shrink-0 text-ink-400 group-hover:text-brand-600"
+                    className="h-4 w-4 shrink-0 text-ink-400 group-hover:text-brand-800"
                     aria-hidden="true"
                   />
                 </Link>
@@ -229,7 +229,7 @@ function CategorySection({ section }) {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className={PRODUCT_GRID}>
         {section.products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
@@ -238,11 +238,323 @@ function CategorySection({ section }) {
   )
 }
 
-const PROMISES = [
-  { icon: Truck, title: 'Cash on delivery', body: 'Pay when your order reaches your door.' },
-  { icon: ShieldCheck, title: 'Genuine with warranty', body: 'Straight from the brand or its distributor.' },
-  { icon: PackageOpen, title: 'Easy returns', body: 'Something wrong? Send it back.' },
-]
+/**
+ * A single row that slides when its contents do not fit.
+ *
+ * A native scroller with snap points rather than a carousel library: it
+ * costs nothing, it already works with a trackpad, a touch drag, and a
+ * keyboard, and the arrows are then just a mouse affordance on top of
+ * behaviour that exists either way.
+ */
+function useRail(itemCount) {
+  const ref = useRef(null)
+  const [overflow, setOverflow] = useState(false)
+  const [atStart, setAtStart] = useState(true)
+  const [atEnd, setAtEnd] = useState(false)
+
+  /*
+   * The arrows only exist when there is somewhere to go. Watched rather
+   * than measured once, because the answer changes with the window and
+   * again when the contents finally arrive.
+   */
+  const measure = useCallback(() => {
+    const rail = ref.current
+
+    if (!rail) return
+
+    const max = rail.scrollWidth - rail.clientWidth
+
+    setOverflow(max > 4)
+    setAtStart(rail.scrollLeft <= 4)
+    setAtEnd(rail.scrollLeft >= max - 4)
+  }, [])
+
+  useEffect(() => {
+    measure()
+
+    const rail = ref.current
+
+    if (!rail) return undefined
+
+    const observer = new ResizeObserver(measure)
+
+    observer.observe(rail)
+    rail.addEventListener('scroll', measure, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      rail.removeEventListener('scroll', measure)
+    }
+  }, [measure, itemCount])
+
+  /*
+   * One card per click.
+   *
+   * The step is measured from the DOM rather than hardcoded, because the
+   * card width is a responsive class and the gap is a Tailwind token --
+   * either can change without this file being touched. Two adjacent
+   * children give width-plus-gap in one number; a single child falls back
+   * to its own width.
+   */
+  const page = (direction) => {
+    const rail = ref.current
+
+    if (!rail) return
+
+    const [first, second] = rail.children
+    const step = second
+      ? second.offsetLeft - first.offsetLeft
+      : (first?.getBoundingClientRect().width ?? rail.clientWidth)
+
+    rail.scrollBy({ left: direction * step, behavior: 'smooth' })
+  }
+
+  return { ref, overflow, atStart, atEnd, page }
+}
+
+/**
+ * The paired arrows a rail is driven by.
+ *
+ * Overlaid on the row and centred against it, so they sit level with the
+ * cards they move rather than off in the heading. They straddle the edge --
+ * half over the first card, half over the gutter -- which is what makes it
+ * read as "there is more this way" instead of as a button that happens to
+ * be nearby.
+ *
+ * Nothing renders when everything already fits, and an arrow disappears at
+ * the end it cannot move towards: a dead control is worse than no control.
+ */
+function RailArrows({ rail, label }) {
+  if (!rail.overflow) return null
+
+  const base =
+    'absolute top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full border border-ink-200 bg-white text-ink-700 shadow-raised transition hover:border-brand-600 hover:text-brand-800 disabled:pointer-events-none disabled:opacity-0'
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => rail.page(-1)}
+        disabled={rail.atStart}
+        aria-label={`Previous ${label}`}
+        className={cx(base, '-left-3')}
+      >
+        <ChevronLeft className="h-4.5 w-4.5" aria-hidden="true" />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => rail.page(1)}
+        disabled={rail.atEnd}
+        aria-label={`More ${label}`}
+        className={cx(base, '-right-3')}
+      >
+        <ChevronRight className="h-4.5 w-4.5" aria-hidden="true" />
+      </button>
+    </>
+  )
+}
+
+function CategoryStrip() {
+  const settings = useStoreSettingsForHero()
+
+  const categories = useQuery({
+    queryKey: ['shop', 'categories'],
+    queryFn: () => get('/shop/categories'),
+    staleTime: 5 * 60 * 1000,
+    select: (response) => response.data,
+  })
+
+  const list = categories.data ?? []
+  const rail = useRail(list.length)
+
+  const style = settings.data?.home_categories_style ?? 'circle'
+  const title = settings.data?.home_categories_title ?? 'Shop by category'
+  const enabled = settings.data?.home_categories_enabled !== false
+
+  if (!enabled || (categories.isLoading === false && list.length === 0)) return null
+
+  return (
+    <section className="mt-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold uppercase tracking-wide text-ink-900">{title}</h2>
+
+        <Link to="/products" className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700">
+          See More
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      </div>
+
+      {/* Positioned parent for the overlaid arrows. */}
+      <div className="relative">
+        <RailArrows rail={rail} label="categories" />
+
+        <div ref={rail.ref} className="rail flex snap-x snap-mandatory gap-3 scroll-smooth pb-1">
+          {list.map((category) => (
+            <CategoryChip key={category.id} category={category} style={style} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** One category, drawn the way the store's settings ask for. */
+function CategoryChip({ category, style }) {
+  const to = `/category/${category.slug}`
+  const count = category.product_count ?? 0
+
+  if (style === 'tile') {
+    return (
+      <Link
+        to={to}
+        className="group flex shrink-0 snap-start items-center gap-2.5 rounded-lg border border-ink-200 bg-white px-4 py-3 transition hover:border-brand-600 hover:shadow-card"
+      >
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-brand-50 text-xs font-bold text-brand-800">
+          {category.name.charAt(0)}
+        </span>
+
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-ink-900 group-hover:text-brand-800">
+            {category.name}
+          </span>
+          {count > 0 && <span className="block text-[11px] text-ink-500">{count} items</span>}
+        </span>
+      </Link>
+    )
+  }
+
+  if (style === 'card') {
+    return (
+      <Link
+        to={to}
+        className="group w-[9.5rem] shrink-0 snap-start overflow-hidden rounded-lg border border-ink-200 bg-white transition hover:border-brand-600 hover:shadow-card"
+      >
+        <span className="block aspect-[4/3] overflow-hidden bg-ink-100">
+          {category.image ? (
+            <img
+              src={category.image}
+              alt=""
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <span className="grid h-full w-full place-items-center text-xl font-black text-ink-300">
+              {category.name.charAt(0)}
+            </span>
+          )}
+        </span>
+
+        <span className="block px-3 py-2.5">
+          <span className="block truncate text-sm font-semibold text-ink-900 group-hover:text-brand-800">
+            {category.name}
+          </span>
+          {count > 0 && <span className="mt-0.5 block text-[11px] text-ink-500">{count} items</span>}
+        </span>
+      </Link>
+    )
+  }
+
+  /*
+   * Width is a share of the row, not a fixed size, so a set number of
+   * categories is visible and the rest scroll: 5 on a wide screen (~250px
+   * each), fewer as it narrows, and the circle grows and shrinks with them.
+   *
+   * A fixed pixel width cannot do both jobs -- at 250px a phone would show
+   * one and a half categories, and at a size that suits a phone a desktop
+   * row looks like scattered buttons. The subtraction is the gaps: N items
+   * have N-1 gaps of 0.75rem (gap-3), and leaving that out puts the last
+   * one half off the edge.
+   */
+  return (
+    <Link
+      to={to}
+      className="group w-[calc((100%-0.75rem)/2)] shrink-0 snap-start text-center sm:w-[calc((100%-1.5rem)/3)] lg:w-[calc((100%-2.25rem)/4)] xl:w-[calc((100%-3rem)/5)]"
+    >
+      {/* The circle fills the slot it is given, so it grows with the row. */}
+      <span className="mx-auto grid aspect-square w-full place-items-center overflow-hidden rounded-full border border-ink-200 bg-white transition group-hover:border-brand-600 group-hover:shadow-card">
+        {category.image ? (
+          <img src={category.image} alt="" loading="lazy" className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-3xl font-black text-brand-800">{category.name.charAt(0)}</span>
+        )}
+      </span>
+
+      <span className="mt-2.5 block truncate text-sm font-medium text-ink-800 group-hover:text-brand-800">
+        {category.name}
+      </span>
+    </Link>
+  )
+}
+
+/**
+ * What is actually selling, ranked by order lines in a recent window.
+ *
+ * The server does the ranking (see ProductController::trending) because
+ * "trending" is a question about orders, and the storefront is never shown
+ * order data.
+ */
+function TrendingSection() {
+  const settings = useStoreSettingsForHero()
+
+  const days = Number(settings.data?.home_trending_days ?? 30)
+  const enabled = settings.data?.home_trending_enabled !== false
+  const title = settings.data?.home_trending_title ?? 'Trending right now'
+
+  const query = useQuery({
+    queryKey: ['shop', 'trending', days],
+    // More than fits on one row, so there is something to slide to. The row
+    // is the point: a wrapping grid buries the ranking, because the tenth
+    // most popular product ends up as visually prominent as the first.
+    queryFn: () => get('/shop/products/trending', { params: { limit: 20, days } }),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const products = query.data?.data ?? []
+  const rail = useRail(products.length)
+
+  if (!enabled) return null
+  if (!query.isLoading && products.length === 0) return null
+
+  return (
+    <section className="mt-8">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-ink-900">
+          <Flame className="h-5 w-5 text-brand-600" aria-hidden="true" />
+          {title}
+        </h2>
+
+        <Link to="/products" className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700">
+          See More
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      </div>
+
+      {/* Positioned parent for the overlaid arrows. */}
+      <div className="relative">
+        <RailArrows rail={rail} label="products" />
+
+        {/*
+           A share of the row, matching PRODUCT_GRID's column count exactly,
+           so a trending card is the same size as a card in any grid on the
+           site. Given here rather than by a grid track because the row has
+           to overflow sideways instead of wrapping.
+        */}
+        <div ref={rail.ref} className="rail flex snap-x snap-mandatory gap-3 scroll-smooth pb-1">
+          {(query.isLoading ? Array.from({ length: 6 }) : products).map((product, index) => (
+            <div
+              key={product?.id ?? index}
+              className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1.5rem)/3)] md:w-[calc((100%-2.25rem)/4)] xl:w-[calc((100%-3rem)/5)]"
+            >
+              {product ? <ProductCard product={product} /> : <ProductCardSkeleton />}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export function HomePage() {
   const sections = useQuery({
@@ -268,24 +580,14 @@ export function HomePage() {
         </div>
       </div>
 
-      <section className="mt-4 grid gap-3 sm:grid-cols-3">
-        {PROMISES.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="flex items-start gap-3 rounded-lg border border-ink-200 bg-white p-3.5">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-brand-50 text-brand-600">
-              <Icon className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-ink-900">{title}</p>
-              <p className="mt-0.5 text-sm text-ink-500">{body}</p>
-            </div>
-          </div>
-        ))}
-      </section>
+      <CategoryStrip />
+
+      <TrendingSection />
 
       {sections.isLoading || latest.isLoading ? (
         <section className="mt-8">
           <div className="mb-3 h-6 w-32 animate-pulse rounded bg-ink-200" />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className={PRODUCT_GRID}>
             {Array.from({ length: 5 }).map((_, index) => (
               <ProductCardSkeleton key={index} />
             ))}

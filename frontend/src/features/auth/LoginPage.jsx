@@ -80,7 +80,7 @@ export function LoginPage() {
               Keep me signed in
             </label>
 
-            <Link to="/forgot-password" className="text-sm font-medium text-brand-700 underline underline-offset-4">
+            <Link to="/forgot-password" className="text-sm font-medium text-brand-800 underline underline-offset-4">
               Forgot password?
             </Link>
           </div>
@@ -92,7 +92,7 @@ export function LoginPage() {
 
         <p className="mt-5 text-center text-sm text-ink-600">
           New here?{' '}
-          <Link to="/register" className="font-medium text-brand-700 underline underline-offset-4">
+          <Link to="/register" className="font-medium text-brand-800 underline underline-offset-4">
             Create an account
           </Link>
         </p>

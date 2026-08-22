@@ -145,7 +145,7 @@ export default function AttributesPage() {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, values: [...form.values, { value: '', color_hex: '' }] })}
-                className="w-fit text-sm font-medium text-brand-700 hover:underline"
+                className="w-fit text-sm font-medium text-brand-800 hover:underline"
               >
                 + Add another value
               </button>
@@ -202,7 +202,7 @@ export default function AttributesPage() {
                           : [{ value: '', color_hex: '' }],
                       })
                     }
-                    className="text-sm font-medium text-brand-700 hover:underline"
+                    className="text-sm font-medium text-brand-800 hover:underline"
                   >
                     Edit
                   </button>

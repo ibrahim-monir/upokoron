@@ -55,7 +55,7 @@ function AddressTester() {
   return (
     <section className="rounded-card border border-ink-200 bg-white p-4">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-        <Search className="h-4 w-4 text-brand-600" aria-hidden="true" />
+        <Search className="h-4 w-4 text-brand-800" aria-hidden="true" />
         Try an address
       </h2>
       <p className="mt-0.5 text-sm text-ink-500">
@@ -263,7 +263,7 @@ function AreaEditor({ zone, allZones, onClose }) {
                         type="checkbox"
                         checked={selectedWhole.has(key)}
                         onChange={() => toggleDistrict(name)}
-                        className="h-4 w-4 rounded border-ink-300 text-brand-600"
+                        className="h-4 w-4 rounded border-ink-300 text-brand-800"
                       />
                       {name}
                       {claimedBy && <span className="text-xs text-warning-700">· also in {claimedBy}</span>}
@@ -454,7 +454,7 @@ function RateEditor({ zone, rate, onClose }) {
           type="checkbox"
           checked={form.supports_cod}
           onChange={(event) => set('supports_cod', event.target.checked)}
-          className="h-4 w-4 rounded border-ink-300 text-brand-600"
+          className="h-4 w-4 rounded border-ink-300 text-brand-800"
         />
         The courier collects cash on delivery here
       </label>

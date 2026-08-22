@@ -46,6 +46,16 @@ return [
     /*
     | Runtime-editable settings and their factory defaults.
     */
+    /*
+     * Setting groups the storefront may read without authenticating.
+     *
+     * Declared once, here. It used to be written out in both SettingsSeeder
+     * and SettingsService::configMeta(), and the two drifted: a group seeded
+     * public was silently demoted to private the first time anyone saved it
+     * through the admin API.
+     */
+    'public_setting_groups' => ['store', 'pages', 'theme', 'home'],
+
     'settings' => [
 
         /*
@@ -95,6 +105,51 @@ return [
             'store_youtube' => '',
             'store_instagram' => '',
             'store_tiktok' => '',
+        ],
+
+        /*
+         * Brand colours, applied to the storefront AND the admin panel at
+         * runtime.
+         *
+         * Only four are stored. Every shade the interface actually uses is
+         * derived from these in the browser, because a palette is a system,
+         * not a list: asking an owner to pick eleven blues by hand is how a
+         * theme ends up with steps that do not belong to the same ramp.
+         *
+         * Public, so the storefront can paint itself before anyone signs in.
+         */
+        'theme' => [
+            // The colour of everything you are meant to press.
+            'theme_primary' => '#0082FB',
+            // Its pressed/hover partner, and the darker end of the ramp.
+            'theme_primary_dark' => '#0064E0',
+            // The page behind the content.
+            'theme_background' => '#F1F5F8',
+            // Header, footer, admin chrome.
+            'theme_dark' => '#1C2B33',
+        ],
+
+        /*
+         * The home page category strip.
+         *
+         * Public, because the home page is the first thing a visitor sees
+         * and it must render without waiting on a sign-in.
+         */
+        'home' => [
+            'home_categories_enabled' => true,
+            'home_categories_title' => 'Shop by category',
+
+            // How each category is drawn: 'circle' (image in a round frame),
+            // 'card' (image over a labelled panel), or 'tile' (compact row,
+            // no image -- the honest choice for a shop that has not
+            // photographed its categories yet).
+            'home_categories_style' => 'circle',
+
+            'home_trending_enabled' => true,
+            'home_trending_title' => 'Trending right now',
+
+            // How far back "right now" reaches when ranking by sales.
+            'home_trending_days' => 30,
         ],
 
         /*

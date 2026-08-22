@@ -106,7 +106,7 @@ export default function BrandsPage() {
                       <button
                         type="button"
                         onClick={() => setForm({ id: brand.id, name: brand.name, description: brand.description })}
-                        className="text-sm font-medium text-brand-700 hover:underline"
+                        className="text-sm font-medium text-brand-800 hover:underline"
                       >
                         Edit
                       </button>

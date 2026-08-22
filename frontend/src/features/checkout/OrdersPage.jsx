@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { PackageOpen } from 'lucide-react'
+import { PackageOpen, PackageSearch } from 'lucide-react'
 import { date, money } from '../../lib/format'
 import { Badge, EmptyState, ErrorState, Spinner } from '../../components/ui'
 import { statusTone } from './orderStatus'
@@ -12,6 +12,33 @@ export function OrdersPage() {
     return (
       <div className="grid place-items-center py-24">
         <Spinner />
+      </div>
+    )
+  }
+
+  /*
+   * A staff account has no customer record, so it has no order history to
+   * scope this list to and the API refuses it. That is correct, but it is
+   * not a fault: showing the owner a red error box for signing in as the
+   * owner reads like the site is broken. Tracking a specific order still
+   * works for them, so point them at it.
+   */
+  if (orders.error?.status === 403) {
+    return (
+      <div className="rounded-card border border-ink-200 bg-white">
+        <EmptyState
+          icon={PackageSearch}
+          title="This account does not place orders"
+          description="Order history belongs to customer accounts. You can still look up any order by its number."
+          action={
+            <Link
+              to="/track"
+              className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Track an order
+            </Link>
+          }
+        />
       </div>
     )
   }

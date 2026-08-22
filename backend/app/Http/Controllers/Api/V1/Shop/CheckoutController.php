@@ -215,7 +215,10 @@ class CheckoutController extends Controller
 
         $orders = Order::query()
             ->where('customer_id', $customer->id)
-            ->with(['items', 'paymentMethod'])
+            // The account's order list shows each line with its picture
+            // and a rough delivery estimate, so both come along rather than
+            // being fetched one order at a time from the client.
+            ->with(['items.variation.image', 'paymentMethod', 'shippingRate'])
             ->latest('id')
             ->paginate($request->integer('per_page', 15));
 

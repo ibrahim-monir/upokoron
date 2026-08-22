@@ -57,6 +57,97 @@ const emptyForm = {
 /* Small reusable UI pieces                                                   */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Put every category directly beneath its own parent.
+ *
+ * The API returns this list ordered by depth: every top-level category
+ * first, then every second-level one, and so on. Indenting that by depth
+ * draws rows that LOOK nested but sit under whichever category happens to
+ * be above them -- so "Mobiles" appears indented under "Fashion" and there
+ * is no way to tell whose subcategory anything actually is.
+ *
+ * Walking parent to child fixes the order. The `indent` each row comes back
+ * with is how far to inset it *within the rows being shown*, which is not
+ * always its true depth: when a search hides a parent, its children become
+ * roots of what is left rather than floating at an indent with nothing
+ * above them. `depth` still says what the category really is.
+ */
+function sortIntoTree(list) {
+  const present = new Set(list.map((category) => category.id))
+  const byParent = new Map()
+
+  for (const category of list) {
+    const key = present.has(category.parent_id) ? category.parent_id : null
+
+    if (!byParent.has(key)) byParent.set(key, [])
+    byParent.get(key).push(category)
+  }
+
+  const ordered = []
+
+  const walk = (parentId, indent, ancestry) => {
+    const children = byParent.get(parentId) ?? []
+
+    children.forEach((category, index) => {
+      ordered.push({
+        ...category,
+        indent,
+        // Whether this row is the last of its siblings, so the guide line
+        // beside it can stop rather than run past the end of the branch.
+        isLastChild: index === children.length - 1,
+        ancestry,
+      })
+
+      walk(category.id, indent + 1, [...ancestry, index === children.length - 1])
+    })
+  }
+
+  walk(null, 0, [])
+
+  return ordered
+}
+
+/** Direct children per category id, counted across the whole catalogue. */
+function countChildren(list) {
+  const counts = new Map()
+
+  for (const category of list) {
+    if (category.parent_id === null || category.parent_id === undefined) continue
+
+    counts.set(category.parent_id, (counts.get(category.parent_id) ?? 0) + 1)
+  }
+
+  return counts
+}
+
+/**
+ * Every category under this one, however deep.
+ *
+ * A category cannot be moved inside its own descendant -- that detaches the
+ * whole branch from the tree and leaves it pointing in a circle. The parent
+ * picker leaves them out rather than letting the save be refused.
+ */
+function descendantIds(list, rootId) {
+  const found = new Set()
+
+  let frontier = [rootId]
+
+  while (frontier.length) {
+    const next = []
+
+    for (const category of list) {
+      if (frontier.includes(category.parent_id) && !found.has(category.id)) {
+        found.add(category.id)
+        next.push(category.id)
+      }
+    }
+
+    frontier = next
+  }
+
+  return found
+}
+
 function StatCard({ icon: Icon, label, value, description }) {
   return (
     <div className="group rounded-2xl border border-ink-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -77,7 +168,7 @@ function StatCard({ icon: Icon, label, value, description }) {
           )}
         </div>
 
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-100">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-800 transition-colors group-hover:bg-brand-100">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
       </div>
@@ -142,6 +233,19 @@ function CategoryForm({
 
   const editing = Boolean(form.id)
 
+  /*
+   * The picker lists the tree in the order it is actually shaped, and
+   * without this category or anything beneath it -- both of which are
+   * places it cannot go.
+   */
+  const parentOptions = useMemo(() => {
+    const banned = form.id ? descendantIds(categories, form.id) : new Set()
+
+    if (form.id) banned.add(form.id)
+
+    return sortIntoTree(categories.filter((category) => !banned.has(category.id)))
+  }, [categories, form.id])
+
   const submit = (event) => {
     event.preventDefault()
 
@@ -188,7 +292,7 @@ function CategoryForm({
         {/* Form heading */}
         <div className="border-b border-ink-100 bg-gradient-to-br from-brand-50 via-white to-white px-5 py-4">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-700">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800">
               {editing ? (
                 <Tag className="h-5 w-5" />
               ) : (
@@ -251,14 +355,13 @@ function CategoryForm({
                   >
                     <option value="">None — Top level</option>
 
-                    {categories
-                      .filter((category) => category.id !== form.id)
-                      .map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {'— '.repeat(category.depth ?? 0)}
-                          {category.name}
-                        </option>
-                      ))}
+                    {parentOptions.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {'\u00a0\u00a0'.repeat(category.indent ?? 0)}
+                        {category.indent > 0 ? '└ ' : ''}
+                        {category.name}
+                      </option>
+                    ))}
                   </Select>
                 )}
               </Field>
@@ -444,7 +547,8 @@ export default function CategoriesPage() {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(new Set())
 
-  const categories = query.data?.data ?? []
+  // Stable across renders, so the tree walking below actually memoizes.
+  const categories = useMemo(() => query.data?.data ?? [], [query.data])
 
   const openForm = (next) => {
     setForm(next)
@@ -543,13 +647,19 @@ export default function CategoriesPage() {
 
   const term = search.trim().toLowerCase()
 
-  const visible = term
-    ? categories.filter(
-        (category) =>
-          category.name.toLowerCase().includes(term) ||
-          category.slug?.toLowerCase().includes(term),
-      )
-    : categories
+  const childCounts = useMemo(() => countChildren(categories), [categories])
+
+  const visible = useMemo(() => {
+    const matched = term
+      ? categories.filter(
+          (category) =>
+            category.name.toLowerCase().includes(term) ||
+            category.slug?.toLowerCase().includes(term),
+        )
+      : categories
+
+    return sortIntoTree(matched)
+  }, [categories, term])
 
   const siblingsOf = (category) =>
     categories.filter(
@@ -618,7 +728,7 @@ export default function CategoriesPage() {
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-medium text-brand-700">
+          <div className="flex items-center gap-2 text-xs font-medium text-brand-800">
             <FolderTree className="h-4 w-4" />
             Catalogue
             <ChevronRight className="h-3.5 w-3.5 text-ink-300" />
@@ -772,7 +882,7 @@ export default function CategoriesPage() {
             {editable && selected.size > 0 && (
               <div className="flex flex-wrap items-center gap-3 border-b border-brand-200 bg-brand-50 px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-100 text-xs font-bold text-brand-800">
                     {selected.size}
                   </span>
 
@@ -861,7 +971,7 @@ export default function CategoriesPage() {
                             )
                           }
                           aria-label="Select all categories"
-                          className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+                          className="h-4 w-4 rounded border-ink-300 text-brand-800 focus:ring-brand-500"
                         />
                       </Th>
                     )}
@@ -908,7 +1018,7 @@ export default function CategoriesPage() {
                                 toggle(category.id)
                               }
                               aria-label={`Select ${category.name}`}
-                              className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+                              className="h-4 w-4 rounded border-ink-300 text-brand-800 focus:ring-brand-500"
                             />
                           </Td>
                         )}
@@ -930,31 +1040,74 @@ export default function CategoriesPage() {
 
                         {/* Category */}
                         <Td>
-                          <div
-                            className="flex items-center"
-                            style={{
-                              paddingLeft: `${Math.min(
-                                category.depth ?? 0,
-                                4,
-                              ) * 18}px`,
-                            }}
-                          >
-                            {category.depth > 0 && (
-                              <div className="mr-2 flex items-center">
-                                <span className="h-px w-3 bg-ink-300" />
-                                <ChevronRight className="h-3 w-3 text-ink-300" />
-                              </div>
+                          <div className="flex items-stretch">
+                            {/*
+                               One column per ancestor, each carrying the
+                               line that connects this row back up to it.
+                               The line is what makes the nesting readable
+                               past the first level -- indentation alone
+                               leaves the eye measuring whitespace.
+                            */}
+                            {category.ancestry.map((ancestorWasLast, level) => (
+                              <span
+                                key={level}
+                                aria-hidden="true"
+                                className="relative w-5 shrink-0"
+                              >
+                                {!ancestorWasLast && (
+                                  <span className="absolute inset-y-0 left-1/2 w-px bg-ink-200" />
+                                )}
+                              </span>
+                            ))}
+
+                            {category.indent > 0 && (
+                              <span
+                                aria-hidden="true"
+                                className="relative w-5 shrink-0"
+                              >
+                                <span
+                                  className={cx(
+                                    'absolute left-1/2 w-px bg-ink-200',
+                                    // The last child's line stops at the
+                                    // elbow; the others carry on down to
+                                    // the next sibling.
+                                    category.isLastChild ? 'top-0 h-1/2' : 'inset-y-0',
+                                  )}
+                                />
+                                <span className="absolute left-1/2 top-1/2 h-px w-2 bg-ink-200" />
+                              </span>
                             )}
 
-                            <div className="min-w-0">
+                            <div className="min-w-0 py-0.5">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-semibold text-ink-900">
                                   {category.name}
                                 </span>
 
-                                {category.depth === 0 && (
+                                {category.depth === 0 ? (
                                   <span className="rounded-md bg-ink-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
                                     Main
+                                  </span>
+                                ) : (
+                                  /*
+                                     Which parent, spelled out. The guide
+                                     line says it when the parent is on
+                                     screen -- but a search can hide the
+                                     parent, and then the line has nothing
+                                     to point at.
+                                  */
+                                  category.indent === 0 &&
+                                  category.parent && (
+                                    <span className="rounded-md bg-ink-100 px-1.5 py-0.5 text-[10px] font-medium text-ink-500">
+                                      in {category.parent}
+                                    </span>
+                                  )
+                                )}
+
+                                {childCounts.get(category.id) > 0 && (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
+                                    <ChevronRight className="h-2.5 w-2.5" aria-hidden="true" />
+                                    {childCounts.get(category.id)} sub
                                   </span>
                                 )}
                               </div>
@@ -1129,7 +1282,7 @@ export default function CategoriesPage() {
                                       category.is_featured,
                                   })
                                 }
-                                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50"
+                                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-800 transition hover:bg-brand-50"
                               >
                                 Edit
                               </button>

@@ -122,13 +122,19 @@ class Order extends Model
         return ! $this->status->hasShipped() && ! $this->status->isFinal();
     }
 
+    /**
+     * Orders somebody still has to do something about.
+     *
+     * Asked of the enum rather than listed here, so adding a step to the
+     * lifecycle cannot quietly drop it out of every "open orders" count in
+     * the app -- which is what a hand-written list does the moment the flow
+     * grows.
+     */
     public function scopeOpen(Builder $query): Builder
     {
-        return $query->whereIn('status', [
-            OrderStatus::Pending->value,
-            OrderStatus::Confirmed->value,
-            OrderStatus::Packed->value,
-            OrderStatus::Shipped->value,
-        ]);
+        return $query->whereIn('status', array_map(
+            static fn (OrderStatus $status): string => $status->value,
+            OrderStatus::inFlight(),
+        ));
     }
 }

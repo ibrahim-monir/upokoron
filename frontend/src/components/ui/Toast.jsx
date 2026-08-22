@@ -8,7 +8,7 @@ const TONES = {
   success: { icon: CheckCircle2, className: 'border-success-500 bg-success-50 text-success-700' },
   error: { icon: XCircle, className: 'border-danger-500 bg-danger-50 text-danger-700' },
   warning: { icon: AlertTriangle, className: 'border-warning-500 bg-warning-50 text-warning-700' },
-  info: { icon: Info, className: 'border-brand-500 bg-brand-50 text-brand-700' },
+  info: { icon: Info, className: 'border-brand-500 bg-brand-50 text-brand-800' },
 }
 
 export function ToastProvider({ children }) {

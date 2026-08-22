@@ -70,16 +70,26 @@ export function RequireAdmin({ children }) {
 /**
  * Per-page permission gate. The API enforces the same permission again on
  * every request -- this only decides whether to bother rendering.
+ *
+ * `permission` may be a list, in which case any one of them opens the page.
+ * That is for screens two jobs arrive at from different directions: the
+ * products table is also where stock is managed, and an accountant holds
+ * `inventory.view` without ever holding `products.view`. Each part of such a
+ * page still checks its own permission -- this only decides who gets through
+ * the door.
  */
 export function RequirePermission({ permission, children }) {
   const can = useAuthStore((state) => state.can)
 
-  if (!can(permission)) {
+  const permissions = Array.isArray(permission) ? permission : [permission]
+
+  if (!permissions.some((name) => can(name))) {
     return (
       <div className="rounded-card border border-ink-200 bg-white p-10 text-center">
         <h1 className="text-lg font-semibold text-ink-900">Not allowed</h1>
         <p className="mt-2 text-sm text-ink-600">
-          You do not have the <code className="rounded bg-ink-100 px-1">{permission}</code> permission.
+          You do not have the{' '}
+          <code className="rounded bg-ink-100 px-1">{permissions.join(' or ')}</code> permission.
         </p>
       </div>
     )

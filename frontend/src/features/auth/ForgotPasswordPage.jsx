@@ -44,7 +44,7 @@ export function ForgotPasswordPage() {
     return (
       <div className="mx-auto w-full max-w-md py-6">
         <Card className="p-6 text-center">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-brand-600">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-brand-800">
             <MailCheck className="h-6 w-6" aria-hidden="true" />
           </span>
 
@@ -57,7 +57,7 @@ export function ForgotPasswordPage() {
 
           <Link
             to="/login"
-            className="mt-5 inline-block text-sm font-medium text-brand-700 underline underline-offset-4"
+            className="mt-5 inline-block text-sm font-medium text-brand-800 underline underline-offset-4"
           >
             Back to sign in
           </Link>
@@ -91,7 +91,7 @@ export function ForgotPasswordPage() {
 
         <p className="mt-5 text-center text-sm text-ink-600">
           Remembered it?{' '}
-          <Link to="/login" className="font-medium text-brand-700 underline underline-offset-4">
+          <Link to="/login" className="font-medium text-brand-800 underline underline-offset-4">
             Back to sign in
           </Link>
         </p>

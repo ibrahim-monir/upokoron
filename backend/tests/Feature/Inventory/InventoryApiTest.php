@@ -94,6 +94,79 @@ class InventoryApiTest extends TestCase
         $this->getJson('/api/v1/admin/inventory?filter=out')->assertOk()->assertJsonCount(0, 'data');
     }
 
+    /**
+     * The products table expands a row into that product's SKUs, and this
+     * filter is what it asks for. Without it the drill-down would have to
+     * pull the whole stock list and sift it in the browser.
+     */
+    public function test_the_list_can_be_scoped_to_one_product(): void
+    {
+        $other = Product::factory()->create();
+
+        app(InventoryService::class)->receive(
+            $other->variations()->first(), '4', '400.00', counterAccount: 'accounts_payable',
+        );
+
+        $this->actingAsRole('owner');
+
+        $mine = $this->variation->product_id;
+
+        $this->getJson("/api/v1/admin/inventory?product_id={$mine}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.product_variation_id', $this->variation->id);
+
+        $this->getJson("/api/v1/admin/inventory?product_id={$other->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.quantity', '4.000');
+    }
+
+    /**
+     * Stock rides along on the catalogue row, which is what lets one table
+     * answer both "what do I sell" and "what is on the shelf".
+     */
+    public function test_the_products_list_carries_each_product_s_stock(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->getJson('/api/v1/admin/products')
+            ->assertOk()
+            ->assertJsonPath('data.0.stock.tracked', true)
+            ->assertJsonPath('data.0.stock.on_hand', '10.000')
+            ->assertJsonPath('data.0.stock.available', '10.000')
+            ->assertJsonPath('data.0.stock.value', '1000.00')
+            ->assertJsonPath('data.0.stock.is_out', false)
+            ->assertJsonPath('data.0.stock.is_low', false);
+    }
+
+    public function test_a_product_below_its_reorder_level_is_flagged_on_the_products_list(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->putJson("/api/v1/admin/inventory/{$this->variation->id}/levels", [
+            'reorder_level' => '25',
+        ])->assertOk();
+
+        $this->getJson('/api/v1/admin/products')
+            ->assertOk()
+            ->assertJsonPath('data.0.stock.is_low', true);
+    }
+
+    /**
+     * An accountant has stock permissions but no product permissions. Stock
+     * is read off the products list now, so that list has to let them in --
+     * otherwise merging the two screens quietly removed a role's access.
+     */
+    public function test_a_role_with_only_stock_permissions_can_read_the_products_list(): void
+    {
+        $this->actingAsRole('accountant');
+
+        $this->getJson('/api/v1/admin/products')
+            ->assertOk()
+            ->assertJsonPath('data.0.stock.on_hand', '10.000');
+    }
+
     public function test_movements_list_the_ledger_behind_a_variation(): void
     {
         $this->actingAsRole('owner');

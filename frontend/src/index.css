@@ -14,29 +14,41 @@
 
 @theme {
   /*
-   * Taken from the Upokoron.com logo: the electric blue of the plug mark and
-   * the .com badge. It carries the header, prices, and every call to action.
+   * The brand blue. Calls to action, active state, prices and sale flags --
+   * the things a shopper is meant to act on. It is deliberately NOT the
+   * colour of large surfaces: at this saturation a whole header of it fights
+   * the products, which is what navy below is for.
+   *
+   * These are DEFAULTS ONLY. Four colours are stored in Settings and the
+   * whole ramp is rebuilt from them in the browser (see lib/theme.js), so
+   * editing this block changes what an unconfigured install looks like, not
+   * what a running shop looks like. Primary sits at 600 and its dark partner
+   * at 700 because `Button` reads bg-600 -> hover:700 -> active:800.
    */
-  --color-brand-50: #eef3ff;
-  --color-brand-100: #dbe4ff;
-  --color-brand-200: #bccdff;
-  --color-brand-300: #90aaff;
-  --color-brand-400: #607dff;
-  --color-brand-500: #3a5ef7;
-  --color-brand-600: #1e4be0;
-  --color-brand-700: #1a3cbd;
-  --color-brand-800: #1b3599;
-  --color-brand-900: #1b317a;
-  --color-brand-950: #131e4a;
-
-  /* The near-black of the wordmark. Dark surfaces use this, not pure black. */
-  --color-navy-900: #0b1220;
-  --color-navy-800: #131c30;
+  --color-brand-50: #f0f8ff;
+  --color-brand-100: #dbeefe;
+  --color-brand-200: #b8dcfe;
+  --color-brand-300: #8ac6fd;
+  --color-brand-400: #52aafc;
+  --color-brand-500: #2494fc;
+  --color-brand-600: #0082fb;
+  --color-brand-700: #0064e0;
+  --color-brand-800: #0052b8;
+  --color-brand-900: #00408f;
+  --color-brand-950: #002655;
 
   /*
-   * Discount flags only. Green against the magenta is the one place a second
-   * hue is allowed, because "you save this much" has to survive being read
-   * at a glance on a busy grid.
+   * Dark navy. Header, footer, and the admin chrome -- the strong areas that
+   * frame the page rather than ask to be clicked.
+   */
+  --color-navy-900: #1c2b33;
+  --color-navy-800: #2f3d45;
+  --color-navy-950: #121c21;
+
+  /*
+   * Discount flags only. Green is the one place a second hue is allowed,
+   * because "you save this much" has to survive being read at a glance on a
+   * busy grid -- and in orange it would just look like everything else.
    */
   --color-accent-50: #eefbf1;
   --color-accent-100: #d5f4de;
@@ -50,20 +62,24 @@
   --color-accent-900: #114520;
 
   /*
-   * Neutrals carry a slight cool bias so they sit with the blue rather than
-   * beside it. A warm grey next to this blue reads as unrelated.
+   * Neutrals are a true grey, with no hue pulled into them. The old ramp was
+   * biased cool to sit beside the blue; against orange that same bias reads
+   * as a second, unintended colour.
+   *
+   * The named steps: Background #F8FAFC (50), Border #E5E7EB (200),
+   * Body #6B7280 (500), Heading #1F2937 (800), Dark Navy #111827 (900).
    */
-  --color-ink-50: #f7f9fb;
-  --color-ink-100: #eef1f6;
-  --color-ink-200: #dfe4ec;
-  --color-ink-300: #c3cad8;
-  --color-ink-400: #929cb0;
-  --color-ink-500: #6b7589;
-  --color-ink-600: #545d70;
-  --color-ink-700: #434b5c;
-  --color-ink-800: #363d4c;
-  --color-ink-900: #1c2231;
-  --color-ink-950: #0f1420;
+  --color-ink-50: #f1f5f8;
+  --color-ink-100: #e6ebee;
+  --color-ink-200: #d5dbde;
+  --color-ink-300: #bac0c5;
+  --color-ink-400: #8f989d;
+  --color-ink-500: #6d787e;
+  --color-ink-600: #536066;
+  --color-ink-700: #3e4b53;
+  --color-ink-800: #2b3941;
+  --color-ink-900: #1c2b33;
+  --color-ink-950: #111a1f;
 
   /*
    * Semantic colours are separate from the accent on purpose: "this worked"
@@ -76,6 +92,7 @@
   --color-warning-500: #f59e0b;
   --color-warning-700: #b45309;
   --color-danger-50: #fef2f2;
+  --color-danger-300: #fca5a5;
   --color-danger-500: #dc2626;
   --color-danger-700: #b91c1c;
 
@@ -122,6 +139,24 @@
   /* Wide tables scroll inside their own container; the page never does. */
   .scroll-x {
     @apply overflow-x-auto;
+  }
+
+  /*
+   * A carousel row: scrolls, but shows no scrollbar.
+   *
+   * Separate from .scroll-x on purpose. A table needs its scrollbar -- it is
+   * the only sign that there are more columns off to the right. A rail has
+   * arrows saying the same thing, so the bar is just a grey line under the
+   * cards. Dragging, the trackpad, and the keyboard all still work.
+   */
+  .rail {
+    @apply overflow-x-auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .rail::-webkit-scrollbar {
+    display: none;
   }
 }
 

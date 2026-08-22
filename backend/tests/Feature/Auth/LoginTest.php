@@ -163,6 +163,47 @@ class LoginTest extends TestCase
             ->assertJsonPath('data.id', $user->id);
     }
 
+    /**
+     * Gender lives on the customer record, not the login, and the account
+     * screen is the only place it is ever set. It was accepted nowhere
+     * before this -- the column existed and the endpoint dropped it.
+     */
+    public function test_a_customer_can_set_their_gender_from_the_account_page(): void
+    {
+        $user = User::factory()->role('customer')->create(['phone' => '01712345678']);
+        \App\Models\Customer::factory()->create([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'phone' => $user->phone,
+        ]);
+
+        $this->actingAs($user)
+            ->putJson('/api/v1/shop/auth/profile', [
+                'name' => 'Bessie Cooper',
+                'phone' => '01712345678',
+                'gender' => 'female',
+            ])
+            ->assertOk()
+            ->assertJsonPath('user.customer.gender', 'female');
+
+        $this->assertSame('Bessie Cooper', $user->fresh()->name);
+        $this->assertSame('female', $user->fresh()->customer->gender);
+    }
+
+    public function test_the_profile_endpoint_refuses_a_gender_it_does_not_know(): void
+    {
+        $user = User::factory()->role('customer')->create(['phone' => '01712345678']);
+
+        $this->actingAs($user)
+            ->putJson('/api/v1/shop/auth/profile', [
+                'name' => 'Bessie Cooper',
+                'phone' => '01712345678',
+                'gender' => 'yes',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('gender');
+    }
+
     public function test_an_account_deactivated_mid_session_is_locked_out_immediately(): void
     {
         $user = User::factory()->role('customer')->create();

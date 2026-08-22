@@ -74,6 +74,40 @@ class OrderLifecycleTest extends TestCase
         return Money::of($debit)->minus(Money::of($credit));
     }
 
+    /**
+     * The forward path an order takes when nothing goes wrong.
+     *
+     * Several of these steps -- processing, ready to ship, out for delivery
+     * -- post nothing and exist only to say where the parcel physically is.
+     * A test about the ledger should not have to name them, and should not
+     * need editing the next time one is added between two others.
+     */
+    private const HAPPY_PATH = [
+        OrderStatus::Confirmed,
+        OrderStatus::Processing,
+        OrderStatus::Packed,
+        OrderStatus::ReadyToShip,
+        OrderStatus::Shipped,
+        OrderStatus::OutForDelivery,
+        OrderStatus::Delivered,
+    ];
+
+    /** Walk an order up the happy path and stop when it reaches $target. */
+    private function advanceTo(Order $order, OrderStatus $target): Order
+    {
+        $statuses = app(OrderStatusService::class);
+
+        foreach (self::HAPPY_PATH as $step) {
+            $order = $statuses->transition($order->refresh(), $step);
+
+            if ($step === $target) {
+                break;
+            }
+        }
+
+        return $order->refresh();
+    }
+
     private function placeOrder(string $quantity = '2', string $methodCode = 'cod'): Order
     {
         $customer = Customer::factory()->create();
@@ -144,9 +178,7 @@ class OrderLifecycleTest extends TestCase
     {
         $order = $this->placeOrder('2');
 
-        app(OrderStatusService::class)->transition($order, OrderStatus::Confirmed);
-        app(OrderStatusService::class)->transition($order->refresh(), OrderStatus::Packed);
-        app(OrderStatusService::class)->transition($order->refresh(), OrderStatus::Shipped);
+        $this->advanceTo($order, OrderStatus::Shipped);
 
         $order->refresh();
         $stock = Inventory::where('product_variation_id', $this->variation->id)->sole();
@@ -168,9 +200,7 @@ class OrderLifecycleTest extends TestCase
         $order = $this->placeOrder('2');
 
         $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
+        $this->advanceTo($order, OrderStatus::Shipped);
 
         $item = $order->refresh()->items->sole();
 
@@ -190,11 +220,7 @@ class OrderLifecycleTest extends TestCase
     {
         $order = $this->placeOrder('2');
 
-        $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
-        $statuses->transition($order->refresh(), OrderStatus::Delivered);
+        $this->advanceTo($order, OrderStatus::Delivered);
 
         $this->assertSame('2000.00', $this->balance('sales_revenue')->negated()->value());
         $this->assertSame('60.00', $this->balance('shipping_income')->negated()->value());
@@ -211,11 +237,7 @@ class OrderLifecycleTest extends TestCase
     {
         $order = $this->placeOrder('2');
 
-        $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
-        $statuses->transition($order->refresh(), OrderStatus::Delivered);
+        $this->advanceTo($order, OrderStatus::Delivered);
 
         app(PaymentService::class)->record($order->refresh(), '2060.00');
 
@@ -236,9 +258,7 @@ class OrderLifecycleTest extends TestCase
         $order = $this->placeOrder('2');
 
         $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
+        $this->advanceTo($order, OrderStatus::Shipped);
         $statuses->transition($order->refresh(), OrderStatus::Returned);
 
         $stock = Inventory::where('product_variation_id', $this->variation->id)->sole();
@@ -250,6 +270,139 @@ class OrderLifecycleTest extends TestCase
         $this->assertSame('0.00', $this->balance('goods_in_transit')->value());
         $this->assertSame('0.00', $this->balance('sales_revenue')->value());
         $this->assertSame('0.00', $this->balance('cogs')->value());
+    }
+
+    /**
+     * The admin list carries the moves each order is allowed to make.
+     *
+     * The status dropdown in the orders table is built entirely from this
+     * field -- it never guesses, so it can never offer an illegal move. If
+     * the field were ever trimmed out of the payload the control would go
+     * quietly read-only instead of failing, which is why it is pinned here.
+     */
+    public function test_the_admin_list_offers_only_the_moves_an_order_may_make(): void
+    {
+        $order = $this->placeOrder();
+
+        $this->actingAsRole('owner');
+
+        $this->getJson('/api/v1/admin/orders')
+            ->assertOk()
+            ->assertJsonPath('data.0.number', $order->number)
+            ->assertJsonPath('data.0.status', 'pending')
+            ->assertJsonPath('data.0.next_statuses.0.value', 'confirmed')
+            ->assertJsonPath('data.0.next_statuses.1.value', 'on_hold')
+            ->assertJsonPath('data.0.next_statuses.2.value', 'cancelled')
+            ->assertJsonCount(3, 'data.0.next_statuses');
+    }
+
+    public function test_a_finished_order_offers_no_moves_at_all(): void
+    {
+        $order = $this->placeOrder();
+
+        $statuses = app(OrderStatusService::class);
+        $statuses->transition($order, OrderStatus::Confirmed);
+        $statuses->transition($order->refresh(), OrderStatus::Cancelled);
+
+        $this->actingAsRole('owner');
+
+        $this->getJson('/api/v1/admin/orders')
+            ->assertOk()
+            ->assertJsonPath('data.0.status', 'cancelled')
+            ->assertJsonCount(0, 'data.0.next_statuses');
+    }
+
+    public function test_the_whole_forward_path_walks_end_to_end(): void
+    {
+        $order = $this->placeOrder();
+
+        $seen = [];
+
+        foreach (self::HAPPY_PATH as $step) {
+            $order = app(OrderStatusService::class)->transition($order->refresh(), $step);
+            $seen[] = $order->status->value;
+        }
+
+        $this->assertSame([
+            'confirmed', 'processing', 'packed', 'ready_to_ship',
+            'shipped', 'out_for_delivery', 'delivered',
+        ], $seen);
+    }
+
+    /**
+     * The steps that were added to describe where a parcel is must not
+     * become steps that move money. Only Shipped and Delivered post.
+     */
+    public function test_the_new_fulfilment_steps_post_nothing_to_the_ledger(): void
+    {
+        $order = $this->placeOrder();
+        $statuses = app(OrderStatusService::class);
+
+        $before = \App\Models\JournalEntry::count();
+
+        $statuses->transition($order, OrderStatus::Confirmed);
+        $statuses->transition($order->refresh(), OrderStatus::Processing);
+        $statuses->transition($order->refresh(), OrderStatus::Packed);
+        $statuses->transition($order->refresh(), OrderStatus::ReadyToShip);
+
+        $this->assertSame($before, \App\Models\JournalEntry::count());
+
+        // Shipped does post -- stock moves to Goods in Transit at cost.
+        $statuses->transition($order->refresh(), OrderStatus::Shipped);
+        $afterShipping = \App\Models\JournalEntry::count();
+        $this->assertGreaterThan($before, $afterShipping);
+
+        // The last mile does not: the goods left when it shipped.
+        $statuses->transition($order->refresh(), OrderStatus::OutForDelivery);
+        $this->assertSame($afterShipping, \App\Models\JournalEntry::count());
+    }
+
+    public function test_a_held_order_keeps_holding_its_stock(): void
+    {
+        $order = $this->placeOrder('4');
+
+        app(OrderStatusService::class)->transition($order, OrderStatus::OnHold);
+
+        $stock = Inventory::where('product_variation_id', $this->variation->id)->sole();
+
+        // Parked, not released. Letting the hold go would allow the same
+        // four units to be sold to somebody else while this order waits.
+        $this->assertSame('4.000', $stock->reserved_quantity);
+        $this->assertSame('6.000', $stock->available_quantity);
+    }
+
+    public function test_a_held_order_resumes_as_confirmed(): void
+    {
+        $order = $this->placeOrder();
+        $statuses = app(OrderStatusService::class);
+
+        $statuses->transition($order, OrderStatus::OnHold);
+        $order = $statuses->transition($order->refresh(), OrderStatus::Confirmed);
+
+        $this->assertSame(OrderStatus::Confirmed, $order->status);
+    }
+
+    public function test_an_order_cannot_skip_a_fulfilment_step(): void
+    {
+        $order = $this->placeOrder();
+
+        app(OrderStatusService::class)->transition($order, OrderStatus::Confirmed);
+
+        // Packing is now preceded by picking, so this jump is refused.
+        $this->expectExceptionMessageMatches('/cannot be marked Packed/');
+
+        app(OrderStatusService::class)->transition($order->refresh(), OrderStatus::Packed);
+    }
+
+    public function test_an_order_out_for_delivery_cannot_be_cancelled(): void
+    {
+        $order = $this->placeOrder();
+
+        $this->advanceTo($order, OrderStatus::OutForDelivery);
+
+        $this->expectExceptionMessageMatches('/cannot be marked Cancelled/');
+
+        app(OrderStatusService::class)->transition($order->refresh(), OrderStatus::Cancelled);
     }
 
     public function test_an_order_cannot_skip_from_pending_to_delivered(): void
@@ -266,9 +419,7 @@ class OrderLifecycleTest extends TestCase
         $order = $this->placeOrder();
 
         $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
+        $this->advanceTo($order, OrderStatus::Shipped);
 
         // The goods are out. It either arrives or comes back.
         $this->expectExceptionMessageMatches('/cannot be marked Cancelled/');
@@ -293,11 +444,7 @@ class OrderLifecycleTest extends TestCase
     {
         $order = $this->placeOrder('2');
 
-        $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
-        $statuses->transition($order->refresh(), OrderStatus::Delivered);
+        $this->advanceTo($order, OrderStatus::Delivered);
 
         $this->expectExceptionMessageMatches('/more than the/');
 
@@ -308,11 +455,7 @@ class OrderLifecycleTest extends TestCase
     {
         $order = $this->placeOrder('2');
 
-        $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
-        $statuses->transition($order->refresh(), OrderStatus::Delivered);
+        $this->advanceTo($order, OrderStatus::Delivered);
 
         // Delivered is terminal, so the second attempt is refused outright --
         // but the ledger guard behind it matters more than the status guard.
@@ -330,11 +473,7 @@ class OrderLifecycleTest extends TestCase
     {
         $order = $this->placeOrder('2');
 
-        $statuses = app(OrderStatusService::class);
-        $statuses->transition($order, OrderStatus::Confirmed);
-        $statuses->transition($order->refresh(), OrderStatus::Packed);
-        $statuses->transition($order->refresh(), OrderStatus::Shipped);
-        $statuses->transition($order->refresh(), OrderStatus::Delivered);
+        $this->advanceTo($order, OrderStatus::Delivered);
 
         app(PaymentService::class)->record($order->refresh(), '2060.00');
 

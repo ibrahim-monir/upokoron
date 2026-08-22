@@ -7,7 +7,7 @@ const VARIANTS = {
   secondary: 'bg-white text-ink-800 border border-ink-300 hover:bg-ink-50 active:bg-ink-100',
   ghost: 'text-ink-700 hover:bg-ink-100 active:bg-ink-200',
   danger: 'bg-danger-500 text-white hover:bg-danger-700 active:bg-danger-700 shadow-card',
-  link: 'text-brand-600 hover:text-brand-700 underline underline-offset-4',
+  link: 'text-brand-800 hover:text-brand-800 underline underline-offset-4',
 }
 
 const SIZES = {

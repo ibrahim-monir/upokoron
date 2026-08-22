@@ -12,9 +12,15 @@
  */
 export const ORDER_STATUS_TONE = {
   pending: 'warning',
+  // Held for the same reason pending is amber: somebody has to act before
+  // this order moves. The label is what separates the two, not the colour.
+  on_hold: 'warning',
   confirmed: 'brand',
+  processing: 'brand',
   packed: 'brand',
+  ready_to_ship: 'brand',
   shipped: 'brand',
+  out_for_delivery: 'brand',
   delivered: 'success',
   cancelled: 'neutral',
   returned: 'danger',

@@ -1,9 +1,23 @@
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Link } from 'react-router-dom'
+import { createBrowserRouter, Link, Navigate, useSearchParams } from 'react-router-dom'
 import { StorefrontLayout } from '../layouts/StorefrontLayout'
 import { AdminLayout } from '../layouts/AdminLayout'
 import { RequireAdmin, RequireAuth, RequireGuest, RequirePermission } from './guards'
 import { PageLoader } from '../components/ui'
+
+function InventoryRedirect() {
+  const [params] = useSearchParams()
+  const filter = params.get('filter') ?? params.get('stock')
+  const search = params.get('search')
+
+  const next = new URLSearchParams()
+  if (filter) next.set('stock', filter)
+  if (search) next.set('search', search)
+
+  const query = next.toString()
+
+  return <Navigate to={`/admin/products${query ? `?${query}` : ''}`} replace />
+}
 
 // Storefront pages load eagerly; they are the first thing a visitor sees.
 import { HomePage } from '../features/storefront/HomePage'
@@ -11,10 +25,12 @@ import { ProductListPage } from '../features/storefront/ProductListPage'
 import { ProductDetailPage } from '../features/storefront/ProductDetailPage'
 import { ContactPage, ContentPage } from '../features/storefront/ContentPage'
 import { CartPage } from '../features/cart/CartPage'
+import { WishlistPage } from '../features/wishlist/WishlistPage'
 import { CheckoutPage } from '../features/checkout/CheckoutPage'
 import { OrderCompletePage } from '../features/checkout/OrderCompletePage'
 import { OrderDetailPage } from '../features/checkout/OrderDetailPage'
 import { OrdersPage } from '../features/checkout/OrdersPage'
+import { TrackOrderPage } from '../features/checkout/TrackOrderPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { AccountPage } from '../features/auth/AccountPage'
@@ -43,7 +59,7 @@ const guarded = (permission, element) => (
 function NotFound() {
   return (
     <div className="py-20 text-center">
-      <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">404</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-brand-800">404</p>
       <h1 className="mt-2 text-2xl font-semibold text-ink-900">Page not found</h1>
       <p className="mt-2 text-ink-600">That page does not exist, or it moved.</p>
       <Link
@@ -71,6 +87,7 @@ export const router = createBrowserRouter([
       // and the address they type is all the shop actually needs -- so these
       // are deliberately not behind RequireAuth.
       { path: 'cart', element: <CartPage /> },
+      { path: 'wishlist', element: <WishlistPage /> },
       { path: 'checkout', element: <CheckoutPage /> },
 
       // A single order is public, because a guest who has just bought
@@ -84,6 +101,11 @@ export const router = createBrowserRouter([
       // one above, because "your order is placed!" stops being true the
       // moment the order ships or is cancelled.
       { path: 'order-complete/:number', element: <OrderCompletePage /> },
+
+      // Tracking is deliberately public. Most people chasing a parcel
+      // bought as a guest, and the ones who did have an account are not
+      // reaching for it while they wait for a courier.
+      { path: 'track', element: <TrackOrderPage /> },
 
       // The LIST is different: "every order this person ever placed" needs an
       // account to scope it to.
@@ -172,7 +194,12 @@ export const router = createBrowserRouter([
 
       {
         path: 'products',
-        element: guarded('products.view', lazyAdmin(() => import('../features/admin/ProductsPage'))),
+        element: guarded(
+          // Stock lives on this page now, so the roles that only ever had
+          // stock permissions still need in.
+          ['products.view', 'inventory.view'],
+          lazyAdmin(() => import('../features/admin/ProductsPage')),
+        ),
       },
       {
         path: 'products/new',
@@ -221,9 +248,16 @@ export const router = createBrowserRouter([
         element: guarded('coupons.manage', lazyAdmin(() => import('../features/admin/CouponsPage'))),
       },
 
+      /*
+       * Stock is managed from the products table now, so this route only
+       * exists to carry old links there: bookmarks, the dashboard tiles,
+       * and anything a shop owner mailed themselves. The stock filter is
+       * carried across under the name the products list uses for it, so
+       * "show me what is out of stock" survives the move.
+       */
       {
         path: 'inventory',
-        element: guarded('inventory.view', lazyAdmin(() => import('../features/admin/InventoryPage'))),
+        element: <InventoryRedirect />,
       },
 
       {

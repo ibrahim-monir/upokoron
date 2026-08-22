@@ -54,6 +54,12 @@ class Customer extends Model
         return $this->hasMany(CustomerAddress::class);
     }
 
+    /** Payment details this customer saved for themselves. */
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(CustomerPaymentMethod::class);
+    }
+
     public function defaultShippingAddress(): HasOne
     {
         return $this->hasOne(CustomerAddress::class)->where('is_default_shipping', true);

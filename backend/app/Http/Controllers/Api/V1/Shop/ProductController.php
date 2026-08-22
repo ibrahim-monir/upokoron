@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Shop;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -138,5 +140,63 @@ class ProductController extends Controller
         ]);
 
         return new ProductResource($product);
+    }
+
+    /**
+     * What is actually selling at the moment.
+     *
+     * Counted from order lines inside a recent window, NOT from the
+     * `sold_count` column -- nothing has ever written to that column, so
+     * ordering by it would produce an arbitrary list wearing the word
+     * "trending". Cancelled and returned orders are excluded: a product that
+     * six people ordered and then sent back is the opposite of trending.
+     *
+     * A new shop has no trend yet, so the list is topped up with the newest
+     * products rather than rendering a section with two items in it.
+     */
+    public function trending(Request $request): AnonymousResourceCollection
+    {
+        $limit = min(max($request->integer('limit', 10), 1), 24);
+        $days = min(max($request->integer('days', 30), 1), 365);
+
+        $ranked = DB::table('order_items as oi')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->join('product_variations as v', 'v.id', '=', 'oi.product_variation_id')
+            ->where('o.created_at', '>=', now()->subDays($days))
+            ->whereNotIn('o.status', [OrderStatus::Cancelled->value, OrderStatus::Returned->value])
+            // Returns are netted off rather than ignored, so a line that was
+            // half sent back counts for the half that was kept.
+            ->selectRaw('v.product_id, SUM(oi.quantity - oi.quantity_returned) as sold')
+            ->groupBy('v.product_id')
+            ->havingRaw('SUM(oi.quantity - oi.quantity_returned) > 0')
+            ->orderByDesc('sold')
+            ->limit($limit)
+            ->pluck('sold', 'v.product_id');
+
+        $products = Product::query()
+            ->published()
+            ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage', 'defaultVariation.inventory'])
+            ->withCount('variations')
+            ->whereIn('id', $ranked->keys())
+            ->get()
+            // The database returned the ranking; this restores it, because
+            // whereIn() does not preserve the order it was given.
+            ->sortByDesc(fn (Product $product) => (float) $ranked[$product->id])
+            ->values();
+
+        if ($products->count() < $limit) {
+            $filler = Product::query()
+                ->published()
+                ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage', 'defaultVariation.inventory'])
+                ->withCount('variations')
+                ->whereNotIn('id', $products->pluck('id'))
+                ->latest('id')
+                ->limit($limit - $products->count())
+                ->get();
+
+            $products = $products->concat($filler);
+        }
+
+        return ProductResource::collection($products);
     }
 }

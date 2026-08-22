@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -77,6 +78,24 @@ class Product extends Model
     public function defaultVariation(): HasOne
     {
         return $this->hasOne(ProductVariation::class)->where('is_default', true);
+    }
+
+    /**
+     * Every stock row under this product, one per variation.
+     *
+     * Exists so the products list can total on-hand and stock value in the
+     * same query that fetches the list, rather than the catalogue and the
+     * stock figures being two screens fed by two round trips.
+     *
+     * A HasManyThrough does NOT inherit the intermediate model's soft-delete
+     * scope, so a deleted variation would keep contributing its stock to the
+     * product's total forever. The constraint below is what keeps the sum
+     * honest.
+     */
+    public function inventories(): HasManyThrough
+    {
+        return $this->hasManyThrough(Inventory::class, ProductVariation::class)
+            ->whereNull('product_variations.deleted_at');
     }
 
     public function images(): HasMany

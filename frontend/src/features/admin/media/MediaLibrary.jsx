@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ImageIcon, Search, Trash2, Upload, X } from 'lucide-react'
 import { api, get } from '../../../lib/api'
-import { cx, dateTime } from '../../../lib/format'
+import { cx } from '../../../lib/format'
 import { useAuthStore } from '../../../stores/authStore'
 import {
   Button,
@@ -266,9 +267,32 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
  * Modal wrapper. Used anywhere a form needs to choose an existing image.
  */
 export function MediaPicker({ open, onClose, onSelect, folder, title = 'Choose an image' }) {
+  // Escape closes it, the same as every other overlay in the panel.
+  useEffect(() => {
+    if (!open) return undefined
+
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    document.addEventListener('keydown', onKey)
+
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   if (!open) return null
 
-  return (
+  /*
+   * Rendered into <body>, not where it is written.
+   *
+   * `position: fixed` only escapes the page when no ancestor has made a
+   * stacking context, and `position: sticky` makes one -- so a picker opened
+   * from inside a sticky column was trapped in that column's layer and any
+   * later sibling painted straight over the top of it. A portal is the fix
+   * that holds wherever this gets used, rather than a z-index on one caller
+   * that the next sticky wrapper quietly breaks again.
+   */
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -298,7 +322,8 @@ export function MediaPicker({ open, onClose, onSelect, folder, title = 'Choose a
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

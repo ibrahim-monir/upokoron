@@ -15,7 +15,7 @@ export function PhoneGate({ number, onSubmit, error }) {
       <h1 className="text-lg font-semibold text-ink-900">Find order {number}</h1>
       <p className="mt-1 text-sm text-ink-600">
         Enter the mobile number the order was placed with, or{' '}
-        <Link to="/login" className="font-medium text-brand-600 hover:underline">
+        <Link to="/login" className="font-medium text-brand-800 hover:underline">
           sign in
         </Link>
         .

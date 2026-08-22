@@ -341,7 +341,7 @@ export function CheckoutPage() {
                         </p>
                         {option.estimate && <p className="text-xs text-ink-500">{option.estimate}</p>}
                       </div>
-                      <span className="tabular text-sm font-semibold text-brand-700">
+                      <span className="tabular text-sm font-semibold text-brand-800">
                         {option.is_free ? 'Free' : money(option.charge)}
                       </span>
                     </div>
@@ -432,7 +432,7 @@ export function CheckoutPage() {
 
               <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
                 <dt className="text-ink-900">Total</dt>
-                <dd className="tabular text-brand-700">{money(totals.total)}</dd>
+                <dd className="tabular text-brand-800">{money(totals.total)}</dd>
               </div>
             </dl>
 

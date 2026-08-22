@@ -121,7 +121,7 @@ export function AddToCart({ variation, compact = false }) {
       {added && (
         <Link
           to="/cart"
-          className="mt-3 block text-center text-sm font-medium text-brand-600 hover:text-brand-700"
+          className="mt-3 block text-center text-sm font-medium text-brand-800 hover:text-brand-800"
         >
           View cart →
         </Link>

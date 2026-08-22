@@ -1,188 +1,71 @@
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { put } from '../../lib/api'
-import { ApiError } from '../../lib/api'
-import { useAuthStore } from '../../stores/authStore'
-import { Button, Card, CardHeader, Field, useToast } from '../../components/ui'
-import { applyServerErrors } from './applyServerErrors'
+import { useSearchParams } from 'react-router-dom'
 
-const profileSchema = z
-  .object({
-    name: z.string().min(1, 'Enter your name.').max(120),
-    phone: z
-      .string()
-      .regex(/^01[3-9]\d{8}$/, 'Enter a valid mobile number.')
-      .or(z.literal('')),
-    email: z.string().email('Enter a valid email address.').or(z.literal('')),
-  })
-  .refine((values) => values.phone !== '' || values.email !== '', {
-    message: 'Keep at least one of mobile number or email address.',
-    path: ['phone'],
-  })
+import { cx } from '../../lib/format'
+import { LogoutPanel } from './account/LogoutPanel'
+import { ManageAddress } from './account/ManageAddress'
+import { MyOrders } from './account/MyOrders'
+import { PasswordManager } from './account/PasswordManager'
+import { PaymentMethods } from './account/PaymentMethods'
+import { PersonalInformation } from './account/PersonalInformation'
 
-const passwordSchema = z
-  .object({
-    current_password: z.string().min(1, 'Enter your current password.'),
-    password: z
-      .string()
-      .min(8, 'Use at least 8 characters.')
-      .regex(/[a-zA-Z]/, 'Include at least one letter.')
-      .regex(/\d/, 'Include at least one number.'),
-    password_confirmation: z.string(),
-  })
-  .refine((values) => values.password === values.password_confirmation, {
-    message: 'The passwords do not match.',
-    path: ['password_confirmation'],
-  })
-
-function ProfileForm() {
-  const user = useAuthStore((state) => state.user)
-  const updateProfile = useAuthStore((state) => state.updateProfile)
-  const toast = useToast()
-
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: user?.name ?? '',
-      phone: user?.phone ?? '',
-      email: user?.email ?? '',
-    },
-  })
-
-  const onSubmit = async (values) => {
-    try {
-      await updateProfile({
-        ...values,
-        phone: values.phone || null,
-        email: values.email || null,
-      })
-
-      toast.success('Profile updated.')
-    } catch (error) {
-      if (error instanceof ApiError) {
-        applyServerErrors(error, setError, toast)
-        return
-      }
-
-      toast.error('Could not save your profile.')
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader title="Your details" description="How we reach you about orders." />
-
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 p-4" noValidate>
-        <Field label="Full name" required error={errors.name?.message} {...register('name')} />
-        <Field label="Mobile number" error={errors.phone?.message} {...register('phone')} />
-        <Field label="Email address" type="email" error={errors.email?.message} {...register('email')} />
-
-        <div>
-          <Button type="submit" loading={isSubmitting} disabled={!isDirty}>
-            Save changes
-          </Button>
-        </div>
-      </form>
-    </Card>
-  )
-}
-
-function PasswordForm() {
-  const toast = useToast()
-
-  const {
-    register,
-    handleSubmit,
-    setError,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: { current_password: '', password: '', password_confirmation: '' },
-  })
-
-  const onSubmit = async (values) => {
-    try {
-      await put('/shop/auth/password', values)
-
-      // The server revokes every other token on a password change, so say so.
-      toast.success('Password changed. Other devices have been signed out.')
-      reset()
-    } catch (error) {
-      if (error instanceof ApiError) {
-        applyServerErrors(error, setError, toast)
-        return
-      }
-
-      toast.error('Could not change your password.')
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader
-        title="Password"
-        description="Changing this signs you out everywhere else."
-      />
-
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 p-4" noValidate>
-        <Field
-          label="Current password"
-          required
-          type="password"
-          autoComplete="current-password"
-          error={errors.current_password?.message}
-          {...register('current_password')}
-        />
-
-        <Field
-          label="New password"
-          required
-          type="password"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register('password')}
-        />
-
-        <Field
-          label="Confirm new password"
-          required
-          type="password"
-          autoComplete="new-password"
-          error={errors.password_confirmation?.message}
-          {...register('password_confirmation')}
-        />
-
-        <div>
-          <Button type="submit" loading={isSubmitting}>
-            Change password
-          </Button>
-        </div>
-      </form>
-    </Card>
-  )
-}
+/*
+ * Which section is open lives in the URL rather than in state, so the back
+ * button works, a reload keeps you where you were, and "look at my orders"
+ * is a link somebody can be sent.
+ */
+const SECTIONS = [
+  { key: 'profile', label: 'Personal Information', Component: PersonalInformation },
+  { key: 'orders', label: 'My Orders', Component: MyOrders },
+  { key: 'addresses', label: 'Manage Address', Component: ManageAddress },
+  { key: 'payment', label: 'Payment Method', Component: PaymentMethods },
+  { key: 'password', label: 'Password Manager', Component: PasswordManager },
+  { key: 'logout', label: 'Logout', Component: LogoutPanel },
+]
 
 export function AccountPage() {
-  const user = useAuthStore((state) => state.user)
+  const [params, setParams] = useSearchParams()
+
+  const requested = params.get('section')
+  const active = SECTIONS.find((section) => section.key === requested) ?? SECTIONS[0]
+  const Active = active.Component
+
+  const open = (key) => {
+    const next = new URLSearchParams(params)
+
+    if (key === SECTIONS[0].key) next.delete('section')
+    else next.set('section', key)
+
+    setParams(next)
+  }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink-900">My account</h1>
-        <p className="mt-1 text-sm text-ink-500">
-          {user?.customer?.code ? `Customer ${user.customer.code}` : 'Your profile and password.'}
-        </p>
-      </div>
+    <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
+      <nav aria-label="Account sections" className="flex flex-col gap-3">
+        {SECTIONS.map((section) => {
+          const selected = section.key === active.key
 
-      <ProfileForm />
-      <PasswordForm />
+          return (
+            <button
+              key={section.key}
+              type="button"
+              onClick={() => open(section.key)}
+              aria-current={selected ? 'page' : undefined}
+              className={cx(
+                'rounded-2xl px-6 py-4 text-left text-base font-semibold transition',
+                selected
+                  ? 'bg-brand-400 text-navy-900'
+                  : 'border border-ink-200 bg-white text-ink-800 hover:border-ink-300 hover:bg-ink-50',
+              )}
+            >
+              {section.label}
+            </button>
+          )
+        })}
+      </nav>
+
+      <div className="min-w-0">
+        <Active />
+      </div>
     </div>
   )
 }

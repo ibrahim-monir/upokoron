@@ -65,7 +65,7 @@ export function ResetPasswordPage() {
 
           <Link
             to="/forgot-password"
-            className="mt-5 inline-block text-sm font-medium text-brand-700 underline underline-offset-4"
+            className="mt-5 inline-block text-sm font-medium text-brand-800 underline underline-offset-4"
           >
             Request a new link
           </Link>

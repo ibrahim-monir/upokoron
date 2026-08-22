@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { PackageOpen } from 'lucide-react'
 import { get } from '../../lib/api'
 import { EmptyState, ErrorState, Pagination, Select } from '../../components/ui'
-import { ProductCard, ProductCardSkeleton } from './ProductCard'
+import { PRODUCT_GRID, ProductCard, ProductCardSkeleton } from './ProductCard'
 
 // Only what the API actually implements. Offering "price: low to high"
 // when the backend ignores it looks like a bug to the customer.
@@ -86,7 +86,7 @@ export function ProductListPage() {
       {query.isError && <ErrorState error={query.error} onRetry={query.refetch} />}
 
       {query.isLoading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className={PRODUCT_GRID}>
           {Array.from({ length: 8 }).map((_, index) => (
             <ProductCardSkeleton key={index} />
           ))}
@@ -102,7 +102,7 @@ export function ProductListPage() {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className={PRODUCT_GRID}>
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

@@ -1,5 +1,5 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, ImageOff, Printer, Truck } from 'lucide-react'
+import { CheckCircle2, ChevronRight, ImageOff, Truck } from 'lucide-react'
 import { dateTime, money } from '../../lib/format'
 import { Badge, ErrorState, Spinner } from '../../components/ui'
 import { TrustBadges } from '../../components/TrustBadges'
@@ -69,33 +69,24 @@ export function OrderCompletePage() {
         </p>
       </div>
 
-      <div className="grid gap-3 rounded-card border border-brand-100 bg-brand-50 p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-center">
+      <div className="grid gap-3 rounded-card border border-brand-100 bg-brand-50 p-4 text-center sm:grid-cols-3 sm:items-center">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Order ID</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">Order ID</p>
           <p className="mt-0.5 font-semibold text-ink-900">{data.number}</p>
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Payment method</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">Payment method</p>
           <p className="mt-0.5 font-medium text-ink-900">{data.payment_method?.name ?? '—'}</p>
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Status</p>
-          <div className="mt-0.5 flex items-center gap-1.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">Status</p>
+          <div className="mt-0.5 flex items-center justify-center gap-1.5">
             <Badge tone={statusTone(data.status)}>{data.status_label}</Badge>
             <Badge tone={data.payment_status === 'paid' ? 'success' : 'neutral'}>
               {data.payment_status_label}
             </Badge>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700 print:hidden"
-        >
-          <Printer className="h-4 w-4" aria-hidden="true" />
-          Print
-        </button>
       </div>
 
       <div className="overflow-hidden rounded-card border border-ink-200 bg-white">
@@ -167,7 +158,7 @@ export function OrderCompletePage() {
 
           <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
             <dt className="text-ink-900">Total</dt>
-            <dd className="tabular text-brand-700">{money(data.total)}</dd>
+            <dd className="tabular text-brand-800">{money(data.total)}</dd>
           </div>
 
           {Number(data.due_total) > 0 && (
@@ -182,7 +173,7 @@ export function OrderCompletePage() {
       <div className="grid gap-4 sm:grid-cols-2 print:hidden">
         <div className="rounded-card border border-ink-200 bg-white p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-            <Truck className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            <Truck className="h-4 w-4 text-brand-800" aria-hidden="true" />
             Delivering to
           </h2>
           <p className="mt-2 text-sm text-ink-800">{data.shipping.name}</p>

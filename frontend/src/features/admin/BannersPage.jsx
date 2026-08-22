@@ -290,7 +290,7 @@ export default function BannersPage() {
                     <button
                       type="button"
                       onClick={() => setForm({ ...banner, starts_at: banner.starts_at ?? '', ends_at: banner.ends_at ?? '' })}
-                      className="ml-2 text-sm font-medium text-brand-700 hover:underline"
+                      className="ml-2 text-sm font-medium text-brand-800 hover:underline"
                     >
                       Edit
                     </button>

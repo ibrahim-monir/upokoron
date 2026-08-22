@@ -25,7 +25,20 @@ class ProductController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        abort_unless($request->user()?->can('products.view'), 403);
+        /*
+         * Either permission opens the list, because the list is now the only
+         * place stock is managed from. An accountant holds `inventory.view`
+         * and never `products.view`, and used to reach stock through a screen
+         * of its own; folding that screen in here would otherwise have taken
+         * their stock levels away with it.
+         *
+         * Not a widening of what they can see: the valuation report they
+         * already hold lists every product with its quantity, cost and value.
+         */
+        abort_unless(
+            $request->user()?->can('products.view') || $request->user()?->can('inventory.view'),
+            403,
+        );
 
         $products = Product::query()
             // `slug` is in the select because ProductResource renders it. A
@@ -34,6 +47,27 @@ class ProductController extends Controller
             // strict models this project runs in dev and test.
             ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage', 'defaultVariation'])
             ->withCount('variations')
+            /*
+             * Stock travels with the catalogue row.
+             *
+             * Products and stock used to be two screens: you looked up what
+             * you sell in one and what is on the shelf in another, and kept
+             * the join in your head. These aggregates are what let the one
+             * table answer both, and they cost three subqueries on a page of
+             * twenty rather than a second paginated request.
+             *
+             * Summed over variations, so a variable product reports the whole
+             * product's position; the per-SKU breakdown is a drill-down.
+             */
+            ->withSum('inventories as stock_on_hand', 'quantity')
+            ->withSum('inventories as stock_available', 'available_quantity')
+            ->withSum('inventories as stock_value', 'stock_value')
+            // "Low" cannot be summed -- it is a per-SKU comparison against
+            // that SKU's own reorder level, so one variation under its line
+            // makes the product worth looking at.
+            ->withExists(['inventories as has_low_stock' => fn ($i) => $i
+                ->where('inventories.reorder_level', '>', 0)
+                ->whereColumn('inventories.quantity', '<=', 'inventories.reorder_level')])
             ->when($request->filled('search'), function ($q) use ($request): void {
                 $term = '%'.$request->string('search')->value().'%';
                 $q->where(fn ($w) => $w->where('name', 'like', $term)

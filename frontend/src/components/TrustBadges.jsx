@@ -12,7 +12,7 @@ export function TrustBadges() {
     <div className="grid gap-4 rounded-card border border-ink-200 bg-white p-4 sm:grid-cols-3 sm:p-6">
       {items.map(({ icon: Icon, title, body }) => (
         <div key={title} className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-600">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-800">
             <Icon className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>

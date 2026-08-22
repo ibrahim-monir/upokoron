@@ -1,9 +1,9 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   BookOpen,
-  Boxes,
   ChevronDown,
   CreditCard,
   FileText,
@@ -23,6 +23,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
+import { get } from '../lib/api'
 import { cx, initials } from '../lib/format'
 import { useAuthStore } from '../stores/authStore'
 
@@ -31,13 +32,18 @@ const SECTIONS = [
     label: null,
     items: [
       { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard', can: 'dashboard.view' },
-      { to: '/admin/orders', icon: ReceiptText, label: 'Orders', can: 'orders.view' },
+      { to: '/admin/orders', icon: ReceiptText, label: 'Orders', can: 'orders.view', badge: 'pendingOrders' },
     ],
   },
   {
     label: 'Catalogue',
     items: [
-      { to: '/admin/products', icon: Package, label: 'Products', can: 'products.view' },
+      {
+        to: '/admin/products',
+        icon: Package,
+        label: 'Products & stock',
+        can: ['products.view', 'inventory.view'],
+      },
       { to: '/admin/categories', icon: Shapes, label: 'Categories', can: 'products.view' },
       { to: '/admin/brands', icon: Store, label: 'Brands', can: 'products.view' },
       { to: '/admin/attributes', icon: Shapes, label: 'Attributes', can: 'products.view' },
@@ -47,7 +53,6 @@ const SECTIONS = [
   {
     label: 'Operations',
     items: [
-      { to: '/admin/inventory', icon: Boxes, label: 'Inventory', can: 'inventory.view' },
       { to: '/admin/shipping', icon: Truck, label: 'Delivery', can: 'shipping.manage' },
       { to: '/admin/payment-methods', icon: CreditCard, label: 'Payments', can: 'payments.manage' },
     ],
@@ -79,7 +84,7 @@ const SECTIONS = [
   },
 ]
 
-function NavItem({ item, onNavigate, prominent = false }) {
+function NavItem({ item, onNavigate, prominent = false, badge = 0 }) {
   const Icon = item.icon
 
   return (
@@ -93,16 +98,16 @@ function NavItem({ item, onNavigate, prominent = false }) {
           prominent ? 'h-11' : 'h-10',
           isActive
             ? prominent
-              ? 'bg-white text-slate-950 shadow-sm'
-              : 'bg-white/[0.075] text-white'
-            : 'text-slate-400 hover:bg-white/[0.045] hover:text-slate-100',
+              ? 'bg-white text-brand-700 shadow-sm'
+              : 'bg-white/[0.16] text-white'
+            : 'text-white/90 hover:bg-white/[0.14] hover:text-white',
         )
       }
     >
       {({ isActive }) => (
         <>
           {isActive && !prominent && (
-            <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-brand-400" />
+            <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-white" />
           )}
 
           <span
@@ -111,9 +116,9 @@ function NavItem({ item, onNavigate, prominent = false }) {
               prominent ? 'h-8 w-8' : 'h-7 w-7',
               isActive
                 ? prominent
-                  ? 'bg-slate-950 text-white'
+                  ? 'bg-brand-600 text-white'
                   : 'text-white'
-                : 'text-slate-500 group-hover:text-slate-200',
+                : 'text-white/85 group-hover:text-white',
             )}
           >
             <Icon className={prominent ? 'h-[17px] w-[17px]' : 'h-4 w-4'} />
@@ -128,13 +133,33 @@ function NavItem({ item, onNavigate, prominent = false }) {
             {item.label}
           </span>
 
-          {prominent && (
+          {/*
+             The count is the point of this slot when there is one: a bare
+             dot says "something is here" and makes you open the page to
+             find out how much. 99+ so a busy day cannot widen the rail.
+          */}
+          {badge > 0 ? (
             <span
+              title={`${badge} order${badge === 1 ? '' : 's'} pending`}
               className={cx(
-                'h-1.5 w-1.5 rounded-full',
-                isActive ? 'bg-brand-500' : 'bg-transparent',
+                'ml-auto grid h-5 min-w-[20px] shrink-0 place-items-center rounded-full px-1.5',
+                'text-[11px] font-bold tabular-nums leading-none',
+                isActive
+                  ? 'bg-amber-500 text-slate-950'
+                  : 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30',
               )}
-            />
+            >
+              {badge > 99 ? '99+' : badge}
+            </span>
+          ) : (
+            prominent && (
+              <span
+                className={cx(
+                  'h-1.5 w-1.5 rounded-full',
+                  isActive ? 'bg-white' : 'bg-transparent',
+                )}
+              />
+            )
           )}
         </>
       )}
@@ -142,7 +167,30 @@ function NavItem({ item, onNavigate, prominent = false }) {
   )
 }
 
-function NavSection({ section, visibleItems, pathname, onNavigate }) {
+/**
+ * How many orders are still waiting to be dealt with.
+ *
+ * Read off the orders list rather than a bespoke endpoint: that response
+ * already carries a status breakdown, so `per_page=1` buys the count for
+ * one row of payload instead of a second query the backend would have to
+ * grow. Skipped entirely for an account that cannot see orders -- polling
+ * a 403 every minute helps nobody.
+ */
+function usePendingOrderCount(enabled) {
+  const query = useQuery({
+    queryKey: ['admin', 'orders', 'pending-count'],
+    queryFn: () => get('/admin/orders', { params: { per_page: 1 } }),
+    enabled,
+    // The sidebar is on screen all day; a stale badge is worse than a
+    // cheap refetch, but a tight poll would be noise.
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  })
+
+  return query.data?.summary?.by_status?.pending?.orders ?? 0
+}
+
+function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
   const hasActiveItem = visibleItems.some((item) =>
     item.end ? pathname === item.to : pathname.startsWith(item.to),
   )
@@ -160,6 +208,7 @@ function NavSection({ section, visibleItems, pathname, onNavigate }) {
             key={item.to}
             item={item}
             prominent={index === 1}
+            badge={item.badge ? badges?.[item.badge] : 0}
             onNavigate={onNavigate}
           />
         ))}
@@ -175,11 +224,11 @@ function NavSection({ section, visibleItems, pathname, onNavigate }) {
         className="mb-1 flex h-7 w-full items-center gap-2 px-3 text-left"
         aria-expanded={open}
       >
-        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">
           {section.label}
         </span>
 
-        <span className="ml-auto grid h-5 w-5 place-items-center rounded-md text-slate-600 transition hover:bg-white/[0.05] hover:text-slate-300">
+        <span className="ml-auto grid h-5 w-5 place-items-center rounded-md text-white/70 transition hover:bg-white/[0.14] hover:text-white">
           <ChevronDown
             className={cx('h-3.5 w-3.5 transition-transform', !open && '-rotate-90')}
           />
@@ -194,7 +243,12 @@ function NavSection({ section, visibleItems, pathname, onNavigate }) {
       >
         <div className="space-y-0.5">
           {visibleItems.map((item) => (
-            <NavItem key={item.to} item={item} onNavigate={onNavigate} />
+            <NavItem
+              key={item.to}
+              item={item}
+              badge={item.badge ? badges?.[item.badge] : 0}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       </div>
@@ -206,11 +260,20 @@ function Sidebar({ onNavigate }) {
   const can = useAuthStore((state) => state.can)
   const { pathname } = useLocation()
 
+  const pendingOrders = usePendingOrderCount(can('orders.view'))
+
+  const badges = useMemo(
+    () => ({ pendingOrders }),
+    [pendingOrders],
+  )
+
   const sections = useMemo(
     () =>
       SECTIONS.map((section) => ({
         ...section,
-        visibleItems: section.items.filter((item) => can(item.can)),
+        visibleItems: section.items.filter((item) =>
+          Array.isArray(item.can) ? item.can.some((name) => can(name)) : can(item.can),
+        ),
       })).filter((section) => section.visibleItems.length),
     [can],
   )
@@ -223,6 +286,7 @@ function Sidebar({ onNavigate }) {
           section={section}
           visibleItems={section.visibleItems}
           pathname={pathname}
+          badges={badges}
           onNavigate={onNavigate}
         />
       ))}
@@ -240,7 +304,7 @@ export function AdminLayout() {
   const closeMobile = () => setMobileOpen(false)
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       {mobileOpen && (
         <button
           type="button"
@@ -252,8 +316,8 @@ export function AdminLayout() {
 
       <aside
         className={cx(
-          'fixed inset-y-0 left-0 z-50 flex w-[258px] flex-col bg-[#111827] text-white',
-          'border-r border-slate-800 shadow-xl transition-transform duration-200',
+          'fixed inset-y-0 left-0 z-50 flex w-[258px] flex-col bg-brand-600 text-white',
+          'border-r border-white/10 shadow-xl transition-transform duration-200',
           'lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
@@ -265,7 +329,7 @@ export function AdminLayout() {
             onClick={closeMobile}
             className="flex min-w-0 items-center gap-3"
           >
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-slate-950">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-brand-700">
               <span className="text-sm font-black tracking-tight">U</span>
             </div>
 
@@ -273,7 +337,7 @@ export function AdminLayout() {
               <p className="truncate text-[15px] font-bold tracking-tight text-white">
                 Upokoron
               </p>
-              <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/75">
                 Admin Console
               </p>
             </div>
@@ -282,7 +346,7 @@ export function AdminLayout() {
           <button
             type="button"
             onClick={closeMobile}
-            className="ml-auto rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-white lg:hidden"
+            className="ml-auto rounded-lg p-1.5 text-white/70 hover:bg-white/[0.12] hover:text-white lg:hidden"
             aria-label="Close navigation"
           >
             <X className="h-5 w-5" />
@@ -297,15 +361,15 @@ export function AdminLayout() {
         {/* User */}
         <div className="shrink-0 border-t border-white/[0.07] p-3">
           <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-700 text-[10px] font-bold text-slate-200">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/20 text-[10px] font-bold text-white">
               {initials(user?.name ?? '')}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-slate-200">
+              <p className="truncate text-xs font-semibold text-white">
                 {user?.name || 'Administrator'}
               </p>
-              <p className="truncate text-[10px] text-slate-500">
+              <p className="truncate text-[10px] text-white/75">
                 {user?.email ?? user?.phone ?? ''}
               </p>
             </div>
@@ -317,7 +381,7 @@ export function AdminLayout() {
                 navigate('/admin/login')
               }}
               title="Sign out"
-              className="rounded-lg p-2 text-slate-500 hover:bg-rose-500/10 hover:text-rose-300"
+              className="rounded-lg p-2 text-white/80 hover:bg-white/20 hover:text-white"
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -326,7 +390,7 @@ export function AdminLayout() {
       </aside>
 
       <div className="min-h-screen lg:pl-[258px]">
-        <header className="sticky top-0 z-30 flex h-[64px] items-center border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:px-6">
+        <header className="sticky top-0 z-30 flex h-[64px] items-center border-b border-ink-200 bg-white/95 px-4 backdrop-blur lg:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}

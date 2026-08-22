@@ -166,9 +166,7 @@ class SettingsService
                 return [
                     'group' => $group,
                     'type' => SettingType::infer($keys[$key]),
-                    // Must match SettingsSeeder, or a setting saved through
-                    // the API would lose the visibility it was seeded with.
-                    'is_public' => in_array($group, ['store', 'pages'], true),
+                    'is_public' => in_array($group, config('upokoron.public_setting_groups', []), true),
                 ];
             }
         }

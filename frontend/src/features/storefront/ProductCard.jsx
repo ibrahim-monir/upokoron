@@ -1,7 +1,20 @@
 import { Link } from 'react-router-dom'
 import { Heart, ImageOff, Star } from 'lucide-react'
-import { money } from '../../lib/format'
+import { cx, money } from '../../lib/format'
 import { AddToCart } from '../cart/AddToCart'
+import { useWishlistStore } from '../../stores/wishlistStore'
+
+/**
+ * The grid every product listing uses.
+ *
+ * Declared once because it had drifted: five listings each wrote their own
+ * columns, and they had fallen out of step -- related products stopped at
+ * four across, the loading skeleton used a different gap from the grid it
+ * was standing in for. Five once there is room for them at xl, four on a
+ * laptop, stepping down from there.
+ */
+export const PRODUCT_GRID =
+  'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5'
 
 /**
  * The saving, in taka rather than a percentage.
@@ -28,8 +41,21 @@ export function ProductCard({ product }) {
   const rating = Number(product.rating_avg ?? 0)
   const sold = Number(product.sold_count ?? 0)
 
+  const saved = useWishlistStore((state) =>
+    state.items.some((item) => item.id === product.id),
+  )
+  const toggleWishlist = useWishlistStore((state) => state.toggle)
+
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-lg border border-ink-200 bg-white transition-shadow hover:shadow-raised">
+    /*
+     * h-full, so the card fills whatever cell it is given.
+     *
+     * A grid item stretches on its own, but inside the carousel rail the
+     * card sits in a fixed-width wrapper and would otherwise shrink to its
+     * own content -- leaving short-named products visibly stubby next to
+     * long-named ones in the same row.
+     */
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-ink-200 bg-white transition-shadow hover:shadow-raised">
       {discount !== null && (
         <span className="absolute left-0 top-2 z-10 rounded-r-md bg-accent-500 px-2 py-1 text-xs font-semibold text-white">
           − {money(discount)}
@@ -38,11 +64,24 @@ export function ProductCard({ product }) {
 
       <button
         type="button"
-        aria-label={`Save ${product.name} to your wishlist`}
-        title="Wishlist arrives with the customer accounts module"
-        className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/85 text-brand-500 backdrop-blur transition-colors hover:bg-white hover:text-brand-600"
+        onClick={() => toggleWishlist(product)}
+        aria-pressed={saved}
+        aria-label={
+          saved
+            ? `Remove ${product.name} from your wishlist`
+            : `Save ${product.name} to your wishlist`
+        }
+        title={saved ? 'Saved to your wishlist' : 'Save to your wishlist'}
+        className={cx(
+          'absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/85 backdrop-blur transition-colors hover:bg-white',
+          saved ? 'text-danger-500 hover:text-danger-700' : 'text-brand-800 hover:text-brand-800',
+        )}
       >
-        <Heart className="h-4.5 w-4.5" aria-hidden="true" />
+        <Heart
+          className="h-4.5 w-4.5"
+          fill={saved ? 'currentColor' : 'none'}
+          aria-hidden="true"
+        />
       </button>
 
       <Link to={`/products/${product.slug}`} className="block aspect-square overflow-hidden bg-ink-100">
@@ -63,13 +102,16 @@ export function ProductCard({ product }) {
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <Link
           to={`/products/${product.slug}`}
-          className="line-clamp-2 text-sm font-medium leading-snug text-ink-900 hover:text-brand-600"
+          // Two lines, always: clamped so a long name cannot push the card
+          // taller, and min-height so a short one does not pull the price up
+          // to a different level from the card beside it.
+          className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-snug text-ink-900 hover:text-brand-800"
         >
           {product.name}
         </Link>
 
         <div className="mt-auto flex items-baseline gap-2 pt-1">
-          <span className="tabular text-lg font-bold text-brand-600">{money(price)}</span>
+          <span className="tabular text-lg font-bold text-brand-800">{money(price)}</span>
           {discount !== null && (
             <span className="tabular text-sm text-ink-400 line-through">{money(wasPrice)}</span>
           )}
@@ -96,7 +138,7 @@ export function ProductCard({ product }) {
           {(product.variations_count ?? 1) > 1 ? (
             <Link
               to={`/products/${product.slug}`}
-              className="block rounded-lg border border-brand-200 px-3 py-2 text-center text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50"
+              className="flex h-8 items-center justify-center rounded-lg border border-brand-200 px-3 text-sm font-medium text-brand-800 transition-colors hover:bg-brand-50"
             >
               Choose options
             </Link>
@@ -111,12 +153,13 @@ export function ProductCard({ product }) {
 
 export function ProductCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border border-ink-200 bg-white">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-ink-200 bg-white">
       <div className="aspect-square animate-pulse bg-ink-100" />
-      <div className="flex flex-col gap-2 p-3">
-        <div className="h-4 w-full animate-pulse rounded bg-ink-100" />
-        <div className="h-5 w-1/2 animate-pulse rounded bg-ink-100" />
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <div className="h-10 w-full animate-pulse rounded bg-ink-100" />
+        <div className="mt-auto h-5 w-1/2 animate-pulse rounded bg-ink-100" />
         <div className="h-3 w-2/3 animate-pulse rounded bg-ink-100" />
+        <div className="h-8 w-full animate-pulse rounded-lg bg-ink-100" />
       </div>
     </div>
   )

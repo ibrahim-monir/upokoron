@@ -16,10 +16,11 @@ import {
 } from 'lucide-react'
 import { get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
+import { useWishlistStore } from '../../stores/wishlistStore'
 import { Button, ErrorState, PageLoader, useToast } from '../../components/ui'
 import { FacebookIcon, WhatsAppIcon, XIcon } from '../../components/BrandIcons'
 import { useAddToCart } from '../cart/useCart'
-import { ProductCard, ProductCardSkeleton } from './ProductCard'
+import { PRODUCT_GRID, ProductCard, ProductCardSkeleton } from './ProductCard'
 
 // Same claims HomePage makes, not new ones -- a product page inventing its
 // own "24/7 support" or "free shipping" would contradict whatever this shop
@@ -76,7 +77,7 @@ function RelatedProducts({ categorySlug, excludeId }) {
     <section>
       <h2 className="text-center text-xl font-bold text-ink-900">Explore Related Products</h2>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className={cx('mt-5', PRODUCT_GRID)}>
         {query.isLoading
           ? Array.from({ length: 4 }).map((_, index) => <ProductCardSkeleton key={index} />)
           : products.map((product) => <ProductCard key={product.id} product={product} />)}
@@ -96,6 +97,9 @@ export function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [tab, setTab] = useState('description')
 
+  const wishlistItems = useWishlistStore((state) => state.items)
+  const toggleWishlist = useWishlistStore((state) => state.toggle)
+
   const query = useQuery({
     queryKey: ['shop', 'product', slug],
     queryFn: () => get(`/shop/products/${slug}`),
@@ -108,7 +112,7 @@ export function ProductDetailPage() {
     return (
       <div className="mx-auto max-w-lg">
         <ErrorState error={query.error} onRetry={query.refetch} />
-        <Link to="/products" className="mt-4 inline-block text-sm text-brand-700 underline">
+        <Link to="/products" className="mt-4 inline-block text-sm text-brand-800 underline">
           Back to all products
         </Link>
       </div>
@@ -116,6 +120,7 @@ export function ProductDetailPage() {
   }
 
   const product = query.data
+  const saved = wishlistItems.some((item) => item.id === product.id)
   const variations = product.variations ?? []
   const selected = variations.find((v) => v.id === variationId) ?? product.default_variation ?? variations[0]
   const images = product.images ?? []
@@ -274,7 +279,7 @@ export function ProductDetailPage() {
           <StarRating value={product.rating_avg} count={product.rating_count} />
 
           <div className="flex items-baseline gap-3">
-            <span className="tabular text-3xl font-bold text-brand-600">{money(price)}</span>
+            <span className="tabular text-3xl font-bold text-brand-800">{money(price)}</span>
             {hasDiscount && <span className="tabular text-lg text-ink-400 line-through">{money(wasPrice)}</span>}
           </div>
 
@@ -382,11 +387,26 @@ export function ProductDetailPage() {
 
             <button
               type="button"
-              aria-label={`Save ${product.name} to your wishlist`}
-              title="Wishlist arrives with the customer accounts module"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-ink-200 text-ink-500 hover:border-danger-300 hover:text-danger-600"
+              onClick={() => toggleWishlist(product)}
+              aria-pressed={saved}
+              aria-label={
+                saved
+                  ? `Remove ${product.name} from your wishlist`
+                  : `Save ${product.name} to your wishlist`
+              }
+              title={saved ? 'Saved to your wishlist' : 'Save to your wishlist'}
+              className={cx(
+                'grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition-colors',
+                saved
+                  ? 'border-danger-300 text-danger-600'
+                  : 'border-ink-200 text-ink-500 hover:border-danger-300 hover:text-danger-600',
+              )}
             >
-              <Heart className="h-5 w-5" aria-hidden="true" />
+              <Heart
+                className="h-5 w-5"
+                fill={saved ? 'currentColor' : 'none'}
+                aria-hidden="true"
+              />
             </button>
           </div>
 
@@ -414,7 +434,7 @@ export function ProductDetailPage() {
               {product.category?.name && (
                 <>
                   Category:{' '}
-                  <Link to={`/category/${product.category.slug}`} className="text-brand-700 hover:underline">
+                  <Link to={`/category/${product.category.slug}`} className="text-brand-800 hover:underline">
                     {product.category.name}
                   </Link>
                 </>
@@ -433,7 +453,7 @@ export function ProductDetailPage() {
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label={label}
-                className="grid h-8 w-8 place-items-center rounded-full bg-ink-100 text-ink-600 hover:bg-brand-100 hover:text-brand-700"
+                className="grid h-8 w-8 place-items-center rounded-full bg-ink-100 text-ink-600 hover:bg-brand-100 hover:text-brand-800"
               >
                 <Icon className="h-4 w-4" />
               </a>
@@ -455,7 +475,7 @@ export function ProductDetailPage() {
               className={cx(
                 '-mb-px border-b-2 px-1 pb-3 text-sm font-medium transition-colors',
                 tab === item.key
-                  ? 'border-brand-600 text-brand-700'
+                  ? 'border-brand-600 text-brand-800'
                   : 'border-transparent text-ink-500 hover:text-ink-800',
               )}
             >
@@ -511,7 +531,7 @@ export function ProductDetailPage() {
       <section className="grid gap-3 border-t border-ink-200 pt-6 sm:grid-cols-3">
         {TRUST.map(({ icon: Icon, title, body }) => (
           <div key={title} className="flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-brand-50 text-brand-600">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-brand-50 text-brand-800">
               <Icon className="h-4 w-4" aria-hidden="true" />
             </span>
             <div>

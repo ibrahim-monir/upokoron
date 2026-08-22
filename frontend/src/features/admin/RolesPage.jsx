@@ -39,7 +39,7 @@ export default function RolesPage() {
           <Card key={role.id} className="p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden="true" />
+                <ShieldCheck className="h-4 w-4 text-brand-800" aria-hidden="true" />
                 <span className="font-medium text-ink-900">{role.name}</span>
                 {role.is_protected && (
                   <span title="Referenced by name in code">

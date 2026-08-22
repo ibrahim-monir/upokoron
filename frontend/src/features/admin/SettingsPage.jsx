@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Image as ImageIcon } from 'lucide-react'
 import { useList, useWrite } from './useResource'
+import { useThemePreview } from '../../lib/useTheme'
+import { parseHex } from '../../lib/theme'
 import { MediaPicker } from './media/MediaLibrary'
 import { Button, Card, CardHeader, ErrorState, Field, Select, Spinner, Textarea } from '../../components/ui'
+import { cx } from '../../lib/format'
 
 /*
  * Only keys the backend declares in config can be written, so this screen is
@@ -17,6 +20,20 @@ const GROUP_LABELS = {
   rewards: 'Reward points',
   affiliate: 'Affiliate',
   tax: 'Tax',
+  theme: 'Brand colours',
+  home: 'Home page',
+}
+
+/*
+ * Four colours, and everything else is derived from them (see lib/theme.js).
+ * The hints matter here: an owner picking "the dark one" needs to know it is
+ * about to become the header, the footer, and the whole admin panel.
+ */
+const COLOUR_HINTS = {
+  theme_primary: 'Buttons, links, active state, prices.',
+  theme_primary_dark: 'The pressed and hover shade of the primary.',
+  theme_background: 'The page behind the content.',
+  theme_dark: 'Header, footer, and the admin panel.',
 }
 
 /** Long-form settings that need room to write in. */
@@ -33,6 +50,16 @@ const CHOICES = {
   revenue_recognition_point: [
     { value: 'delivered', label: 'On delivery (recommended for COD)' },
     { value: 'shipped', label: 'On shipment' },
+  ],
+  home_trending_days: [
+    { value: '7', label: 'Last 7 days' },
+    { value: '30', label: 'Last 30 days' },
+    { value: '90', label: 'Last 90 days' },
+  ],
+  home_categories_style: [
+    { value: 'circle', label: 'Circle — round image, name underneath' },
+    { value: 'card', label: 'Card — image over a labelled panel' },
+    { value: 'tile', label: 'Tile — compact row, no image needed' },
   ],
   default_commission_type: [
     { value: 'percentage', label: 'Percentage of order' },
@@ -51,6 +78,10 @@ export default function SettingsPage() {
 
   // Which image setting the picker is currently choosing for, if any.
   const [picking, setPicking] = useState(null)
+
+  // Repaint the panel from the unsaved draft, and put the saved colours
+  // back if this screen is left without saving.
+  useThemePreview(values, query.data?.data)
 
   useEffect(() => {
     if (query.data?.data) setValues(query.data.data)
@@ -84,6 +115,8 @@ export default function SettingsPage() {
       if (group === 'rewards') return key.startsWith('rewards_') || key.includes('points') || key.includes('redeem') || key === 'referral_points' || key === 'expiry_months'
       if (group === 'affiliate') return key.startsWith('affiliate_') || key.startsWith('default_commission') || key === 'cookie_days' || key === 'min_payout_amount'
       if (group === 'tax') return key.startsWith('tax_') || key === 'prices_include_tax'
+      if (group === 'theme') return key.startsWith('theme_')
+      if (group === 'home') return key.startsWith('home_')
       if (group === 'inventory') return key === 'allow_negative_stock' || key === 'low_stock_alert'
       return (
         key.startsWith('revenue_') ||
@@ -129,6 +162,43 @@ export default function SettingsPage() {
             <div className="grid gap-4 p-4 sm:grid-cols-2">
               {keys.map((key) => {
                 const value = values[key]
+
+                /*
+                 * A swatch next to a hex box, both editing the same value:
+                 * the picker is how you explore, the text box is how you
+                 * paste the hex a designer sent you. Changes repaint the
+                 * whole panel immediately, so this screen is its own preview.
+                 */
+                if (key.startsWith('theme_')) {
+                  const valid = parseHex(value) !== null
+
+                  return (
+                    <Field key={key} label={humanise(key)} hint={COLOUR_HINTS[key]}>
+                      {({ id }) => (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            aria-label={`${humanise(key)} colour picker`}
+                            value={valid ? value : '#000000'}
+                            onChange={(event) => set(key, event.target.value.toUpperCase())}
+                            className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-ink-200 bg-white p-1"
+                          />
+
+                          <input
+                            id={id}
+                            value={value ?? ''}
+                            onChange={(event) => set(key, event.target.value.toUpperCase())}
+                            spellCheck={false}
+                            className={cx(
+                              'h-10 w-full rounded-lg border px-3 font-mono text-sm uppercase',
+                              valid ? 'border-ink-200' : 'border-danger-500 text-danger-700',
+                            )}
+                          />
+                        </div>
+                      )}
+                    </Field>
+                  )
+                }
 
                 if (typeof value === 'boolean') {
                   return (

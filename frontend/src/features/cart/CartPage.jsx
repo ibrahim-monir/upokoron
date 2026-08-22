@@ -102,7 +102,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
         <div className="min-w-0">
           <Link
             to={`/products/${line.slug}`}
-            className="line-clamp-2 text-sm font-medium text-ink-900 hover:text-brand-600"
+            className="line-clamp-2 text-sm font-medium text-ink-900 hover:text-brand-800"
           >
             {line.name}
           </Link>
@@ -111,7 +111,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
 
           {/* Prices under the name on mobile, where the Price column is hidden. */}
           <div className="mt-1 flex items-baseline gap-2 sm:hidden">
-            <span className="tabular text-sm font-semibold text-brand-700">{money(line.unit_price)}</span>
+            <span className="tabular text-sm font-semibold text-brand-800">{money(line.unit_price)}</span>
             {Number(line.line_discount) > 0 && (
               <span className="tabular text-xs text-ink-400 line-through">{money(line.list_price)}</span>
             )}
@@ -393,7 +393,7 @@ export function CartPage() {
 
               <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
                 <dt className="text-ink-900">Total</dt>
-                <dd className="tabular text-brand-700">{money(total)}</dd>
+                <dd className="tabular text-brand-800">{money(total)}</dd>
               </div>
             </dl>
 
@@ -432,7 +432,7 @@ export function CartPage() {
           */}
           <div className="rounded-card border border-ink-200 bg-white p-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-              <Truck className="h-4 w-4 text-brand-600" aria-hidden="true" />
+              <Truck className="h-4 w-4 text-brand-800" aria-hidden="true" />
               Delivery charge
             </h2>
 
@@ -473,7 +473,7 @@ export function CartPage() {
                   {option.name}
                   {option.estimate ? ` · ${option.estimate}` : ''}
                 </p>
-                <p className="mt-1 font-semibold text-brand-700">
+                <p className="mt-1 font-semibold text-brand-800">
                   {option.is_free ? 'Free delivery' : money(option.charge)}
                 </p>
                 {!option.is_free && option.free_above_subtotal && (

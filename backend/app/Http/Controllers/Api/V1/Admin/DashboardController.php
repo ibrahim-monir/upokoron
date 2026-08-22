@@ -85,27 +85,24 @@ class DashboardController extends Controller
      */
     private function pipeline(): array
     {
+        $stages = OrderStatus::inFlight();
+
         $rows = Order::query()
-            ->whereIn('status', [
-                OrderStatus::Pending->value,
-                OrderStatus::Confirmed->value,
-                OrderStatus::Packed->value,
-                OrderStatus::Shipped->value,
-            ])
+            ->open()
             ->selectRaw('status, COUNT(*) as orders, COALESCE(SUM(total), 0) as value')
             ->groupBy('status')
             ->get()
             ->keyBy('status');
 
-        $stages = [];
+        $breakdown = [];
         $totalOrders = 0;
         $totalValue = Money::zero();
 
-        foreach ([OrderStatus::Pending, OrderStatus::Confirmed, OrderStatus::Packed, OrderStatus::Shipped] as $status) {
+        foreach ($stages as $status) {
             $row = $rows->get($status->value);
             $value = Money::of((string) ($row->value ?? '0'));
 
-            $stages[] = [
+            $breakdown[] = [
                 'status' => $status->value,
                 'label' => $status->label(),
                 'orders' => (int) ($row->orders ?? 0),
@@ -117,7 +114,7 @@ class DashboardController extends Controller
         }
 
         return [
-            'stages' => $stages,
+            'stages' => $breakdown,
             'orders' => $totalOrders,
             'value' => $totalValue->value(),
         ];

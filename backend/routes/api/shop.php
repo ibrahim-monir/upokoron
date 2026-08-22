@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Shop\BannerController;
 use App\Http\Controllers\Api\V1\Shop\CartController;
 use App\Http\Controllers\Api\V1\Shop\CategoryController;
 use App\Http\Controllers\Api\V1\Shop\CheckoutController;
+use App\Http\Controllers\Api\V1\Shop\CustomerPaymentMethodController;
 use App\Http\Controllers\Api\V1\Shop\ProductController;
 use App\Http\Controllers\Api\V1\Shop\ShippingController;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,10 @@ Route::get('categories/featured', [CategoryController::class, 'featured'])
 
 Route::get('products', [ProductController::class, 'index'])
     ->name('products.index');
+
+// Before the {slug} route below, or "trending" is read as a product slug.
+Route::get('products/trending', [ProductController::class, 'trending'])
+    ->name('products.trending');
 
 Route::get('products/{product:slug}', [ProductController::class, 'show'])
     ->name('products.show');
@@ -128,6 +133,13 @@ Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::post('addresses', [AddressController::class, 'store'])->name('addresses.store');
     Route::put('addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
     Route::delete('addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+
+    // The customer's own saved payment details -- their bKash number, not
+    // the shop's list of what it accepts.
+    Route::get('payment-methods', [CustomerPaymentMethodController::class, 'index'])->name('payment-methods.index');
+    Route::post('payment-methods', [CustomerPaymentMethodController::class, 'store'])->name('payment-methods.store');
+    Route::put('payment-methods/{paymentMethod}', [CustomerPaymentMethodController::class, 'update'])->name('payment-methods.update');
+    Route::delete('payment-methods/{paymentMethod}', [CustomerPaymentMethodController::class, 'destroy'])->name('payment-methods.destroy');
 
     // The customer's own order history.
     Route::get('orders', [CheckoutController::class, 'index'])->name('orders.index');

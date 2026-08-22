@@ -26,6 +26,11 @@ class UpdateProfileRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'email' => ['nullable', 'email:rfc', 'max:190', Rule::unique('users', 'email')->ignore($id)],
             'phone' => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/', Rule::unique('users', 'phone')->ignore($id)],
+
+            // Lives on the customer record, not the user: it is a fact about
+            // the shopper, not about the login. Optional in every sense --
+            // nobody is stopped from buying a sofa for declining to answer.
+            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
         ];
     }
 

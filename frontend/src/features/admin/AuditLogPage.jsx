@@ -115,7 +115,7 @@ export default function AuditLogPage() {
                       <button
                         type="button"
                         onClick={() => setExpanded(expanded === log.id ? null : log.id)}
-                        className="text-sm font-medium text-brand-700 hover:underline"
+                        className="text-sm font-medium text-brand-800 hover:underline"
                       >
                         {expanded === log.id ? 'Hide' : 'Changes'}
                       </button>

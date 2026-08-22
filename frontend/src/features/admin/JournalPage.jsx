@@ -132,7 +132,7 @@ function ManualEntryForm({ onDone }) {
           <button
             type="button"
             onClick={() => setLines([...lines, { account_id: '', type: 'debit', amount: '' }])}
-            className="w-fit text-sm font-medium text-brand-700 hover:underline"
+            className="w-fit text-sm font-medium text-brand-800 hover:underline"
           >
             + Add line
           </button>
@@ -232,7 +232,7 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={() => setExpanded(expanded === entry.id ? null : entry.id)}
-                          className="text-sm font-medium text-brand-700 hover:underline"
+                          className="text-sm font-medium text-brand-800 hover:underline"
                         >
                           {expanded === entry.id ? 'Hide' : 'Lines'}
                         </button>

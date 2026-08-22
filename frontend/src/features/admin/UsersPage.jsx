@@ -132,7 +132,7 @@ export default function UsersPage() {
                 <tr key={user.id} className="hover:bg-ink-50">
                   <Td>
                     <div className="flex items-center gap-2.5">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-semibold text-brand-800">
                         {initials(user.name)}
                       </span>
                       <span className="font-medium text-ink-900">{user.name}</span>

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\Product;
+use App\Support\Money;
+use App\Support\Quantity;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -82,6 +84,29 @@ class ProductResource extends JsonResource
                 'position' => $i->position,
                 'is_primary' => $i->is_primary,
             ])),
+
+            /*
+             * Present only on the list, where the controller adds the
+             * aggregates. Keyed off the attribute actually being there
+             * rather than off the route, so a caller that does not ask for
+             * the sums does not get a block of zeroes that reads like real
+             * data meaning "nothing in stock".
+             */
+            'stock' => $this->when(
+                array_key_exists('stock_on_hand', $this->getAttributes()),
+                fn (): array => [
+                    'tracked' => (bool) $this->is_stock_tracked,
+                    'on_hand' => Quantity::of((string) ($this->stock_on_hand ?? '0'))->value(),
+                    'available' => Quantity::of((string) ($this->stock_available ?? '0'))->value(),
+                    'value' => Money::of((string) ($this->stock_value ?? '0'))->value(),
+                    'is_low' => (bool) $this->has_low_stock,
+                    // Untracked products are never out of stock: a
+                    // made-to-order item has no stock row and can always be
+                    // sold. Flagging it red would be a standing false alarm.
+                    'is_out' => (bool) $this->is_stock_tracked
+                        && (float) ($this->stock_available ?? 0) <= 0,
+                ],
+            ),
 
             'variations_count' => $this->whenCounted('variations'),
             'default_variation' => $this->whenLoaded(

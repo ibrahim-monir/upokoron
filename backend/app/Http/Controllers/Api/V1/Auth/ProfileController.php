@@ -29,13 +29,14 @@ class ProfileController extends Controller
 
             // The customer profile mirrors the contact details so admin-side
             // customer screens do not have to join through users to show a
-            // phone number.
-            $user->customer?->update($request->safe()->only(['name', 'email', 'phone']));
+            // phone number. Gender is only ever stored here -- there is no
+            // column for it on the login.
+            $user->customer?->update($request->safe()->only(['name', 'email', 'phone', 'gender']));
         });
 
         return response()->json([
             'message' => 'Profile updated.',
-            'user' => new UserResource($user->fresh()->load('roles', 'customer')),
+            'user' => new UserResource($user->fresh()->load('roles', 'customer.addresses')),
         ]);
     }
 }

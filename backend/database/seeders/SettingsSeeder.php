@@ -38,7 +38,7 @@ class SettingsSeeder extends Seeder
                     'type' => $type,
                     // Store identity and footer pages are needed by the
                     // storefront before anyone signs in.
-                    'is_public' => in_array($group, ['store', 'pages'], true),
+                    'is_public' => in_array($group, config('upokoron.public_setting_groups', []), true),
                     'label' => str($key)->replace('_', ' ')->title()->value(),
                 ]);
 

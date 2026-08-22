@@ -3,22 +3,26 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowUpRight,
+  Boxes,
   CheckCircle2,
   ChevronRight,
   Clock3,
+  Cog,
   Edit3,
+  Eye,
   Filter,
+  Navigation,
   PackageCheck,
+  PauseCircle,
   ReceiptText,
   RotateCcw,
   Search,
   Truck,
-  XCircle,
 } from 'lucide-react'
 import { get } from '../../lib/api'
 import { cx, dateTime, money } from '../../lib/format'
+import { OrderQuickView, OrderStatusControl } from './OrderQuickView'
 import {
-  Badge,
   EmptyState,
   ErrorState,
   Input,
@@ -29,19 +33,30 @@ import {
   Td,
   Th,
 } from '../../components/ui'
-import { statusTone } from '../checkout/orderStatus'
 
 const STATUSES = [
   { value: '', label: 'All statuses' },
   { value: 'pending', label: 'Pending' },
+  { value: 'on_hold', label: 'On hold' },
   { value: 'confirmed', label: 'Confirmed' },
+  { value: 'processing', label: 'Processing' },
   { value: 'packed', label: 'Packed' },
+  { value: 'ready_to_ship', label: 'Ready to ship' },
   { value: 'shipped', label: 'Shipped' },
+  { value: 'out_for_delivery', label: 'Out for delivery' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'returned', label: 'Returned (RTO)' },
 ]
 
+/*
+ * The board across the top, in lifecycle order.
+ *
+ * Only the statuses an order can still move out of appear here: these tiles
+ * are a worklist, and a tile for "delivered" would be a number nobody can
+ * act on sitting where the day's work should be. Finished orders are still
+ * reachable through the filter beneath.
+ */
 const STATUS_META = {
   pending: {
     icon: Clock3,
@@ -50,12 +65,26 @@ const STATUS_META = {
     iconShell: 'bg-amber-100 text-amber-700',
     value: 'text-amber-900',
   },
+  on_hold: {
+    icon: PauseCircle,
+    label: 'On hold',
+    shell: 'from-rose-50 to-white border-rose-200',
+    iconShell: 'bg-rose-100 text-rose-700',
+    value: 'text-rose-900',
+  },
   confirmed: {
     icon: CheckCircle2,
     label: 'Confirmed',
     shell: 'from-sky-50 to-white border-sky-200',
     iconShell: 'bg-sky-100 text-sky-700',
     value: 'text-sky-900',
+  },
+  processing: {
+    icon: Cog,
+    label: 'Processing',
+    shell: 'from-indigo-50 to-white border-indigo-200',
+    iconShell: 'bg-indigo-100 text-indigo-700',
+    value: 'text-indigo-900',
   },
   packed: {
     icon: PackageCheck,
@@ -64,12 +93,26 @@ const STATUS_META = {
     iconShell: 'bg-violet-100 text-violet-700',
     value: 'text-violet-900',
   },
+  ready_to_ship: {
+    icon: Boxes,
+    label: 'Ready to ship',
+    shell: 'from-teal-50 to-white border-teal-200',
+    iconShell: 'bg-teal-100 text-teal-700',
+    value: 'text-teal-900',
+  },
   shipped: {
     icon: Truck,
     label: 'Shipped',
     shell: 'from-cyan-50 to-white border-cyan-200',
     iconShell: 'bg-cyan-100 text-cyan-700',
     value: 'text-cyan-900',
+  },
+  out_for_delivery: {
+    icon: Navigation,
+    label: 'Out for delivery',
+    shell: 'from-emerald-50 to-white border-emerald-200',
+    iconShell: 'bg-emerald-100 text-emerald-700',
+    value: 'text-emerald-900',
   },
 }
 
@@ -114,7 +157,7 @@ function StatusOverview({ summary, active, onPick }) {
               <ChevronRight
                 className={cx(
                   'h-4 w-4 transition-transform',
-                  selected ? 'text-brand-600 rotate-90' : 'text-ink-300 group-hover:translate-x-0.5',
+                  selected ? 'text-brand-800 rotate-90' : 'text-ink-300 group-hover:translate-x-0.5',
                 )}
               />
             </div>
@@ -157,21 +200,21 @@ function PaymentBadge({ order }) {
   )
 }
 
-function OrderRow({ order }) {
+function OrderRow({ order, onQuickView }) {
   const profit = order.gross_profit === null ? null : Number(order.gross_profit)
 
   return (
     <tr className="group border-t border-ink-100 transition-colors hover:bg-brand-50/35">
       <Td className="py-4">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-50 to-cyan-50 text-brand-700 ring-1 ring-inset ring-brand-100">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-50 to-cyan-50 text-brand-800 ring-1 ring-inset ring-brand-100">
             <ReceiptText className="h-4 w-4" />
           </div>
 
           <div className="min-w-0">
             <Link
               to={`/admin/orders/${order.id}`}
-              className="inline-flex items-center gap-1 font-bold text-brand-700 hover:text-brand-800"
+              className="inline-flex items-center gap-1 font-bold text-brand-800 hover:text-brand-800"
             >
               {order.number}
               <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-100" />
@@ -222,19 +265,29 @@ function OrderRow({ order }) {
       </Td>
 
       <Td className="py-4">
-        <Badge tone={statusTone(order.status)}>
-          {order.status_label}
-        </Badge>
+        <OrderStatusControl order={order} />
       </Td>
 
       <Td className="py-4">
-        <Link
-          to={`/admin/orders/${order.id}`}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-2 text-xs font-bold text-ink-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
-        >
-          <Edit3 className="h-3.5 w-3.5" />
-          Manage
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onQuickView(order.id)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-2 text-xs font-bold text-ink-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Quick view
+          </button>
+
+          <Link
+            to={`/admin/orders/${order.id}`}
+            title="Open the full order"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-ink-200 bg-white text-ink-500 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800"
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+            <span className="sr-only">Manage {order.number}</span>
+          </Link>
+        </div>
       </Td>
     </tr>
   )
@@ -244,6 +297,7 @@ export default function AdminOrdersPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
+  const [quickViewId, setQuickViewId] = useState(null)
 
   const query = useQuery({
     queryKey: ['admin', 'orders', { search, status, page }],
@@ -391,7 +445,7 @@ export default function AdminOrdersPage() {
               <span className="text-xs font-semibold text-ink-400">Active filters:</span>
 
               {search && (
-                <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">
+                <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-800">
                   Search: {search}
                 </span>
               )}
@@ -461,7 +515,7 @@ export default function AdminOrdersPage() {
 
                   <tbody>
                     {rows.map((order) => (
-                      <OrderRow key={order.id} order={order} />
+                      <OrderRow key={order.id} order={order} onQuickView={setQuickViewId} />
                     ))}
                   </tbody>
                 </table>
@@ -474,6 +528,10 @@ export default function AdminOrdersPage() {
           <Pagination meta={query.data?.meta} onPage={setPage} />
         </div>
       </div>
+
+      {quickViewId && (
+        <OrderQuickView orderId={quickViewId} onClose={() => setQuickViewId(null)} />
+      )}
     </div>
   )
 }

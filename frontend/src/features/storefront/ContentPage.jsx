@@ -90,13 +90,13 @@ export function ContactPage() {
         <Card className="mt-6 divide-y divide-ink-100">
           {rows.map(({ icon: Icon, label, value, href }) => (
             <div key={label} className="flex items-start gap-3 p-4">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-800">
                 <Icon className="h-4 w-4" aria-hidden="true" />
               </span>
               <div className="min-w-0">
                 <p className="text-xs font-medium uppercase tracking-wide text-ink-500">{label}</p>
                 {href ? (
-                  <a href={href} className="text-ink-900 hover:text-brand-600">
+                  <a href={href} className="text-ink-900 hover:text-brand-800">
                     {value}
                   </a>
                 ) : (

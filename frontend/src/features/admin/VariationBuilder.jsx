@@ -102,7 +102,7 @@ export function VariationBuilder({ value, onChange }) {
                   className={cx(
                     'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors',
                     active
-                      ? 'border-brand-600 bg-brand-50 font-medium text-brand-700'
+                      ? 'border-brand-600 bg-brand-50 font-medium text-brand-800'
                       : 'border-ink-200 text-ink-700 hover:border-brand-300',
                   )}
                 >
@@ -138,7 +138,7 @@ export function VariationBuilder({ value, onChange }) {
         ) : (
           <>
             <p className="flex items-center gap-2 text-sm font-medium text-ink-900">
-              <Layers className="h-4 w-4 text-brand-600" aria-hidden="true" />
+              <Layers className="h-4 w-4 text-brand-800" aria-hidden="true" />
               {combinations.length} variation{combinations.length === 1 ? '' : 's'} will be created
             </p>
 
