@@ -237,7 +237,22 @@ if ($authorised && ! $blocked && ($_POST['action'] ?? '') === 'update') {
         // that command. Without this, a settings change shipped in this
         // deploy would not actually take effect until the old cache entry's
         // hour ran out.
-        foreach (['migrate' => ['--force' => true], 'cache:clear' => [], 'optimize' => []] as $command => $arguments) {
+        //
+        // db:seed runs RolePermissionSeeder specifically, nothing else --
+        // Permissions::all() is the single source of truth for what exists,
+        // and this is the only thing that ever syncs a newly-declared
+        // permission onto the roles in App\Support\Permissions::roles(). It
+        // is deliberately idempotent (see the seeder's own docblock) so
+        // running it on every deploy, whether or not this push added a
+        // permission, is safe.
+        $steps = [
+            'migrate' => ['--force' => true],
+            'db:seed' => ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true],
+            'cache:clear' => [],
+            'optimize' => [],
+        ];
+
+        foreach ($steps as $command => $arguments) {
             $lines[] = '$ php artisan '.$command;
 
             try {
