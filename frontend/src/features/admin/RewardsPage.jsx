@@ -180,6 +180,22 @@ function SettingsTab() {
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-200 p-3">
               <input
                 type="checkbox"
+                checked={Boolean(values.rewards_enabled)}
+                onChange={(event) => set('rewards_enabled', event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-ink-300"
+              />
+              <span>
+                <span className="block text-sm font-medium text-ink-800">Enable reward points program</span>
+                <span className="mt-0.5 block text-[11px] text-ink-500">
+                  Master switch. Off means nothing below applies — no points earned, no redemption at
+                  checkout, and the product-page line stays hidden regardless of that setting.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-200 p-3">
+              <input
+                type="checkbox"
                 checked={Boolean(values.show_points_on_product_page)}
                 onChange={(event) => set('show_points_on_product_page', event.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-ink-300"
