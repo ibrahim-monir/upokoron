@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\V1\Shop\CategoryController;
 use App\Http\Controllers\Api\V1\Shop\CheckoutController;
 use App\Http\Controllers\Api\V1\Shop\CustomerPaymentMethodController;
 use App\Http\Controllers\Api\V1\Shop\ProductController;
+use App\Http\Controllers\Api\V1\Shop\RewardController;
+use App\Http\Controllers\Api\V1\Shop\ReviewController;
 use App\Http\Controllers\Api\V1\Shop\ShippingController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +52,10 @@ Route::get('products/trending', [ProductController::class, 'trending'])
 Route::get('products/{product:slug}', [ProductController::class, 'show'])
     ->name('products.show');
 
+// Approved reviews for a product, public.
+Route::get('products/{product:slug}/reviews', [ReviewController::class, 'index'])
+    ->name('products.reviews.index');
+
 /*
 | Guest-only auth.
 */
@@ -85,6 +91,11 @@ Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
 
 Route::post('cart/coupon', [CartController::class, 'applyCoupon'])->name('cart.coupon.apply');
 Route::delete('cart/coupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');
+
+// Spending loyalty points on this basket. Requires a signed-in customer --
+// enforced in the controller, since a guest has no balance to spend.
+Route::post('cart/reward-points', [CartController::class, 'redeemPoints'])->name('cart.reward-points.apply');
+Route::delete('cart/reward-points', [CartController::class, 'removeRewardPoints'])->name('cart.reward-points.remove');
 
 /*
 | Delivery charges. Public, because "what does delivery cost to my area?" is
@@ -144,6 +155,9 @@ Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     // The customer's own order history.
     Route::get('orders', [CheckoutController::class, 'index'])->name('orders.index');
 
+    // The customer's own reward point history.
+    Route::get('rewards/history', [RewardController::class, 'history'])->name('rewards.history');
+
     Route::get('auth/me', [ProfileController::class, 'show'])
         ->name('auth.me');
 
@@ -152,4 +166,14 @@ Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
 
     Route::put('auth/password', [PasswordController::class, 'update'])
         ->name('auth.password.update');
+
+    // The customer's own review of a product they bought.
+    Route::get('products/{product:slug}/reviews/mine', [ReviewController::class, 'mine'])
+        ->name('products.reviews.mine');
+    Route::post('products/{product:slug}/reviews', [ReviewController::class, 'store'])
+        ->name('products.reviews.store');
+    Route::put('products/{product:slug}/reviews/{review}', [ReviewController::class, 'update'])
+        ->name('products.reviews.update');
+    Route::delete('products/{product:slug}/reviews/{review}', [ReviewController::class, 'destroy'])
+        ->name('products.reviews.destroy');
 });

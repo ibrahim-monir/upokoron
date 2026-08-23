@@ -7,6 +7,7 @@ import { MyOrders } from './account/MyOrders'
 import { PasswordManager } from './account/PasswordManager'
 import { PaymentMethods } from './account/PaymentMethods'
 import { PersonalInformation } from './account/PersonalInformation'
+import { RewardsPanel } from './account/RewardsPanel'
 
 /*
  * Which section is open lives in the URL rather than in state, so the back
@@ -18,6 +19,7 @@ const SECTIONS = [
   { key: 'orders', label: 'My Orders', Component: MyOrders },
   { key: 'addresses', label: 'Manage Address', Component: ManageAddress },
   { key: 'payment', label: 'Payment Method', Component: PaymentMethods },
+  { key: 'rewards', label: 'Reward Points', Component: RewardsPanel },
   { key: 'password', label: 'Password Manager', Component: PasswordManager },
   { key: 'logout', label: 'Logout', Component: LogoutPanel },
 ]

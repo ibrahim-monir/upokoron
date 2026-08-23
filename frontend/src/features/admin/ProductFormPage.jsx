@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
@@ -23,7 +23,7 @@ import {
 
 import { get, post, put } from '../../lib/api'
 import { ApiError } from '../../lib/api'
-import { datetimeLocalValue } from '../../lib/format'
+import { cx, datetimeLocalValue } from '../../lib/format'
 import { applyServerErrors } from '../auth/applyServerErrors'
 
 import {
@@ -32,6 +32,7 @@ import {
   Field,
   Input,
   PageLoader,
+  RichTextEditor,
   Select,
   Textarea,
   useToast,
@@ -102,6 +103,11 @@ const schema = z
     short_description: z
       .string()
       .max(500)
+      .optional()
+      .or(z.literal('')),
+
+    short_description_style: z
+      .enum(['paragraph', 'list'])
       .optional()
       .or(z.literal('')),
 
@@ -302,6 +308,19 @@ function decimalValue(value, fallback = '') {
   return Number.isFinite(number)
     ? number
     : fallback
+}
+
+/**
+ * A best-effort client-side preview of what the server will generate --
+ * the server has the last word (transliteration, uniqueness), this just
+ * saves the admin from staring at a blank slug field while they type.
+ */
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 }
 
 /** Quantities are decimal(_,3); round to that scale so 0.1+0.2 cannot leak. */
@@ -516,6 +535,7 @@ export default function ProductFormPage() {
     handleSubmit,
     reset,
     setError,
+    setValue,
     control,
     formState: { errors },
   } = useForm({
@@ -534,6 +554,7 @@ export default function ProductFormPage() {
 
       /* Content */
       short_description: '',
+      short_description_style: 'paragraph',
       description: '',
 
       /* Pricing */
@@ -582,6 +603,20 @@ export default function ProductFormPage() {
     name: 'name',
   })
 
+  /*
+   * The slug tracks the name until the admin types into the slug field
+   * themselves -- at that point their spelling wins and the name may keep
+   * changing without dragging the slug (and every link to the product)
+   * along with it.
+   */
+  const [slugAuto, setSlugAuto] = useState(!isEdit)
+
+  useEffect(() => {
+    if (!slugAuto) return
+
+    setValue('slug', slugify(productName || ''), { shouldValidate: false })
+  }, [productName, slugAuto, setValue])
+
   const specialPrice = useWatch({
     control,
     name: 'special_price',
@@ -590,6 +625,11 @@ export default function ProductFormPage() {
   const isStockTracked = useWatch({
     control,
     name: 'is_stock_tracked',
+  })
+
+  const shortDescriptionStyle = useWatch({
+    control,
+    name: 'short_description_style',
   })
 
   const stockQuantity = useWatch({
@@ -650,6 +690,10 @@ export default function ProductFormPage() {
 
     const product =
       existing.data
+
+    // The product already has a real slug; do not start rewriting it just
+    // because loading the form touches the name field.
+    setSlugAuto(false)
 
     const variation =
       defaultVariationOf(product)
@@ -715,6 +759,10 @@ export default function ProductFormPage() {
       short_description:
         product.short_description ??
         '',
+
+      short_description_style:
+        product.short_description_style ??
+        'paragraph',
 
       description:
         product.description ??
@@ -1321,6 +1369,22 @@ export default function ProductFormPage() {
                   {...register('name')}
                 />
 
+                <Field
+                  label="Product slug"
+                  placeholder="baseus-65w-gan-charger"
+                  hint={
+                    slugAuto
+                      ? 'Auto-filled from the product name -- edit it yourself to take over.'
+                      : 'Edited by hand. It will no longer follow the product name.'
+                  }
+                  error={
+                    errors.slug?.message
+                  }
+                  {...register('slug', {
+                    onChange: () => setSlugAuto(false),
+                  })}
+                />
+
                 <div className="grid gap-5 md:grid-cols-2">
 
                   <Field
@@ -1520,16 +1584,6 @@ export default function ProductFormPage() {
 
                 </div>
 
-                <Field
-                  label="Product slug"
-                  placeholder="baseus-65w-gan-charger"
-                  hint="Leave blank to generate from the product name."
-                  error={
-                    errors.slug?.message
-                  }
-                  {...register('slug')}
-                />
-
               </div>
             </Card>
 
@@ -1551,15 +1605,63 @@ export default function ProductFormPage() {
 
                 <Field
                   label="Short description"
-                  placeholder="A short summary shown near the product title."
+                  hint={
+                    (shortDescriptionStyle || 'paragraph') === 'list'
+                      ? 'One point per line -- each line becomes a bullet.'
+                      : 'A short summary shown near the product title.'
+                  }
                   error={
                     errors.short_description
                       ?.message
                   }
-                  {...register(
-                    'short_description',
+                >
+                  {({
+                    id: fieldId,
+                    invalid,
+                  }) => (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-ink-500">Display as</span>
+                        {[
+                          { value: 'paragraph', label: 'Paragraph' },
+                          { value: 'list', label: 'Bullet list' },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() =>
+                              setValue('short_description_style', option.value, { shouldDirty: true })
+                            }
+                            className={cx(
+                              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                              (shortDescriptionStyle || 'paragraph') === option.value
+                                ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                : 'border-ink-200 text-ink-600 hover:border-ink-300',
+                            )}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <Textarea
+                        id={fieldId}
+                        invalid={invalid}
+                        rows={
+                          (shortDescriptionStyle || 'paragraph') === 'list' ? 5 : 3
+                        }
+                        placeholder={
+                          (shortDescriptionStyle || 'paragraph') === 'list'
+                            ? 'Lightweight design\nLong battery life\nWorks with all standard chargers'
+                            : 'A short summary shown near the product title.'
+                        }
+                        {...register(
+                          'short_description',
+                        )}
+                      />
+                    </div>
                   )}
-                />
+                </Field>
 
                 <Field
                   label="Full description"
@@ -1570,48 +1672,24 @@ export default function ProductFormPage() {
                 >
                   {({
                     id: fieldId,
+                    invalid,
                   }) => (
-                    <Textarea
-                      id={fieldId}
-                      rows={8}
-                      placeholder="Describe the product, features, compatibility and important details..."
-                      {...register(
-                        'description',
+                    <Controller
+                      name="description"
+                      control={control}
+                      render={({ field }) => (
+                        <RichTextEditor
+                          id={fieldId}
+                          invalid={invalid}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="Describe the product, features, compatibility and important details..."
+                        />
                       )}
                     />
                   )}
                 </Field>
-
-              </div>
-            </Card>
-
-            {/* ===============================================================
-               03 IMAGES
-               =============================================================== */}
-
-            <Card className="overflow-hidden">
-
-              <div className="border-b border-ink-100 px-5 py-4">
-                <SectionHeader
-                  icon={ImageIcon}
-                  title="Product images"
-                  description="The first image will be used as the primary product image."
-                />
-              </div>
-
-              <div className="p-5">
-
-                <ProductImages
-                  productId={
-                    isEdit
-                      ? id
-                      : null
-                  }
-                  value={images}
-                  onChange={
-                    setImages
-                  }
-                />
 
               </div>
             </Card>
@@ -2419,6 +2497,30 @@ export default function ProductFormPage() {
                 </label>
 
               </div>
+
+            </SidebarSection>
+
+            {/* ===============================================================
+               PRODUCT IMAGES
+               =============================================================== */}
+
+            <SidebarSection
+              icon={ImageIcon}
+              title="Product images"
+              description="The first image will be used as the primary product image."
+            >
+
+              <ProductImages
+                productId={
+                  isEdit
+                    ? id
+                    : null
+                }
+                value={images}
+                onChange={
+                  setImages
+                }
+              />
 
             </SidebarSection>
 

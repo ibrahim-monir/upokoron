@@ -111,16 +111,23 @@ export function CheckoutPage() {
 
   const coupon = data?.coupon ?? null
   const couponDiscount = coupon?.is_valid ? Number(coupon.discount) : 0
+  const rewardPoints = data?.reward_points ?? null
+  const rewardPointsDiscount = rewardPoints?.is_valid ? Number(rewardPoints.discount) : 0
 
   const totals = useMemo(() => {
     const subtotal = Number(data?.subtotal ?? 0)
     const delivery = Number(rate?.charge ?? 0)
     const extra = Number(method?.extra_charge ?? 0)
 
-    // `subtotal` is already net of item-level discounts; only the coupon
-    // subtracts further here.
-    return { subtotal, delivery, extra, total: subtotal - couponDiscount + delivery + extra }
-  }, [data?.subtotal, rate?.charge, method?.extra_charge, couponDiscount])
+    // `subtotal` is already net of item-level discounts; only the coupon,
+    // redeemed points, and delivery subtract further here.
+    return {
+      subtotal,
+      delivery,
+      extra,
+      total: subtotal - couponDiscount - rewardPointsDiscount + delivery + extra,
+    }
+  }, [data?.subtotal, rate?.charge, method?.extra_charge, couponDiscount, rewardPointsDiscount])
 
   const submit = form.handleSubmit((values) => {
     if (!rateId) {
@@ -130,6 +137,11 @@ export function CheckoutPage() {
 
     if (coupon && !coupon.is_valid) {
       toast.error(coupon.message ?? 'That coupon no longer applies. Remove it in your cart and try again.')
+      return
+    }
+
+    if (rewardPoints && !rewardPoints.is_valid) {
+      toast.error(rewardPoints.message ?? 'That points redemption no longer applies. Remove it in your cart and try again.')
       return
     }
 
@@ -416,6 +428,19 @@ export function CheckoutPage() {
                 </div>
               )}
 
+              {rewardPoints && (
+                <div className="flex justify-between">
+                  <dt className={rewardPoints.is_valid ? 'text-ink-600' : 'text-warning-700'}>
+                    Points ({rewardPoints.points})
+                  </dt>
+                  <dd className={cx('tabular', rewardPoints.is_valid ? 'text-accent-600' : 'text-warning-700')}>
+                    {rewardPoints.is_valid
+                      ? `− ${money(rewardPointsDiscount)}`
+                      : (rewardPoints.message ?? 'no longer applies')}
+                  </dd>
+                </div>
+              )}
+
               <div className="flex justify-between">
                 <dt className="text-ink-600">Delivery</dt>
                 <dd className="tabular text-ink-900">
@@ -446,7 +471,13 @@ export function CheckoutPage() {
               type="submit"
               className="mt-4 w-full"
               loading={placeOrder.isPending}
-              disabled={!rateId || !methodId || data.has_unheld_items || (coupon && !coupon.is_valid)}
+              disabled={
+                !rateId ||
+                !methodId ||
+                data.has_unheld_items ||
+                (coupon && !coupon.is_valid) ||
+                (rewardPoints && !rewardPoints.is_valid)
+              }
             >
               <Check className="h-4 w-4" aria-hidden="true" />
               Place order

@@ -13,10 +13,12 @@ import {
   Menu,
   Package,
   ReceiptText,
+  Gift,
   ScrollText,
   Settings,
   Shapes,
   ShieldCheck,
+  Star,
   Store,
   Tag,
   Truck,
@@ -62,6 +64,8 @@ const SECTIONS = [
     items: [
       { to: '/admin/banners', icon: ImageIcon, label: 'Banners', can: 'banners.manage' },
       { to: '/admin/coupons', icon: Tag, label: 'Coupons', can: 'coupons.manage' },
+      { to: '/admin/reviews', icon: Star, label: 'Reviews', can: 'reviews.view' },
+      { to: '/admin/rewards', icon: Gift, label: 'Reward Points', can: 'rewards.view' },
     ],
   },
   {

@@ -158,6 +158,48 @@
   .rail::-webkit-scrollbar {
     display: none;
   }
+
+  /*
+   * Product descriptions are authored as HTML by the admin rich text editor
+   * and rendered as-is on the storefront -- one shared set of rules, so the
+   * editor and the public page never disagree about what a paragraph or a
+   * list is supposed to look like.
+   */
+  .prose-content {
+    line-height: 1.6;
+  }
+  .prose-content p {
+    margin: 0 0 0.75em;
+  }
+  .prose-content p:last-child {
+    margin-bottom: 0;
+  }
+  .prose-content ul,
+  .prose-content ol {
+    margin: 0 0 0.75em 1.25em;
+  }
+  .prose-content ul {
+    list-style: disc;
+  }
+  .prose-content ol {
+    list-style: decimal;
+  }
+  .prose-content h3 {
+    margin: 0.75em 0 0.4em;
+    font-size: 1.05em;
+    font-weight: 600;
+  }
+  .prose-content a {
+    color: var(--color-brand-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .rich-text-editor:empty:before {
+    content: attr(data-placeholder);
+    color: var(--color-ink-400);
+    pointer-events: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

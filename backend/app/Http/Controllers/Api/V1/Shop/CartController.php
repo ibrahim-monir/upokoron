@@ -11,6 +11,7 @@ use App\Models\CartItem;
 use App\Models\Customer;
 use App\Models\ProductVariation;
 use App\Services\Cart\CartService;
+use App\Services\Rewards\RewardPointsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -35,7 +36,10 @@ class CartController extends Controller
 
     private const COOKIE_DAYS = 30;
 
-    public function __construct(private readonly CartService $carts) {}
+    public function __construct(
+        private readonly CartService $carts,
+        private readonly RewardPointsService $rewards,
+    ) {}
 
     public function show(Request $request): JsonResponse
     {
@@ -126,6 +130,32 @@ class CartController extends Controller
         return $this->respond($cart->refresh(), $request);
     }
 
+    public function redeemPoints(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'points' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $customer = $this->customer($request);
+
+        abort_if($customer === null, 403, 'Sign in to redeem reward points.');
+
+        $cart = $this->cart($request);
+
+        $this->carts->redeemPoints($cart, $data['points'], $customer);
+
+        return $this->respond($cart->refresh(), $request);
+    }
+
+    public function removeRewardPoints(Request $request): JsonResponse
+    {
+        $cart = $this->cart($request);
+
+        $this->carts->removeRewardPoints($cart);
+
+        return $this->respond($cart->refresh(), $request);
+    }
+
     private function cart(Request $request): Cart
     {
         return $this->carts->resolve($this->cartToken($request), $this->customer($request));
@@ -138,7 +168,8 @@ class CartController extends Controller
 
     private function respond(Cart $cart, Request $request, int $status = 200): JsonResponse
     {
-        $summary = $this->carts->summary($cart, $this->customer($request));
+        $customer = $this->customer($request);
+        $summary = $this->carts->summary($cart, $customer);
 
         $response = response()->json([
             'data' => [
@@ -148,6 +179,8 @@ class CartController extends Controller
                 'subtotal' => $summary['subtotal']->value(),
                 'discount' => $summary['discount']->value(),
                 'coupon' => $summary['coupon'],
+                'reward_points' => $summary['reward_points'],
+                'reward_points_balance' => $customer === null ? null : $this->rewards->balance($customer),
                 'weight_kg' => $summary['weight_kg']->value(),
 
                 // True when a hold has lapsed. The UI shows the line as no

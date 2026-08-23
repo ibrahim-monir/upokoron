@@ -34,6 +34,7 @@ const schema = z
       .regex(/^01[3-9]\d{8}$/, 'Enter a valid mobile number.')
       .or(z.literal('')),
     gender: z.enum(['', 'male', 'female', 'other']),
+    date_of_birth: z.string().or(z.literal('')),
   })
   .refine((values) => values.phone !== '' || values.email !== '', {
     message: 'Keep at least one of mobile number or email address.',
@@ -60,6 +61,8 @@ export function PersonalInformation() {
       email: user?.email ?? '',
       phone: user?.phone ?? '',
       gender: user?.customer?.gender ?? '',
+      // The API sends a full timestamp; <input type="date"> wants the date.
+      date_of_birth: (user?.customer?.date_of_birth ?? '').slice(0, 10),
     },
   })
 
@@ -70,6 +73,7 @@ export function PersonalInformation() {
         email: values.email || null,
         phone: values.phone || null,
         gender: values.gender || null,
+        date_of_birth: values.date_of_birth || null,
       })
 
       toast.success('Profile updated.')
@@ -150,6 +154,24 @@ export function PersonalInformation() {
             <option value="male">Male</option>
             <option value="other">Other</option>
           </select>
+        </AccountField>
+
+        {/*
+          The rewards program pays a bonus on a birthday, so without somewhere
+          to enter one that bonus could never be earned.
+        */}
+        <AccountField
+          label="Date of birth"
+          htmlFor="date_of_birth"
+          error={errors.date_of_birth?.message}
+        >
+          <input
+            id="date_of_birth"
+            type="date"
+            className={fieldClass}
+            max={new Date().toISOString().slice(0, 10)}
+            {...register('date_of_birth')}
+          />
         </AccountField>
 
         <div>

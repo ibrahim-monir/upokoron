@@ -92,7 +92,7 @@ export function ProductImages({ productId, value, onChange }) {
           </p>
         </div>
       ) : (
-        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+        <ul className="grid grid-cols-3 gap-2">
           {images.map((image, index) => (
             <li key={image.url} className="group relative">
               <span

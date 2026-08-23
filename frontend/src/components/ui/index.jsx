@@ -3,6 +3,7 @@ import { cx } from '../../lib/format'
 
 export { Button } from './Button'
 export { Field, Input, Select, Textarea } from './Field'
+export { RichTextEditor } from './RichTextEditor'
 export { ToastProvider, useToast } from './Toast'
 
 export function Card({ className, children, ...props }) {

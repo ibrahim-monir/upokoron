@@ -195,14 +195,27 @@ return [
         // prefix where a bare name would collide across groups.
         'rewards' => [
             'rewards_enabled' => true,
-            'signup_points' => 100,
-            // Points earned per BDT 100 spent.
-            'points_per_hundred' => 1,
-            // BDT value of one point when redeemed.
-            'redemption_rate' => '0.50',
-            'min_redeem_points' => 100,
-            'max_redeem_percent_of_order' => 20,
-            'expiry_months' => 12,
+
+            // Shows an "Earn N points" line on the storefront product page.
+            // Off on its own switch: a shop may run the program quietly
+            // (still crediting purchases) without advertising it yet.
+            'show_points_on_product_page' => true,
+
+            // Earning.
+            'points_per_hundred' => 5, // Points earned per BDT 100 spent (delivered orders).
+            'review_points' => 10, // Points per approved product review.
+            'profile_completion_points' => 50, // One-time bonus once name, phone and birthday are all on file.
+            'birthday_points' => 200, // Awarded once a year, on the customer's birthday.
+
+            // Redemption.
+            'redemption_rate' => '1.00', // BDT discount per point spent.
+            'min_redeem_points' => 50, // Smallest redemption a checkout will accept.
+            'max_redeem_points' => 200, // Largest redemption a single order will accept.
+            'max_redeem_percent_of_order' => 20, // Discount from points capped at this % of the cart subtotal.
+            'expiry_days' => 365, // Points not spent within this many days of being earned expire, oldest first.
+
+            // Not surfaced on the rewards settings screen yet -- kept for a
+            // future referral feature.
             'referral_points' => 200,
         ],
 

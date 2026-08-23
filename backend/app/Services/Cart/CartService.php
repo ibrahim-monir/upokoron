@@ -12,6 +12,7 @@ use App\Models\ProductVariation;
 use App\Services\Inventory\ReservationService;
 use App\Services\Pricing\PricedLine;
 use App\Services\Pricing\PricingService;
+use App\Services\Rewards\RewardPointsService;
 use App\Services\Support\SettingsService;
 use App\Support\Money;
 use App\Support\Quantity;
@@ -38,6 +39,7 @@ class CartService
         private readonly PricingService $pricing,
         private readonly SettingsService $settings,
         private readonly CouponService $coupons,
+        private readonly RewardPointsService $rewards,
     ) {}
 
     /**
@@ -164,7 +166,7 @@ class CartService
      * Prices are worked out here, from the catalogue, every single time. The
      * cart stores no money at all.
      *
-     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, weight_kg: Quantity, item_count: int, has_unheld: bool}
+     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, reward_points: array<string, mixed>|null, weight_kg: Quantity, item_count: int, has_unheld: bool}
      */
     public function summary(Cart $cart, ?Customer $customer = null): array
     {
@@ -234,6 +236,7 @@ class CartService
             'subtotal' => $subtotal,
             'discount' => $this->pricing->totalDiscount($priced),
             'coupon' => $this->couponSummary($cart, $subtotal, $customer),
+            'reward_points' => $this->rewardPointsSummary($cart, $subtotal, $customer),
             'weight_kg' => $this->pricing->totalWeight($priced),
             'item_count' => count($lines),
             'has_unheld' => $hasUnheld,
@@ -267,6 +270,31 @@ class CartService
     public function removeCoupon(Cart $cart): void
     {
         $cart->forceFill(['coupon_id' => null])->save();
+    }
+
+    /**
+     * Ask the cart to redeem this many points. Only the count is stored;
+     * the discount it is worth is worked out fresh on every read, the same
+     * as the coupon beside it.
+     */
+    public function redeemPoints(Cart $cart, int $points, Customer $customer): Cart
+    {
+        $subtotal = $this->pricing->subtotal(
+            $this->pricing->priceAll($this->itemsToPrice($cart), $customer),
+        );
+
+        // Validate now so the shopper hears about a bad request immediately,
+        // even though summary() re-validates on every read regardless.
+        $this->rewards->previewRedemption($customer, $points, $subtotal);
+
+        $cart->forceFill(['reward_points_redeemed' => $points])->save();
+
+        return $cart->refresh();
+    }
+
+    public function removeRewardPoints(Cart $cart): void
+    {
+        $cart->forceFill(['reward_points_redeemed' => 0])->save();
     }
 
     /**
@@ -314,6 +342,42 @@ class CartService
             return [
                 'id' => $coupon->id,
                 'code' => $coupon->code,
+                'discount' => '0.00',
+                'is_valid' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * The points redemption requested against this cart, revalidated
+     * against the customer's live balance and the current subtotal. A
+     * redemption that stopped qualifying -- an item removed since, a manual
+     * debit that lowered the balance -- is reported invalid with a reason
+     * rather than silently dropped.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function rewardPointsSummary(Cart $cart, Money $subtotal, ?Customer $customer): ?array
+    {
+        if ($customer === null || $cart->reward_points_redeemed <= 0) {
+            return null;
+        }
+
+        $points = $cart->reward_points_redeemed;
+
+        try {
+            $preview = $this->rewards->previewRedemption($customer, $points, $subtotal);
+
+            return [
+                'points' => $preview['points'],
+                'discount' => $preview['discount']->value(),
+                'is_valid' => true,
+                'message' => null,
+            ];
+        } catch (BusinessRuleException $e) {
+            return [
+                'points' => $points,
                 'discount' => '0.00',
                 'is_valid' => false,
                 'message' => $e->getMessage(),

@@ -42,7 +42,7 @@ export function AddToCart({ variation, compact = false }) {
 
   if (compact) {
     return (
-      <Button size="sm" className="w-full" onClick={add} disabled={!canBuy} loading={addToCart.isPending}>
+      <Button size="sm" className="w-full justify-center" onClick={add} disabled={!canBuy} loading={addToCart.isPending}>
         {added ? (
           <>
             <Check className="h-4 w-4" aria-hidden="true" />

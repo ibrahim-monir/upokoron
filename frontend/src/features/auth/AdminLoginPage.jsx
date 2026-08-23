@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { ApiError } from '../../lib/api'
+import { cx } from '../../lib/format'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Field, PageLoader, useToast } from '../../components/ui'
 import { applyServerErrors } from './applyServerErrors'
@@ -21,6 +23,7 @@ export function AdminLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const toast = useToast()
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -78,14 +81,34 @@ export function AdminLoginPage() {
               {...register('identifier')}
             />
 
-            <Field
-              label="Password"
-              required
-              type="password"
-              autoComplete="current-password"
-              error={errors.password?.message}
-              {...register('password')}
-            />
+            <Field label="Password" required error={errors.password?.message}>
+              {({ id, describedBy, invalid }) => (
+                <div className="relative">
+                  <input
+                    id={id}
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    aria-invalid={invalid ? 'true' : undefined}
+                    aria-describedby={describedBy}
+                    className={cx(
+                      'h-10 w-full rounded-lg border bg-white px-3 pr-10 text-sm text-ink-900 transition-colors',
+                      'placeholder:text-ink-400',
+                      'disabled:bg-ink-100 disabled:text-ink-500',
+                      invalid ? 'border-danger-500' : 'border-ink-300 hover:border-ink-400',
+                    )}
+                    {...register('password')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-ink-400 hover:text-ink-600"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              )}
+            </Field>
 
             <p className="-mt-2 text-right text-sm">
               <Link to="/forgot-password" className="font-medium text-brand-800 underline underline-offset-4">
