@@ -17,9 +17,6 @@ const GROUP_LABELS = {
   pages: 'Footer pages',
   sales: 'Sales and orders',
   inventory: 'Inventory',
-  rewards: 'Reward points',
-  affiliate: 'Affiliate',
-  tax: 'Tax',
   theme: 'Brand colours',
   home: 'Home page',
 }
@@ -61,10 +58,6 @@ const CHOICES = {
     { value: 'card', label: 'Card — image over a labelled panel' },
     { value: 'tile', label: 'Tile — compact row, no image needed' },
   ],
-  default_commission_type: [
-    { value: 'percentage', label: 'Percentage of order' },
-    { value: 'fixed', label: 'Fixed amount' },
-  ],
 }
 
 function humanise(key) {
@@ -97,7 +90,11 @@ export default function SettingsPage() {
 
   if (query.isError) return <ErrorState error={query.error} onRetry={query.refetch} />
 
-  const groups = query.data?.groups ?? []
+  // Reward points get their own dedicated screen (Admin > Rewards). Affiliate
+  // and tax have no wired-up feature behind them yet, so both are hidden here.
+  const groups = (query.data?.groups ?? []).filter(
+    (group) => group !== 'rewards' && group !== 'affiliate' && group !== 'tax',
+  )
 
   const submit = (event) => {
     event.preventDefault()
@@ -112,9 +109,6 @@ export default function SettingsPage() {
     Object.keys(values).filter((key) => {
       if (group === 'store') return key.startsWith('store_')
       if (group === 'pages') return key.startsWith('page_')
-      if (group === 'rewards') return key.startsWith('rewards_') || key.includes('points') || key.includes('redeem') || key === 'referral_points' || key === 'expiry_months'
-      if (group === 'affiliate') return key.startsWith('affiliate_') || key.startsWith('default_commission') || key === 'cookie_days' || key === 'min_payout_amount'
-      if (group === 'tax') return key.startsWith('tax_') || key === 'prices_include_tax'
       if (group === 'theme') return key.startsWith('theme_')
       if (group === 'home') return key.startsWith('home_')
       if (group === 'inventory') return key === 'allow_negative_stock' || key === 'low_stock_alert'
