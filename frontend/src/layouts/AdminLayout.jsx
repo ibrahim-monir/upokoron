@@ -101,28 +101,18 @@ function NavItem({ item, onNavigate, prominent = false, badge = 0 }) {
           'group relative flex items-center gap-3 rounded-lg px-3 transition-colors',
           prominent ? 'h-11' : 'h-10',
           isActive
-            ? prominent
-              ? 'bg-white text-brand-700 shadow-sm'
-              : 'bg-white/[0.16] text-white'
-            : 'text-white/90 hover:bg-white/[0.14] hover:text-white',
+            ? 'bg-brand-600 text-white shadow-sm'
+            : 'text-slate-300 hover:bg-white/[0.06] hover:text-white',
         )
       }
     >
       {({ isActive }) => (
         <>
-          {isActive && !prominent && (
-            <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-white" />
-          )}
-
           <span
             className={cx(
               'grid shrink-0 place-items-center rounded-md',
               prominent ? 'h-8 w-8' : 'h-7 w-7',
-              isActive
-                ? prominent
-                  ? 'bg-brand-600 text-white'
-                  : 'text-white'
-                : 'text-white/85 group-hover:text-white',
+              isActive ? 'bg-white/20 text-white' : 'text-slate-400 group-hover:text-white',
             )}
           >
             <Icon className={prominent ? 'h-[17px] w-[17px]' : 'h-4 w-4'} />
@@ -130,8 +120,8 @@ function NavItem({ item, onNavigate, prominent = false, badge = 0 }) {
 
           <span
             className={cx(
-              'min-w-0 flex-1 truncate',
-              prominent ? 'text-[13px] font-semibold' : 'text-[13px] font-medium',
+              'min-w-0 flex-1 truncate text-sm',
+              isActive ? 'font-semibold' : 'font-medium',
             )}
           >
             {item.label}
@@ -221,18 +211,18 @@ function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
   }
 
   return (
-    <div className="border-t border-white/[0.06] pt-3">
+    <div className="border-t border-navy-800/70 pt-3">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="mb-1 flex h-7 w-full items-center gap-2 px-3 text-left"
         aria-expanded={open}
       >
-        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
           {section.label}
         </span>
 
-        <span className="ml-auto grid h-5 w-5 place-items-center rounded-md text-white/70 transition hover:bg-white/[0.14] hover:text-white">
+        <span className="ml-auto grid h-5 w-5 place-items-center rounded-md text-slate-500 transition hover:bg-white/[0.06] hover:text-white">
           <ChevronDown
             className={cx('h-3.5 w-3.5 transition-transform', !open && '-rotate-90')}
           />
@@ -320,28 +310,28 @@ export function AdminLayout() {
 
       <aside
         className={cx(
-          'fixed inset-y-0 left-0 z-50 flex w-[258px] flex-col bg-brand-600 text-white',
-          'border-r border-white/10 shadow-xl transition-transform duration-200',
+          'fixed inset-y-0 left-0 z-50 flex w-[258px] flex-col bg-navy-950 text-white',
+          'border-r border-navy-800/70 shadow-xl transition-transform duration-200',
           'lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {/* Brand */}
-        <div className="flex h-[68px] shrink-0 items-center border-b border-white/[0.07] px-4">
+        <div className="flex h-[68px] shrink-0 items-center border-b border-navy-800/70 px-4">
           <NavLink
             to="/admin"
             onClick={closeMobile}
             className="flex min-w-0 items-center gap-3"
           >
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-brand-700">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white">
               <span className="text-sm font-black tracking-tight">U</span>
             </div>
 
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-bold tracking-tight text-white">
+              <p className="truncate text-base font-extrabold tracking-tight text-white">
                 Upokoron
               </p>
-              <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/75">
+              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">
                 Admin Console
               </p>
             </div>
@@ -350,7 +340,7 @@ export function AdminLayout() {
           <button
             type="button"
             onClick={closeMobile}
-            className="ml-auto rounded-lg p-1.5 text-white/70 hover:bg-white/[0.12] hover:text-white lg:hidden"
+            className="ml-auto rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.06] hover:text-white lg:hidden"
             aria-label="Close navigation"
           >
             <X className="h-5 w-5" />
@@ -363,9 +353,9 @@ export function AdminLayout() {
         </div>
 
         {/* User */}
-        <div className="shrink-0 border-t border-white/[0.07] p-3">
+        <div className="shrink-0 border-t border-navy-800/70 p-3">
           <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/20 text-[10px] font-bold text-white">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/10 text-[10px] font-bold text-white">
               {initials(user?.name ?? '')}
             </div>
 
@@ -373,7 +363,7 @@ export function AdminLayout() {
               <p className="truncate text-xs font-semibold text-white">
                 {user?.name || 'Administrator'}
               </p>
-              <p className="truncate text-[10px] text-white/75">
+              <p className="truncate text-[10px] text-slate-500">
                 {user?.email ?? user?.phone ?? ''}
               </p>
             </div>
@@ -385,7 +375,7 @@ export function AdminLayout() {
                 navigate('/admin/login')
               }}
               title="Sign out"
-              className="rounded-lg p-2 text-white/80 hover:bg-white/20 hover:text-white"
+              className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.08] hover:text-white"
             >
               <LogOut className="h-4 w-4" />
             </button>
