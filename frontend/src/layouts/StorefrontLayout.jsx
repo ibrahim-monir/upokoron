@@ -512,7 +512,11 @@ function CategoryBar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [openId, closeNow])
 
-  if (categories.isLoading || list.length === 0) return null
+  // The home page already leads with its own "Shop by category" section --
+  // repeating the same list as a menu bar right above it is redundant.
+  // Every other page has no such section of its own, so the bar is how a
+  // visitor gets back to browsing by category from there.
+  if (categories.isLoading || list.length === 0 || pathname === '/') return null
 
   return (
     <nav aria-label="Categories" className="hidden border-b border-ink-200 bg-white lg:block">
