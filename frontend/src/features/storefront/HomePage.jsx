@@ -260,14 +260,7 @@ function CategoryStrip() {
 
   return (
     <section className="mt-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold uppercase tracking-wide text-ink-900">{title}</h2>
-
-        <Link to="/products" className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700">
-          See More
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </div>
+      <h2 className="mb-3 text-center text-lg font-bold uppercase tracking-wide text-ink-900">{title}</h2>
 
       {/* Positioned parent for the overlaid arrows. */}
       <div className="relative">
