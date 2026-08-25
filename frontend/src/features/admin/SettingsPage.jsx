@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Image as ImageIcon } from 'lucide-react'
+import { ChevronDown, Image as ImageIcon } from 'lucide-react'
 import { useList, useWrite } from './useResource'
 import { useThemePreview } from '../../lib/useTheme'
 import { parseHex } from '../../lib/theme'
 import { MediaPicker } from './media/MediaLibrary'
-import { Button, Card, CardHeader, ErrorState, Field, Select, Spinner, Textarea } from '../../components/ui'
+import { Button, Card, ErrorState, Field, Select, Spinner, Textarea } from '../../components/ui'
 import { cx } from '../../lib/format'
 
 /*
@@ -95,6 +95,12 @@ export default function SettingsPage() {
   // Which image setting the picker is currently choosing for, if any.
   const [picking, setPicking] = useState(null)
 
+  // Which groups are expanded. Store details opens by default -- it's the
+  // one nearly every visit here is about -- everything else starts
+  // collapsed so the page reads as a list of sections, not one long form.
+  const [openGroups, setOpenGroups] = useState({ store: true })
+  const toggleGroup = (group) => setOpenGroups((current) => ({ ...current, [group]: !current[group] }))
+
   // Repaint the panel from the unsaved draft, and put the saved colours
   // back if this screen is left without saving.
   useThemePreview(values, query.data?.data)
@@ -173,151 +179,176 @@ export default function SettingsPage() {
 
         if (keys.length === 0) return null
 
+        const open = Boolean(openGroups[group])
+
         return (
           <Card key={group}>
-            <CardHeader title={GROUP_LABELS[group] ?? humanise(group)} />
+            <button
+              type="button"
+              onClick={() => toggleGroup(group)}
+              aria-expanded={open}
+              className="flex w-full items-center justify-between gap-4 p-4 text-left"
+            >
+              <h2 className="text-base font-semibold text-ink-900">
+                {GROUP_LABELS[group] ?? humanise(group)}
+              </h2>
 
-            <div className="grid gap-4 p-4 sm:grid-cols-2">
-              {keys.map((key) => {
-                const value = values[key]
+              <ChevronDown
+                className={cx('h-4.5 w-4.5 shrink-0 text-ink-400 transition-transform', open && 'rotate-180')}
+                aria-hidden="true"
+              />
+            </button>
 
-                /*
-                 * A swatch next to a hex box, both editing the same value:
-                 * the picker is how you explore, the text box is how you
-                 * paste the hex a designer sent you. Changes repaint the
-                 * whole panel immediately, so this screen is its own preview.
-                 */
-                if (key.startsWith('theme_')) {
-                  const valid = parseHex(value) !== null
+            <div
+              className={cx(
+                'grid transition-[grid-template-rows] duration-200 ease-out',
+                open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="grid gap-4 border-t border-ink-200 p-4 sm:grid-cols-2">
+                  {keys.map((key) => {
+                    const value = values[key]
 
-                  return (
-                    <Field key={key} label={humanise(key)} hint={COLOUR_HINTS[key]}>
-                      {({ id }) => (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            aria-label={`${humanise(key)} colour picker`}
-                            value={valid ? value : '#000000'}
-                            onChange={(event) => set(key, event.target.value.toUpperCase())}
-                            className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-ink-200 bg-white p-1"
-                          />
+                    /*
+                     * A swatch next to a hex box, both editing the same value:
+                     * the picker is how you explore, the text box is how you
+                     * paste the hex a designer sent you. Changes repaint the
+                     * whole panel immediately, so this screen is its own preview.
+                     */
+                    if (key.startsWith('theme_')) {
+                      const valid = parseHex(value) !== null
 
-                          <input
-                            id={id}
-                            value={value ?? ''}
-                            onChange={(event) => set(key, event.target.value.toUpperCase())}
-                            spellCheck={false}
-                            className={cx(
-                              'h-10 w-full rounded-lg border px-3 font-mono text-sm uppercase',
-                              valid ? 'border-ink-200' : 'border-danger-500 text-danger-700',
-                            )}
-                          />
-                        </div>
-                      )}
-                    </Field>
-                  )
-                }
+                      return (
+                        <Field key={key} label={humanise(key)} hint={COLOUR_HINTS[key]}>
+                          {({ id }) => (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                aria-label={`${humanise(key)} colour picker`}
+                                value={valid ? value : '#000000'}
+                                onChange={(event) => set(key, event.target.value.toUpperCase())}
+                                className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-ink-200 bg-white p-1"
+                              />
 
-                if (typeof value === 'boolean') {
-                  return (
-                    <label key={key} className="flex items-center gap-2 self-end pb-2 text-sm text-ink-700">
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={(event) => set(key, event.target.checked)}
-                        className="h-4 w-4 rounded border-ink-300"
-                      />
-                      {humanise(key)}
-                    </label>
-                  )
-                }
-
-                if (CHOICES[key]) {
-                  return (
-                    <Field key={key} label={humanise(key)}>
-                      {({ id }) => (
-                        <Select id={id} value={value ?? ''} onChange={(event) => set(key, event.target.value)}>
-                          {CHOICES[key].map((choice) => (
-                            <option key={choice.value} value={choice.value}>
-                              {choice.label}
-                            </option>
-                          ))}
-                        </Select>
-                      )}
-                    </Field>
-                  )
-                }
-
-                // Image settings get a picker and a live preview rather than
-                // a text box the owner has to paste a URL into.
-                if (IMAGE_KEYS.includes(key)) {
-                  return (
-                    <Field key={key} label={humanise(key)} hint="Pick from the image library.">
-                      {() => (
-                        <div className="flex items-center gap-3">
-                          <span className="grid h-14 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-ink-50">
-                            {value ? (
-                              <img src={value} alt="" className="h-full w-full object-contain" />
-                            ) : (
-                              <ImageIcon className="h-5 w-5 text-ink-400" aria-hidden="true" />
-                            )}
-                          </span>
-
-                          <Button variant="secondary" size="sm" onClick={() => setPicking(key)}>
-                            {value ? 'Change' : 'Choose'}
-                          </Button>
-
-                          {value && (
-                            <Button variant="ghost" size="sm" onClick={() => set(key, '')}>
-                              Remove
-                            </Button>
+                              <input
+                                id={id}
+                                value={value ?? ''}
+                                onChange={(event) => set(key, event.target.value.toUpperCase())}
+                                spellCheck={false}
+                                className={cx(
+                                  'h-10 w-full rounded-lg border px-3 font-mono text-sm uppercase',
+                                  valid ? 'border-ink-200' : 'border-danger-500 text-danger-700',
+                                )}
+                              />
+                            </div>
                           )}
-                        </div>
-                      )}
-                    </Field>
-                  )
-                }
-
-                if (MULTILINE.includes(key)) {
-                  return (
-                    <Field
-                      key={key}
-                      label={humanise(key)}
-                      className="sm:col-span-2"
-                      hint={
-                        HINTS[key] ??
-                        (key.startsWith('page_')
-                          ? 'Shown on the storefront. Left blank, the page says it has not been written yet.'
-                          : undefined)
-                      }
-                    >
-                      {({ id }) => (
-                        <Textarea
-                          id={id}
-                          rows={key.startsWith('page_') ? 8 : CODE_KEYS.includes(key) ? 6 : 3}
-                          value={value ?? ''}
-                          onChange={(event) => set(key, event.target.value)}
-                          className={CODE_KEYS.includes(key) ? 'font-mono text-xs' : undefined}
-                          spellCheck={CODE_KEYS.includes(key) ? false : undefined}
-                        />
-                      )}
-                    </Field>
-                  )
-                }
-
-                return (
-                  <Field
-                    key={key}
-                    label={humanise(key)}
-                    hint={HINTS[key]}
-                    type={typeof value === 'number' ? 'number' : 'text'}
-                    value={value ?? ''}
-                    onChange={(event) =>
-                      set(key, typeof value === 'number' ? Number(event.target.value) : event.target.value)
+                        </Field>
+                      )
                     }
-                  />
-                )
-              })}
+
+                    if (typeof value === 'boolean') {
+                      return (
+                        <label key={key} className="flex items-center gap-2 self-end pb-2 text-sm text-ink-700">
+                          <input
+                            type="checkbox"
+                            checked={value}
+                            onChange={(event) => set(key, event.target.checked)}
+                            className="h-4 w-4 rounded border-ink-300"
+                          />
+                          {humanise(key)}
+                        </label>
+                      )
+                    }
+
+                    if (CHOICES[key]) {
+                      return (
+                        <Field key={key} label={humanise(key)}>
+                          {({ id }) => (
+                            <Select id={id} value={value ?? ''} onChange={(event) => set(key, event.target.value)}>
+                              {CHOICES[key].map((choice) => (
+                                <option key={choice.value} value={choice.value}>
+                                  {choice.label}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
+                        </Field>
+                      )
+                    }
+
+                    // Image settings get a picker and a live preview rather than
+                    // a text box the owner has to paste a URL into.
+                    if (IMAGE_KEYS.includes(key)) {
+                      return (
+                        <Field key={key} label={humanise(key)} hint="Pick from the image library.">
+                          {() => (
+                            <div className="flex items-center gap-3">
+                              <span className="grid h-14 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-ink-50">
+                                {value ? (
+                                  <img src={value} alt="" className="h-full w-full object-contain" />
+                                ) : (
+                                  <ImageIcon className="h-5 w-5 text-ink-400" aria-hidden="true" />
+                                )}
+                              </span>
+
+                              <Button variant="secondary" size="sm" onClick={() => setPicking(key)}>
+                                {value ? 'Change' : 'Choose'}
+                              </Button>
+
+                              {value && (
+                                <Button variant="ghost" size="sm" onClick={() => set(key, '')}>
+                                  Remove
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </Field>
+                      )
+                    }
+
+                    if (MULTILINE.includes(key)) {
+                      return (
+                        <Field
+                          key={key}
+                          label={humanise(key)}
+                          className="sm:col-span-2"
+                          hint={
+                            HINTS[key] ??
+                            (key.startsWith('page_')
+                              ? 'Shown on the storefront. Left blank, the page says it has not been written yet.'
+                              : undefined)
+                          }
+                        >
+                          {({ id }) => (
+                            <Textarea
+                              id={id}
+                              rows={key.startsWith('page_') ? 8 : CODE_KEYS.includes(key) ? 6 : 3}
+                              value={value ?? ''}
+                              onChange={(event) => set(key, event.target.value)}
+                              className={CODE_KEYS.includes(key) ? 'font-mono text-xs' : undefined}
+                              spellCheck={CODE_KEYS.includes(key) ? false : undefined}
+                            />
+                          )}
+                        </Field>
+                      )
+                    }
+
+                    return (
+                      <Field
+                        key={key}
+                        label={humanise(key)}
+                        hint={HINTS[key]}
+                        type={typeof value === 'number' ? 'number' : 'text'}
+                        value={value ?? ''}
+                        onChange={(event) =>
+                          set(key, typeof value === 'number' ? Number(event.target.value) : event.target.value)
+                        }
+                      />
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </Card>
         )
