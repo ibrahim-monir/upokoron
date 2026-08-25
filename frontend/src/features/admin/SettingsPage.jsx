@@ -19,6 +19,7 @@ const GROUP_LABELS = {
   inventory: 'Inventory',
   theme: 'Brand colours',
   home: 'Home page',
+  marketing: 'Analytics & search console',
 }
 
 /*
@@ -35,6 +36,13 @@ const COLOUR_HINTS = {
 
 /** Long-form settings that need room to write in. */
 const MULTILINE = ['page_about', 'page_privacy', 'page_terms', 'store_address', 'store_description']
+
+/** Plain-text settings whose expected format is not obvious from the label alone. */
+const HINTS = {
+  google_site_verification:
+    "From Search Console: Settings > Ownership verification > HTML tag. Paste only the tag's content value, not the whole <meta> tag.",
+  google_analytics_id: 'The GA4 Measurement ID from Admin > Data streams, in the form G-XXXXXXXXXX.',
+}
 
 /** Settings that hold an image URL, so they get a picker instead of a text box. */
 const IMAGE_KEYS = ['store_logo', 'store_favicon']
@@ -111,6 +119,7 @@ export default function SettingsPage() {
       if (group === 'pages') return key.startsWith('page_')
       if (group === 'theme') return key.startsWith('theme_')
       if (group === 'home') return key.startsWith('home_')
+      if (group === 'marketing') return key.startsWith('google_')
       if (group === 'inventory') return key === 'allow_negative_stock' || key === 'low_stock_alert'
       return (
         key.startsWith('revenue_') ||
@@ -282,6 +291,7 @@ export default function SettingsPage() {
                   <Field
                     key={key}
                     label={humanise(key)}
+                    hint={HINTS[key]}
                     type={typeof value === 'number' ? 'number' : 'text'}
                     value={value ?? ''}
                     onChange={(event) =>

@@ -54,7 +54,7 @@ return [
      * public was silently demoted to private the first time anyone saved it
      * through the admin API.
      */
-    'public_setting_groups' => ['store', 'pages', 'theme', 'home'],
+    'public_setting_groups' => ['store', 'pages', 'theme', 'home', 'marketing'],
 
     'settings' => [
 
@@ -150,6 +150,24 @@ return [
 
             // How far back "right now" reaches when ranking by sales.
             'home_trending_days' => 30,
+        ],
+
+        /*
+         * Third-party site verification and analytics. Public, because the
+         * codes have to render into every storefront page's <head> --
+         * including for a visitor who has never signed in -- to actually
+         * verify or track anything.
+         */
+        'marketing' => [
+            // The "content" value of a <meta name="google-site-verification">
+            // tag, exactly as Search Console's "HTML tag" method shows it --
+            // not the whole tag, just the value, so a pasted full tag doesn't
+            // silently double the wrapping quotes.
+            'google_site_verification' => '',
+
+            // A GA4 Measurement ID (G-XXXXXXXXXX). Loads the standard gtag.js
+            // snippet when set; nothing is added to the page when blank.
+            'google_analytics_id' => '',
         ],
 
         /*

@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { get } from '../lib/api'
 import { cx, money } from '../lib/format'
+import { useAnalytics } from '../lib/useAnalytics'
 import { useFavicon } from '../lib/useFavicon'
 import { useAuthStore } from '../stores/authStore'
 import { Logo } from '../components/Logo'
@@ -755,6 +756,10 @@ export function StorefrontLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   useFavicon(settings?.store_favicon)
+  useAnalytics({
+    googleSiteVerification: settings?.google_site_verification,
+    googleAnalyticsId: settings?.google_analytics_id,
+  })
 
   const HeaderComponent = settings?.store_header_style === 'classic' ? ClassicHeader : CategoriesHeader
 
