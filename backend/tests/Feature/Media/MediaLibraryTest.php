@@ -125,6 +125,62 @@ class MediaLibraryTest extends TestCase
             ->assertJsonValidationErrors('files.0');
     }
 
+    /**
+     * Product photos are shown much larger on the product page than on a
+     * card, and nothing generates a second, bigger derivative to fall back
+     * on -- so a source image too small to fill that larger box would come
+     * out visibly upscaled and blurry. Caught here instead.
+     */
+    public function test_a_low_resolution_product_image_is_refused(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->postJson('/api/v1/admin/media', [
+            'files' => [$this->image('small.jpg', 400, 400)],
+            'folder' => 'products',
+        ])->assertStatus(422)->assertJsonPath('code', 'image_too_small');
+
+        $this->assertSame(0, Media::count());
+    }
+
+    /**
+     * The same small image is perfectly fine as a logo or a favicon -- the
+     * minimum-resolution rule only makes sense for product photography.
+     */
+    public function test_a_low_resolution_image_is_accepted_outside_the_products_folder(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->postJson('/api/v1/admin/media', [
+            'files' => [$this->image('logo.jpg', 200, 200)],
+            'folder' => 'branding',
+        ])->assertCreated();
+
+        $this->assertSame(1, Media::count());
+    }
+
+    /**
+     * Nothing on the site displays a product photo larger than this, so a
+     * bigger source is downscaled on the way in rather than stored (and
+     * served) at its full original size for no benefit.
+     */
+    public function test_an_oversized_product_image_is_downscaled(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->postJson('/api/v1/admin/media', [
+            'files' => [$this->image('huge.jpg', 2200, 1760)],
+            'folder' => 'products',
+        ])->assertCreated();
+
+        $media = Media::sole();
+
+        $this->assertLessThanOrEqual(2000, $media->width);
+        $this->assertLessThanOrEqual(2000, $media->height);
+        // Aspect ratio survives the resize.
+        $this->assertEqualsWithDelta(2200 / 1760, $media->width / $media->height, 0.01);
+    }
+
     public function test_a_folder_name_cannot_escape_the_uploads_directory(): void
     {
         $this->actingAsRole('owner');

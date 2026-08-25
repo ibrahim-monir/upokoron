@@ -34,6 +34,8 @@ class MediaService
     /** @var array<int, string> */
     private const EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
 
+    public function __construct(private readonly ImageProcessor $processor) {}
+
     /**
      * Store an upload, or return the existing row if this exact file is
      * already in the library.
@@ -42,24 +44,36 @@ class MediaService
     {
         $this->assertIsReallyAnImage($file);
 
-        // Content hash, not filename: the same picture uploaded twice under
-        // two names is one image, and a library full of near-identical
-        // thumbnails is unusable.
+        // Content hash of the ORIGINAL bytes, not the re-encoded ones -- it
+        // is purely a "have I seen this exact upload before" key, and hashing
+        // pre-processing keeps that answer stable even if a quality setting
+        // here changes later.
         $hash = hash_file('sha256', $file->getRealPath());
 
         if ($existing = Media::firstWhere('hash', $hash)) {
             return $existing;
         }
 
+        [$originalWidth, $originalHeight] = $this->processor->dimensions($file);
+
+        // Only product photos get the minimum-resolution gate: a store logo
+        // or favicon is legitimately small, and rejecting those would just
+        // be wrong. Product images always run through here with folder
+        // 'products' (see ProductImages.jsx's "Upload new").
+        if ($folder === 'products') {
+            $this->processor->assertLargeEnough($originalWidth, $originalHeight, $file->getMimeType());
+        }
+
+        [$bytes, $width, $height] = $this->processor->process($file, $originalWidth, $originalHeight);
+
         $extension = $this->safeExtension($file);
         $name = Str::uuid()->toString().'.'.$extension;
         $directory = trim($folder, '/') ?: 'general';
+        $path = "{$directory}/{$name}";
 
         // Generated name, never the client's -- an attacker-supplied filename
         // has no business reaching the filesystem.
-        $path = $file->storeAs($directory, $name, ['disk' => self::DISK]);
-
-        [$width, $height] = $this->dimensions($file);
+        Storage::disk(self::DISK)->put($path, $bytes);
 
         try {
             return Media::forceCreate([
@@ -68,7 +82,7 @@ class MediaService
                 'filename' => $name,
                 'original_name' => Str::limit($file->getClientOriginalName(), 190, ''),
                 'mime' => $file->getMimeType(),
-                'size' => $file->getSize(),
+                'size' => strlen($bytes),
                 'width' => $width,
                 'height' => $height,
                 'hash' => $hash,
@@ -206,20 +220,6 @@ class MediaService
                 422,
             );
         }
-    }
-
-    /**
-     * @return array{0: int|null, 1: int|null}
-     */
-    private function dimensions(UploadedFile $file): array
-    {
-        if ($file->getMimeType() === 'image/svg+xml') {
-            return [null, null];
-        }
-
-        $size = @getimagesize($file->getRealPath());
-
-        return $size === false ? [null, null] : [$size[0], $size[1]];
     }
 
     private function safeExtension(UploadedFile $file): string

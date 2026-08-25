@@ -8,6 +8,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\Media;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\Media\ImageProcessor;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -31,25 +32,37 @@ class ProductImageService
     /** @var array<int, string> */
     private const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
+    public function __construct(private readonly ImageProcessor $processor) {}
+
     public function upload(Product $product, UploadedFile $file, ?string $alt = null): ProductImage
     {
         $this->assertIsReallyAnImage($file);
+
+        [$originalWidth, $originalHeight] = $this->processor->dimensions($file);
+
+        // Every image through this method is a product photo, so the
+        // minimum-resolution gate always applies -- unlike the general media
+        // library, there is no "this one's a small icon on purpose" case here.
+        $this->processor->assertLargeEnough($originalWidth, $originalHeight, $file->getMimeType());
+
+        [$bytes] = $this->processor->process($file, $originalWidth, $originalHeight);
 
         // Generated name, never the client's. A user-supplied filename is
         // attacker-controlled and has no business reaching the filesystem.
         $name = Str::uuid()->toString().'.'.$this->safeExtension($file);
         $directory = 'products/'.$product->id;
+        $path = "{$directory}/{$name}";
 
-        $path = $file->storeAs($directory, $name, ['disk' => self::DISK]);
+        Storage::disk(self::DISK)->put($path, $bytes);
 
-        return DB::transaction(function () use ($product, $path, $alt, $file): ProductImage {
+        return DB::transaction(function () use ($product, $path, $alt, $bytes): ProductImage {
             $isFirst = ! $product->images()->exists();
 
             return $product->images()->create([
                 'disk' => self::DISK,
                 'path' => $path,
                 'alt' => $alt ?? $product->name,
-                'size' => $file->getSize(),
+                'size' => strlen($bytes),
                 'position' => (int) $product->images()->max('position') + 1,
                 'is_primary' => $isFirst,
             ]);

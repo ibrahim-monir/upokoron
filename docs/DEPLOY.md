@@ -77,6 +77,7 @@ Do this **before** building or uploading anything else.
 | memory_limit 256M | Comfortable headroom | cPanel → Select PHP Version → Options |
 | **Cron Jobs** | Queue draining, expiring stock reservations, nightly integrity check | Standard on cPanel. Without it, abandoned carts hold stock forever. |
 | SSL certificate | Login cookies are `Secure` in production | cPanel → SSL/TLS Status → Run AutoSSL (free) |
+| `gd` (recommended, not required) | Product/media uploads are resized and re-compressed through it so a card and a full-size gallery photo both come from a source large enough for either. Nearly universal on shared hosting, but not guaranteed. | cPanel → Select PHP Version → Extensions. Without it, uploads still work — they are just stored exactly as given, uncompressed. |
 
 Deliberately **not** required, because shared hosting usually cannot give them:
 SSH, Composer on the server, Node.js on the server, Redis, `symlink()`,
