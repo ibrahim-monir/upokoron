@@ -36,7 +36,14 @@ const EVENTS = [
   'password_changed',
 ]
 
-export default function AuditLogPage() {
+/**
+ * The log itself, with no page heading of its own.
+ *
+ * Rendered both as a standalone page (below) and as a tab on the settings
+ * screen, which supplies its own title -- two headings stacked would be one
+ * more than the page needs.
+ */
+export function AuditLog({ heading = null }) {
   const [page, setPage] = useState(1)
   const [event, setEvent] = useState('')
   const [expanded, setExpanded] = useState(null)
@@ -51,12 +58,11 @@ export default function AuditLogPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-ink-900">Audit log</h1>
-          <p className="mt-0.5 text-sm text-ink-500">
+        {heading ?? (
+          <p className="text-sm text-ink-500">
             Append-only. Records only what changed, and never a password.
           </p>
-        </div>
+        )}
 
         <Select
           value={event}
@@ -146,5 +152,20 @@ export default function AuditLogPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function AuditLogPage() {
+  return (
+    <AuditLog
+      heading={
+        <div>
+          <h1 className="text-xl font-semibold text-ink-900">Audit log</h1>
+          <p className="mt-0.5 text-sm text-ink-500">
+            Append-only. Records only what changed, and never a password.
+          </p>
+        </div>
+      }
+    />
   )
 }

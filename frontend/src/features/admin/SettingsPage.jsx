@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Image as ImageIcon } from 'lucide-react'
 import { useList, useWrite } from './useResource'
+import { useAuthStore } from '../../stores/authStore'
+import { AuditLog } from './AuditLogPage'
 import { useThemePreview } from '../../lib/useTheme'
 import { parseHex } from '../../lib/theme'
 import { MediaPicker } from './media/MediaLibrary'
@@ -20,7 +22,16 @@ const GROUP_LABELS = {
   theme: 'Brand colours',
   home: 'Home page',
   marketing: 'Analytics & search console',
+  audit: 'Audit log',
 }
+
+/*
+ * The audit log is a tab here, not a settings group. It reads a different
+ * endpoint and writes nothing, so it sits beside the groups rather than
+ * inside the form -- its own filter and pager have no business being
+ * submitted with the settings.
+ */
+const AUDIT_TAB = 'audit'
 
 /*
  * Four colours, and everything else is derived from them (see lib/theme.js).
@@ -102,6 +113,7 @@ export default function SettingsPage() {
   // once the list of groups is known -- config declares 'store' first, but
   // nothing guarantees that stays true forever.
   const [activeGroup, setActiveGroup] = useState('store')
+  const can = useAuthStore((state) => state.can)
 
   // Repaint the panel from the unsaved draft, and put the saved colours
   // back if this screen is left without saving.
@@ -157,8 +169,11 @@ export default function SettingsPage() {
   // all filtered out above (or never had any) would otherwise be a tab that
   // opens onto an empty panel.
   const visibleGroups = groups.filter((group) => keysFor(group).length > 0)
-  const currentGroup = visibleGroups.includes(activeGroup) ? activeGroup : visibleGroups[0]
-  const keys = keysFor(currentGroup ?? '')
+
+  const tabs = can('audit.view') ? [...visibleGroups, AUDIT_TAB] : visibleGroups
+  const currentGroup = tabs.includes(activeGroup) ? activeGroup : tabs[0]
+  const showingAudit = currentGroup === AUDIT_TAB
+  const keys = showingAudit ? [] : keysFor(currentGroup ?? '')
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
@@ -178,14 +193,17 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Button type="submit" loading={write.isPending}>
-          Save changes
-        </Button>
+        {/* Nothing to save on the audit tab; it only reads. */}
+        {!showingAudit && (
+          <Button type="submit" loading={write.isPending}>
+            Save changes
+          </Button>
+        )}
       </div>
 
       <Card>
         <div className="flex gap-1 overflow-x-auto border-b border-ink-200 px-2" role="tablist">
-          {visibleGroups.map((group) => (
+          {tabs.map((group) => (
             <button
               key={group}
               type="button"
@@ -204,7 +222,13 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <div className="grid gap-4 p-4 sm:grid-cols-2">
+        {showingAudit && (
+          <div className="p-4">
+            <AuditLog />
+          </div>
+        )}
+
+        <div className={cx('gap-4 p-4 sm:grid-cols-2', showingAudit ? 'hidden' : 'grid')}>
           {keys.map((key) => {
             const value = values[key]
 

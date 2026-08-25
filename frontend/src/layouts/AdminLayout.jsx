@@ -4,15 +4,14 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   BookOpen,
+  Boxes,
   ChevronDown,
-  Cog,
   CreditCard,
   FileText,
   Gift,
   Image as ImageIcon,
   Layers,
   LayoutDashboard,
-  LayoutGrid,
   LogOut,
   Megaphone,
   Menu,
@@ -22,6 +21,7 @@ import {
   Settings,
   Shapes,
   ShieldCheck,
+  SlidersHorizontal,
   Star,
   Store,
   Tag,
@@ -48,25 +48,31 @@ const SECTIONS = [
         badge: 'pendingOrders',
         prominent: true,
       },
-      // Top level rather than inside Catalogue: images are picked from
+      // Top level rather than inside a group: images are picked from
       // products, banners, categories and settings alike, so filing it under
-      // one of those made it a detour from all the others.
+      // any one of those made it a detour from all the others.
       { to: '/admin/media', icon: ImageIcon, label: 'Media library', can: 'media.view' },
+      { to: '/admin/settings', icon: Settings, label: 'Settings', can: 'settings.manage' },
     ],
   },
   {
-    label: 'Catalogue',
-    icon: LayoutGrid,
+    // Named for the stock rather than the catalogue: /admin/inventory is
+    // only a redirect to this list now, because what you sell and what is
+    // on the shelf are the same screen.
+    label: 'Inventory',
+    icon: Boxes,
     items: [
       {
         to: '/admin/products',
         icon: Package,
-        label: 'Products & stock',
+        label: 'All Products',
         can: ['products.view', 'inventory.view'],
       },
-      { to: '/admin/categories', icon: Shapes, label: 'Categories', can: 'products.view' },
+      { to: '/admin/categories', icon: Shapes, label: 'Category', can: 'products.view' },
       { to: '/admin/brands', icon: Store, label: 'Brands', can: 'products.view' },
-      { to: '/admin/attributes', icon: Shapes, label: 'Attributes', can: 'products.view' },
+      // Not Shapes: Categories already uses it, and two rows in one group
+      // with the same icon give the eye nothing to tell them apart by.
+      { to: '/admin/attributes', icon: SlidersHorizontal, label: 'Attributes', can: 'products.view' },
     ],
   },
   {
@@ -106,14 +112,6 @@ const SECTIONS = [
       { to: '/admin/users', end: true, icon: Users, label: 'All users', can: 'users.view' },
       { to: '/admin/users/new', icon: UserPlus, label: 'Add new user', can: 'users.manage' },
       { to: '/admin/roles', icon: ShieldCheck, label: 'Role manage', can: 'roles.manage' },
-    ],
-  },
-  {
-    label: 'Administration',
-    icon: Cog,
-    items: [
-      { to: '/admin/settings', icon: Settings, label: 'Settings', can: 'settings.manage' },
-      { to: '/admin/audit-logs', icon: ScrollText, label: 'Audit log', can: 'audit.view' },
     ],
   },
 ]
@@ -241,8 +239,13 @@ function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
     )
   }
 
+  /*
+   * No rule between groups. Now that a header is built like a nav row, the
+   * whole rail is one list, and the gap does the separating: 12px between
+   * groups against 2px inside one is difference enough to read.
+   */
   return (
-    <div className="border-t border-navy-800/70 pt-3">
+    <div>
       {/*
          Built to the same spec as NavItem -- same height, icon tile, text
          size and hover. A group header is a thing you click to get
