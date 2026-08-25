@@ -116,7 +116,7 @@ const SECTIONS = [
   },
 ]
 
-function NavItem({ item, onNavigate, prominent = false, badge = 0 }) {
+function NavItem({ item, onNavigate, prominent = false, badge = 0, inset = false }) {
   const Icon = item.icon
 
   return (
@@ -126,8 +126,11 @@ function NavItem({ item, onNavigate, prominent = false, badge = 0 }) {
       onClick={onNavigate}
       className={({ isActive }) =>
         cx(
-          'group relative flex items-center gap-3 rounded-lg px-3 transition-colors',
+          'group relative flex items-center gap-3 rounded-lg pr-3 transition-colors',
           prominent ? 'h-11' : 'h-10',
+          // Indented under its group header, so a row reads as belonging to
+          // the heading above it rather than sitting at the same level.
+          inset ? 'pl-7' : 'pl-3',
           isActive
             ? 'bg-brand-600 text-white shadow-sm'
             : 'text-slate-300 hover:bg-white/[0.06] hover:text-white',
@@ -301,6 +304,7 @@ function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
             <NavItem
               key={item.to}
               item={item}
+              inset
               badge={item.badge ? badges?.[item.badge] : 0}
               onNavigate={onNavigate}
             />
