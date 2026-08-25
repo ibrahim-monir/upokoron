@@ -24,7 +24,7 @@ function StockLabel({ variation }) {
   )
 }
 
-function Row({ entry, product, loading, onRemove }) {
+function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
   const toast = useToast()
   const addToCart = useAddToCart()
   const [added, setAdded] = useState(false)
@@ -84,14 +84,24 @@ function Row({ entry, product, loading, onRemove }) {
 
   return (
     <li className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 px-4 py-5 sm:grid-cols-[auto_minmax(0,1fr)_7rem_9rem_8rem_9rem] sm:gap-4">
-      <button
-        type="button"
-        onClick={() => onRemove(entry.id)}
-        aria-label={`Remove ${product.name} from your wishlist`}
-        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
-      >
-        <X className="h-4 w-4" aria-hidden="true" />
-      </button>
+      <div className="flex flex-col items-center gap-2">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggleSelect(entry.id)}
+          aria-label={`Select ${product.name}`}
+          className="h-4 w-4 rounded border-ink-300"
+        />
+
+        <button
+          type="button"
+          onClick={() => onRemove(entry.id)}
+          aria-label={`Remove ${product.name} from your wishlist`}
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
 
       <div className="flex min-w-0 items-center gap-3">
         <Link
@@ -177,6 +187,33 @@ export function WishlistPage() {
 
   const [copied, setCopied] = useState(false)
   const [addingAll, setAddingAll] = useState(false)
+  const [selected, setSelected] = useState(() => new Set())
+
+  const toggleSelect = (id) => {
+    setSelected((current) => {
+      const next = new Set(current)
+
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+
+      return next
+    })
+  }
+
+  const removeAndDeselect = (id) => {
+    remove(id)
+    setSelected((current) => {
+      if (!current.has(id)) return current
+
+      const next = new Set(current)
+      next.delete(id)
+
+      return next
+    })
+  }
 
   /*
    * One query per saved product rather than one bulk call: the storefront has
@@ -210,6 +247,18 @@ export function WishlistPage() {
     ({ product }) => Number(buyableVariation(product)?.available_quantity ?? 0) > 0,
   )
 
+  // Selecting specific rows narrows every bulk action to just those; with
+  // nothing checked, "select all" is implied and bulk actions cover the
+  // whole list, same as before this existed.
+  const selectableIds = rows.filter(({ product }) => product).map(({ entry }) => entry.id)
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selected.has(id))
+  const hasSelection = selected.size > 0
+  const targets = hasSelection ? buyable.filter(({ entry }) => selected.has(entry.id)) : buyable
+
+  const toggleSelectAll = () => {
+    setSelected(allSelected ? new Set() : new Set(selectableIds))
+  }
+
   const shareUrl = `${window.location.origin}/wishlist`
 
   const copyLink = async () => {
@@ -223,7 +272,7 @@ export function WishlistPage() {
   }
 
   const addAll = async () => {
-    if (buyable.length === 0) return
+    if (targets.length === 0) return
 
     setAddingAll(true)
 
@@ -233,7 +282,7 @@ export function WishlistPage() {
      * Sequential on purpose. Each add re-prices the basket server-side, and
      * firing them together makes those writes race for the same cart row.
      */
-    for (const { product } of buyable) {
+    for (const { product } of targets) {
       try {
         await addToCart.mutateAsync({
           variationId: buyableVariation(product).id,
@@ -248,10 +297,10 @@ export function WishlistPage() {
 
     if (failed === 0) {
       toast.success(
-        `Added ${buyable.length} item${buyable.length === 1 ? '' : 's'} to your cart.`,
+        `Added ${targets.length} item${targets.length === 1 ? '' : 's'} to your cart.`,
       )
     } else {
-      toast.error(`${failed} of ${buyable.length} could not be added.`)
+      toast.error(`${failed} of ${targets.length} could not be added.`)
     }
   }
 
@@ -259,6 +308,7 @@ export function WishlistPage() {
     if (!window.confirm('Remove everything from your wishlist?')) return
 
     clear()
+    setSelected(new Set())
     toast.success('Wishlist cleared.')
   }
 
@@ -300,7 +350,17 @@ export function WishlistPage() {
           <div className="overflow-hidden rounded-card border border-ink-200 bg-white">
             {/* Column headings only make sense once a row is a single line. */}
             <div className="hidden grid-cols-[auto_minmax(0,1fr)_7rem_9rem_8rem_9rem] gap-4 border-b border-ink-200 bg-brand-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white sm:grid">
-              <span className="w-7" />
+              <span className="grid w-7 place-items-center">
+                {selectableIds.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all"
+                    className="h-4 w-4 rounded border-white/60 bg-transparent"
+                  />
+                )}
+              </span>
               <span>Product</span>
               <span>Price</span>
               <span>Date Added</span>
@@ -315,7 +375,9 @@ export function WishlistPage() {
                   entry={entry}
                   product={product}
                   loading={loading}
-                  onRemove={remove}
+                  onRemove={removeAndDeselect}
+                  selected={selected.has(entry.id)}
+                  onToggleSelect={toggleSelect}
                 />
               ))}
             </ul>
@@ -356,8 +418,8 @@ export function WishlistPage() {
                 Clear Wishlist
               </button>
 
-              <Button onClick={addAll} disabled={buyable.length === 0 || addingAll} loading={addingAll}>
-                Add All to Cart
+              <Button onClick={addAll} disabled={targets.length === 0 || addingAll} loading={addingAll}>
+                {hasSelection ? `Add Selected to Cart (${targets.length})` : 'Add All to Cart'}
               </Button>
             </div>
           </div>
