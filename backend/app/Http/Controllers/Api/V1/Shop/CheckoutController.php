@@ -99,6 +99,11 @@ class CheckoutController extends Controller
                         'name' => $m->name,
                         'type' => $m->type->value,
                         'instructions' => $m->instructions,
+                        // Unlike account_id and the rest of this method's
+                        // accounting-facing fields, this one exists ONLY to
+                        // be shown to the customer -- there is no version of
+                        // "send us the money" that keeps the number private.
+                        'receive_number' => $m->receive_number,
                         'extra_charge' => $m->extra_charge,
                         'is_cod' => $m->type->isCollectedOnDelivery(),
                     ])->values()->all(),

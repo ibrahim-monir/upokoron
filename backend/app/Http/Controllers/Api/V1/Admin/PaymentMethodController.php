@@ -89,6 +89,10 @@ class PaymentMethodController extends Controller
             ],
             'type' => [$required, Rule::in(array_column(PaymentMethodType::cases(), 'value'))],
             'instructions' => ['nullable', 'string', 'max:1000'],
+            // The merchant's own bKash/Nagad number or similar -- shown to
+            // the customer at checkout as its own highlighted line, so it is
+            // validated as a short id rather than free text.
+            'receive_number' => ['nullable', 'string', 'max:32'],
             'extra_charge' => ['sometimes', 'numeric', 'min:0', 'max:99999999'],
             'min_order_total' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'max_order_total' => ['nullable', 'numeric', 'min:0', 'max:99999999', 'gte:min_order_total'],
@@ -109,6 +113,7 @@ class PaymentMethodController extends Controller
             'type' => $method->type->value,
             'type_label' => $method->type->label(),
             'instructions' => $method->instructions,
+            'receive_number' => $method->receive_number,
             'extra_charge' => $method->extra_charge,
             'min_order_total' => $method->min_order_total,
             'max_order_total' => $method->max_order_total,

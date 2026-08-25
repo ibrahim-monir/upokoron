@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { AlertTriangle, Check, ShoppingBag, Truck } from 'lucide-react'
+import { AlertTriangle, Check, Copy, ShoppingBag, Truck } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Field, Spinner, useToast } from '../../components/ui'
 import { DistrictSelect } from '../../components/DistrictSelect'
@@ -49,6 +49,13 @@ export function CheckoutPage() {
   const [addressId, setAddressId] = useState(null)
   const [rateId, setRateId] = useState(null)
   const [methodId, setMethodId] = useState(null)
+
+  const copyReceiveNumber = (number) => {
+    navigator.clipboard
+      .writeText(number)
+      .then(() => toast.success('Number copied.'))
+      .catch(() => toast.error('Could not copy the number.'))
+  }
 
   const form = useForm({
     defaultValues: {
@@ -379,6 +386,40 @@ export function CheckoutPage() {
                       </span>
                     )}
                   </div>
+                  {paymentMethod.id === methodId && paymentMethod.receive_number && (
+                    <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
+                      <span className="text-sm text-ink-600">Send payment to</span>
+                      <span className="tabular text-sm font-semibold text-brand-800">
+                        {paymentMethod.receive_number}
+                      </span>
+                      {/*
+                        A <span>, not a <button> -- Choice above is itself a
+                        button, and a button cannot contain another one
+                        without the browser silently breaking the nesting.
+                        role="button" + a key handler keep it as reachable
+                        and operable as a real button would be.
+                      */}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          copyReceiveNumber(paymentMethod.receive_number)
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') return
+                          event.preventDefault()
+                          event.stopPropagation()
+                          copyReceiveNumber(paymentMethod.receive_number)
+                        }}
+                        aria-label="Copy the receive number"
+                        className="ml-auto grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded text-brand-700 hover:bg-brand-100"
+                      >
+                        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                      </span>
+                    </div>
+                  )}
+
                   {paymentMethod.id === methodId && paymentMethod.instructions && (
                     <p className="mt-1.5 text-sm text-ink-600">{paymentMethod.instructions}</p>
                   )}

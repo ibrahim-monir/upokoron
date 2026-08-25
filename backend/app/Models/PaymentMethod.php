@@ -16,7 +16,7 @@ class PaymentMethod extends Model
     use Auditable;
 
     protected $fillable = [
-        'name', 'code', 'type', 'instructions', 'account_id',
+        'name', 'code', 'type', 'instructions', 'receive_number', 'account_id',
         'extra_charge', 'min_order_total', 'max_order_total',
         'is_active', 'position',
     ];

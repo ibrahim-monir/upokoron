@@ -40,6 +40,7 @@ function MethodForm({ method, onClose }) {
     code: method?.code ?? '',
     type: method?.type ?? 'manual',
     instructions: method?.instructions ?? '',
+    receive_number: method?.receive_number ?? '',
     extra_charge: method?.extra_charge ?? '0.00',
     min_order_total: method?.min_order_total ?? '',
     max_order_total: method?.max_order_total ?? '',
@@ -55,6 +56,7 @@ function MethodForm({ method, onClose }) {
         code: form.code.trim(),
         type: form.type,
         instructions: form.instructions.trim() || null,
+        receive_number: form.receive_number.trim() || null,
         extra_charge: Number(form.extra_charge || 0),
         min_order_total: form.min_order_total === '' ? null : Number(form.min_order_total),
         max_order_total: form.max_order_total === '' ? null : Number(form.max_order_total),
@@ -109,6 +111,15 @@ function MethodForm({ method, onClose }) {
             </Select>
           )}
         </Field>
+
+        <Field
+          className="sm:col-span-2"
+          label="Receive number (optional)"
+          hint="Your own bKash/Nagad number or similar -- shown to the customer at checkout as its own highlighted line, separate from the instructions below."
+          placeholder="e.g. 01712345678"
+          value={form.receive_number}
+          onChange={(event) => set('receive_number', event.target.value)}
+        />
 
         <Field
           className="sm:col-span-2"
@@ -214,6 +225,7 @@ function MethodRow({ method, editable, editing, onEdit, onCloseEdit }) {
         </p>
         <p className="text-xs text-ink-500">
           {method.code}
+          {method.receive_number && ` · receives on ${method.receive_number}`}
           {Number(method.extra_charge) > 0 && ` · +${money(method.extra_charge)}`}
           {method.min_order_total && ` · min ${money(method.min_order_total)}`}
           {method.max_order_total && ` · max ${money(method.max_order_total)}`}
