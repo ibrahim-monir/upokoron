@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
 import {
+  Banknote,
+  Landmark,
   Mail,
   MapPin,
   Phone,
-  Globe,
+  Smartphone,
+  Wallet,
 } from 'lucide-react'
 
 import { Logo } from '../components/Logo'
@@ -13,6 +16,18 @@ import {
   TikTokIcon,
   YoutubeIcon,
 } from '../components/BrandIcons'
+
+/*
+ * What checkout actually offers (see PaymentMethodSeeder) -- generic icons
+ * rather than brand logos, since no bKash/Nagad mark is licensed for use
+ * here.
+ */
+const PAYMENT_METHODS = [
+  { label: 'Cash on Delivery', icon: Banknote },
+  { label: 'bKash', icon: Smartphone },
+  { label: 'Nagad', icon: Wallet },
+  { label: 'Bank Transfer', icon: Landmark },
+]
 
 function FooterLink({ to, children }) {
   return (
@@ -230,12 +245,22 @@ export function Footer({ settings }) {
                   </a>
                 )}
 
-                <div className="flex items-center gap-3 text-white/80">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/15 text-white">
-                    <Globe className="h-4 w-4" aria-hidden="true" />
-                  </span>
+                <div className="pt-1">
+                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white/65">
+                    We Accept
+                  </p>
 
-                  <span>{window.location.host}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {PAYMENT_METHODS.map(({ label, icon: Icon }) => (
+                      <span
+                        key={label}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/85"
+                      >
+                        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </address>
             </FooterColumn>
