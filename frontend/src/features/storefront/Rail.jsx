@@ -10,7 +10,7 @@ import { cx } from '../../lib/format'
  * keyboard, and the arrows are then just a mouse affordance on top of
  * behaviour that exists either way.
  */
-export function useRail(itemCount) {
+export function useRail(itemCount, { autoAdvanceMs = null } = {}) {
   const ref = useRef(null)
   const [overflow, setOverflow] = useState(false)
   const [atStart, setAtStart] = useState(true)
@@ -72,6 +72,59 @@ export function useRail(itemCount) {
 
     rail.scrollBy({ left: direction * step, behavior: 'smooth' })
   }
+
+  /*
+   * Opt-in auto-advance, off unless a caller asks for it -- most rails
+   * (related products, category pickers used for navigation) should sit
+   * still until touched. It loops back to the start instead of stopping at
+   * the end, and pauses on hover, touch, or keyboard focus so it never
+   * fights someone actually using the manual controls: those keep working
+   * exactly as before, this just nudges the row forward when idle.
+   */
+  useEffect(() => {
+    if (!autoAdvanceMs) return undefined
+
+    const rail = ref.current
+
+    if (!rail) return undefined
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+
+    let paused = false
+    const pause = () => { paused = true }
+    const resume = () => { paused = false }
+
+    rail.addEventListener('mouseenter', pause)
+    rail.addEventListener('mouseleave', resume)
+    rail.addEventListener('touchstart', pause, { passive: true })
+    rail.addEventListener('touchend', resume)
+    rail.addEventListener('focusin', pause)
+    rail.addEventListener('focusout', resume)
+
+    const timer = setInterval(() => {
+      if (paused) return
+
+      const max = rail.scrollWidth - rail.clientWidth
+
+      if (max <= 4) return
+
+      if (rail.scrollLeft >= max - 4) {
+        rail.scrollTo({ left: 0, behavior: 'smooth' })
+      } else {
+        page(1)
+      }
+    }, autoAdvanceMs)
+
+    return () => {
+      clearInterval(timer)
+      rail.removeEventListener('mouseenter', pause)
+      rail.removeEventListener('mouseleave', resume)
+      rail.removeEventListener('touchstart', pause)
+      rail.removeEventListener('touchend', resume)
+      rail.removeEventListener('focusin', pause)
+      rail.removeEventListener('focusout', resume)
+    }
+  }, [autoAdvanceMs, itemCount])
 
   return { ref, overflow, atStart, atEnd, page }
 }

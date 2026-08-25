@@ -250,7 +250,7 @@ function CategoryStrip() {
   })
 
   const list = categories.data ?? []
-  const rail = useRail(list.length)
+  const rail = useRail(list.length, { autoAdvanceMs: 3000 })
 
   const style = settings.data?.home_categories_style ?? 'circle'
   const title = settings.data?.home_categories_title ?? 'Shop by category'
