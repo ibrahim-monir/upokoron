@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Plus, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { get } from '../../lib/api'
@@ -24,10 +25,20 @@ export default function UsersPage() {
   const can = useAuthStore((state) => state.can)
   const currentUser = useAuthStore((state) => state.user)
   const [page, setPage] = useState(1)
-  const [creating, setCreating] = useState(false)
+
+  /*
+   * Whether the create form is open lives in the URL, not in state, so
+   * "Add new user" in the menu is an ordinary link -- and the back button
+   * closes the form instead of leaving the screen.
+   */
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+
+  const creating = pathname.endsWith('/new')
+  const setCreating = (open) => navigate(open ? '/admin/users/new' : '/admin/users')
 
   const query = useList('admin.users', '/admin/users', { page })
-  const write = useWrite('admin.users', { onSuccess: () => setCreating(false) })
+  const write = useWrite('admin.users', { onSuccess: () => navigate('/admin/users') })
 
   const roles = useQuery({
     queryKey: ['admin', 'roles', 'options'],

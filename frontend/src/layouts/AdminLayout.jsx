@@ -22,6 +22,7 @@ import {
   Store,
   Tag,
   Truck,
+  UserPlus,
   Users,
   X,
 } from 'lucide-react'
@@ -34,7 +35,18 @@ const SECTIONS = [
     label: null,
     items: [
       { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard', can: 'dashboard.view' },
-      { to: '/admin/orders', icon: ReceiptText, label: 'Orders', can: 'orders.view', badge: 'pendingOrders' },
+      {
+        to: '/admin/orders',
+        icon: ReceiptText,
+        label: 'Orders',
+        can: 'orders.view',
+        badge: 'pendingOrders',
+        prominent: true,
+      },
+      // Top level rather than inside Catalogue: images are picked from
+      // products, banners, categories and settings alike, so filing it under
+      // one of those made it a detour from all the others.
+      { to: '/admin/media', icon: ImageIcon, label: 'Media library', can: 'media.view' },
     ],
   },
   {
@@ -49,7 +61,6 @@ const SECTIONS = [
       { to: '/admin/categories', icon: Shapes, label: 'Categories', can: 'products.view' },
       { to: '/admin/brands', icon: Store, label: 'Brands', can: 'products.view' },
       { to: '/admin/attributes', icon: Shapes, label: 'Attributes', can: 'products.view' },
-      { to: '/admin/media', icon: ImageIcon, label: 'Media library', can: 'media.view' },
     ],
   },
   {
@@ -78,10 +89,18 @@ const SECTIONS = [
     ],
   },
   {
+    label: 'Users',
+    items: [
+      // `end`, or this stays highlighted while Add new user is open --
+      // /admin/users is a prefix of /admin/users/new.
+      { to: '/admin/users', end: true, icon: Users, label: 'All users', can: 'users.view' },
+      { to: '/admin/users/new', icon: UserPlus, label: 'Add new user', can: 'users.manage' },
+      { to: '/admin/roles', icon: ShieldCheck, label: 'Role manage', can: 'roles.manage' },
+    ],
+  },
+  {
     label: 'Administration',
     items: [
-      { to: '/admin/users', icon: Users, label: 'Users', can: 'users.view' },
-      { to: '/admin/roles', icon: ShieldCheck, label: 'Roles & permissions', can: 'roles.manage' },
       { to: '/admin/settings', icon: Settings, label: 'Settings', can: 'settings.manage' },
       { to: '/admin/audit-logs', icon: ScrollText, label: 'Audit log', can: 'audit.view' },
     ],
@@ -197,11 +216,11 @@ function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
   if (!section.label) {
     return (
       <div className="space-y-1">
-        {visibleItems.map((item, index) => (
+        {visibleItems.map((item) => (
           <NavItem
             key={item.to}
             item={item}
-            prominent={index === 1}
+            prominent={Boolean(item.prominent)}
             badge={item.badge ? badges?.[item.badge] : 0}
             onNavigate={onNavigate}
           />

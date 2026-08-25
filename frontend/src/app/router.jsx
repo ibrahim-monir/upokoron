@@ -295,6 +295,14 @@ export const router = createBrowserRouter([
         element: guarded('users.view', lazyAdmin(() => import('../features/admin/UsersPage'))),
       },
       {
+        // The same screen with its create form already open, so "Add new
+        // user" can be a link in the menu rather than a second copy of the
+        // form. Guarded on manage, not view: reaching this URL is an intent
+        // to create one.
+        path: 'users/new',
+        element: guarded('users.manage', lazyAdmin(() => import('../features/admin/UsersPage'))),
+      },
+      {
         path: 'roles',
         element: guarded('roles.manage', lazyAdmin(() => import('../features/admin/RolesPage'))),
       },
