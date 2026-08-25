@@ -455,23 +455,8 @@ function CategoryChip({ category, style }) {
     )
   }
 
-  /*
-   * Width is a share of the row, not a fixed size, so a set number of
-   * categories is visible and the rest scroll: 5 on a wide screen (~250px
-   * each), fewer as it narrows, and the circle grows and shrinks with them.
-   *
-   * A fixed pixel width cannot do both jobs -- at 250px a phone would show
-   * one and a half categories, and at a size that suits a phone a desktop
-   * row looks like scattered buttons. The subtraction is the gaps: N items
-   * have N-1 gaps of 0.75rem (gap-3), and leaving that out puts the last
-   * one half off the edge.
-   */
   return (
-    <Link
-      to={to}
-      className="group w-[calc((100%-0.75rem)/2)] shrink-0 snap-start text-center sm:w-[calc((100%-1.5rem)/3)] lg:w-[calc((100%-2.25rem)/4)] xl:w-[calc((100%-3rem)/5)]"
-    >
-      {/* The circle fills the slot it is given, so it grows with the row. */}
+    <Link to={to} className="group w-[170px] shrink-0 snap-start text-center">
       <span className="mx-auto grid aspect-square w-full place-items-center overflow-hidden rounded-full border border-ink-200 bg-white transition group-hover:border-brand-600 group-hover:shadow-card">
         {category.image ? (
           <img src={category.image} alt="" loading="lazy" className="h-full w-full object-cover" />
