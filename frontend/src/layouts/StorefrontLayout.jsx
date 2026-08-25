@@ -7,6 +7,7 @@ import {
   Loader2,
   Heart,
   LogIn,
+  Megaphone,
   Menu,
   MessageCircle,
   Package,
@@ -447,7 +448,8 @@ function NewsTicker({ text }) {
     <div className="min-w-0 flex-1 overflow-hidden">
       <div className="ticker-track flex w-max items-center gap-10 whitespace-nowrap">
         {[...items, ...items].map((item, index) => (
-          <span key={index} className="text-white/90">
+          <span key={index} className="flex items-center gap-1.5 text-white/90">
+            <Megaphone className="h-3.5 w-3.5 shrink-0 text-white/60" aria-hidden="true" />
             {item}
           </span>
         ))}
