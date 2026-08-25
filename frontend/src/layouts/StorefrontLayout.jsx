@@ -20,6 +20,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { get } from '../lib/api'
 import { cx, money } from '../lib/format'
 import { useAnalytics } from '../lib/useAnalytics'
+import { useCustomScripts } from '../lib/useCustomScripts'
 import { useFavicon } from '../lib/useFavicon'
 import { useAuthStore } from '../stores/authStore'
 import { Logo } from '../components/Logo'
@@ -759,6 +760,10 @@ export function StorefrontLayout() {
   useAnalytics({
     googleSiteVerification: settings?.google_site_verification,
     googleAnalyticsId: settings?.google_analytics_id,
+  })
+  useCustomScripts({
+    headerScripts: settings?.custom_header_scripts,
+    footerScripts: settings?.custom_footer_scripts,
   })
 
   const HeaderComponent = settings?.store_header_style === 'classic' ? ClassicHeader : CategoriesHeader

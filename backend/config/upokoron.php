@@ -168,6 +168,13 @@ return [
             // A GA4 Measurement ID (G-XXXXXXXXXX). Loads the standard gtag.js
             // snippet when set; nothing is added to the page when blank.
             'google_analytics_id' => '',
+
+            // Freeform code for anything the two fields above don't cover --
+            // a Facebook Pixel, a chat widget, a verification snippet from
+            // some other service. Rendered as-is: header at the end of
+            // <head>, footer at the end of <body>, on every storefront page.
+            'custom_header_scripts' => '',
+            'custom_footer_scripts' => '',
         ],
 
         /*

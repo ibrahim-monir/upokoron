@@ -35,13 +35,28 @@ const COLOUR_HINTS = {
 }
 
 /** Long-form settings that need room to write in. */
-const MULTILINE = ['page_about', 'page_privacy', 'page_terms', 'store_address', 'store_description']
+const MULTILINE = [
+  'page_about',
+  'page_privacy',
+  'page_terms',
+  'store_address',
+  'store_description',
+  'custom_header_scripts',
+  'custom_footer_scripts',
+]
+
+/** Settings edited as code rather than prose -- monospace, so tags and brackets are easy to read. */
+const CODE_KEYS = ['custom_header_scripts', 'custom_footer_scripts']
 
 /** Plain-text settings whose expected format is not obvious from the label alone. */
 const HINTS = {
   google_site_verification:
     "From Search Console: Settings > Ownership verification > HTML tag. Paste only the tag's content value, not the whole <meta> tag.",
   google_analytics_id: 'The GA4 Measurement ID from Admin > Data streams, in the form G-XXXXXXXXXX.',
+  custom_header_scripts:
+    'Anything not covered above -- a Facebook Pixel, a chat widget, a verification snippet. Paste the script tag(s) as given; runs on every storefront page, at the end of <head>.',
+  custom_footer_scripts:
+    'Same as header scripts, but placed at the end of the page instead -- for anything documented to go right before </body>.',
 }
 
 /** Settings that hold an image URL, so they get a picker instead of a text box. */
@@ -119,7 +134,7 @@ export default function SettingsPage() {
       if (group === 'pages') return key.startsWith('page_')
       if (group === 'theme') return key.startsWith('theme_')
       if (group === 'home') return key.startsWith('home_')
-      if (group === 'marketing') return key.startsWith('google_')
+      if (group === 'marketing') return key.startsWith('google_') || key.startsWith('custom_')
       if (group === 'inventory') return key === 'allow_negative_stock' || key === 'low_stock_alert'
       return (
         key.startsWith('revenue_') ||
@@ -270,17 +285,20 @@ export default function SettingsPage() {
                       label={humanise(key)}
                       className="sm:col-span-2"
                       hint={
-                        key.startsWith('page_')
+                        HINTS[key] ??
+                        (key.startsWith('page_')
                           ? 'Shown on the storefront. Left blank, the page says it has not been written yet.'
-                          : undefined
+                          : undefined)
                       }
                     >
                       {({ id }) => (
                         <Textarea
                           id={id}
-                          rows={key.startsWith('page_') ? 8 : 3}
+                          rows={key.startsWith('page_') ? 8 : CODE_KEYS.includes(key) ? 6 : 3}
                           value={value ?? ''}
                           onChange={(event) => set(key, event.target.value)}
+                          className={CODE_KEYS.includes(key) ? 'font-mono text-xs' : undefined}
+                          spellCheck={CODE_KEYS.includes(key) ? false : undefined}
                         />
                       )}
                     </Field>
