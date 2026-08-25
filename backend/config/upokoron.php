@@ -81,6 +81,11 @@ return [
             // fit a rigid schedule picker anyway.
             'store_support_hours' => '',
 
+            // Scrolling announcement strip in the top bar, on the side
+            // opposite Order Track / the phone number. One message per line;
+            // blank means nothing renders there at all, not an empty bar.
+            'store_ticker_text' => '',
+
             // Which header the storefront renders. 'classic': logo, search,
             // and a Shop/Offers/Contact nav in one bar. 'categories': a
             // support-info top bar, then a plain search bar with no category

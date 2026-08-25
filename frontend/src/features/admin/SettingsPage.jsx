@@ -41,6 +41,7 @@ const MULTILINE = [
   'page_terms',
   'store_address',
   'store_description',
+  'store_ticker_text',
   'custom_header_scripts',
   'custom_footer_scripts',
 ]
@@ -57,6 +58,8 @@ const HINTS = {
     'Anything not covered above -- a Facebook Pixel, a chat widget, a verification snippet. Paste the script tag(s) as given; runs on every storefront page, at the end of <head>.',
   custom_footer_scripts:
     'Same as header scripts, but placed at the end of the page instead -- for anything documented to go right before </body>.',
+  store_ticker_text:
+    'One message per line, scrolling in the header top bar. Leave blank to show nothing there.',
 }
 
 /** Settings that hold an image URL, so they get a picker instead of a text box. */

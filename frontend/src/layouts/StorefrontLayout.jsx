@@ -427,27 +427,60 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
   )
 }
 
-/** Support phone + hours on the left, account shortcuts on the right. Hidden on phones -- there is no room, and a tel: link is one tap away in the mobile menu instead. */
+/**
+ * The scrolling announcement strip, filling whatever room the top bar has
+ * left of Order Track / the phone number. Each message shown twice back to
+ * back in one continuous track, scrolled exactly one copy's width -- that is
+ * what makes the loop point invisible instead of a visible jump or gap.
+ * Nothing renders at all with no configured text, and it holds still under
+ * prefers-reduced-motion (see index.css's global override for that).
+ */
+function NewsTicker({ text }) {
+  const items = (text ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="ticker-track flex w-max items-center gap-10 whitespace-nowrap">
+        {[...items, ...items].map((item, index) => (
+          <span key={index} className="text-white/90">
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Announcement ticker on the left, support phone + Order Track on the right. Hidden on phones -- there is no room, and a tel: link is one tap away in the mobile menu instead. */
 function TopBar({ settings }) {
   return (
     <div className="hidden border-b border-white/10 bg-navy-800 text-white sm:block">
-      <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-end gap-4 px-3 text-xs sm:px-4">
-        <nav className="flex items-center gap-4">
-          <Link to="/track" className="flex items-center gap-1.5 text-white/90 hover:text-white">
-            <Package className="h-3.5 w-3.5" aria-hidden="true" />
-            Order Track
-          </Link>
-        </nav>
+      <div className="mx-auto flex h-9 max-w-[1400px] items-center gap-4 px-3 text-xs sm:px-4">
+        <NewsTicker text={settings?.store_ticker_text} />
 
-        {settings?.store_phone && (
-          <a href={`tel:${settings.store_phone}`} className="flex items-center gap-1.5 text-white/90 hover:text-white">
-            <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="font-medium">{settings.store_phone}</span>
-            {settings.store_support_hours && (
-              <span className="text-white/60">· {settings.store_support_hours}</span>
-            )}
-          </a>
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-4">
+          <nav className="flex items-center gap-4">
+            <Link to="/track" className="flex items-center gap-1.5 text-white/90 hover:text-white">
+              <Package className="h-3.5 w-3.5" aria-hidden="true" />
+              Order Track
+            </Link>
+          </nav>
+
+          {settings?.store_phone && (
+            <a href={`tel:${settings.store_phone}`} className="flex items-center gap-1.5 text-white/90 hover:text-white">
+              <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="font-medium">{settings.store_phone}</span>
+              {settings.store_support_hours && (
+                <span className="text-white/60">· {settings.store_support_hours}</span>
+              )}
+            </a>
+          )}
+        </div>
       </div>
     </div>
   )

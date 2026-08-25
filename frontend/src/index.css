@@ -200,6 +200,30 @@
     color: var(--color-ink-400);
     pointer-events: none;
   }
+
+  /*
+   * The top bar announcement ticker. The track holds the message list
+   * twice back to back and scrolls exactly one copy's width, so the loop
+   * point is invisible -- a single copy scrolled to -100% would leave a
+   * blank gap before it restarts. Paused on hover so a message someone
+   * is mid-read does not slide away from under the pointer.
+   */
+  .ticker-track {
+    animation: ticker-scroll 22s linear infinite;
+  }
+
+  .ticker-track:hover {
+    animation-play-state: paused;
+  }
+
+  @keyframes ticker-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
