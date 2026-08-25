@@ -9,6 +9,7 @@ import {
   Wallet,
 } from 'lucide-react'
 
+import { cx } from '../lib/format'
 import { Logo } from '../components/Logo'
 import {
   FacebookIcon,
@@ -18,15 +19,16 @@ import {
 } from '../components/BrandIcons'
 
 /*
- * What checkout actually offers (see PaymentMethodSeeder) -- generic icons
- * rather than brand logos, since no bKash/Nagad mark is licensed for use
- * here.
+ * What checkout actually offers (see PaymentMethodSeeder). Each badge's own
+ * brand colour carries the identity here -- a generic icon rather than the
+ * literal wordmark, since no bKash/Nagad logo artwork is licensed for use
+ * in this codebase, but the colour alone reads as "that one" at a glance.
  */
 const PAYMENT_METHODS = [
-  { label: 'Cash on Delivery', icon: Banknote },
-  { label: 'bKash', icon: Smartphone },
-  { label: 'Nagad', icon: Wallet },
-  { label: 'Bank Transfer', icon: Landmark },
+  { label: 'Cash on Delivery', icon: Banknote, bgClass: 'bg-success-600' },
+  { label: 'bKash', icon: Smartphone, bgClass: 'bg-[#E2136E]' },
+  { label: 'Nagad', icon: Wallet, bgClass: 'bg-[#F5821F]' },
+  { label: 'Bank Transfer', icon: Landmark, bgClass: 'bg-brand-600' },
 ]
 
 function FooterLink({ to, children }) {
@@ -65,21 +67,27 @@ export function Footer({ settings }) {
       key: 'store_facebook',
       label: 'Facebook',
       icon: FacebookIcon,
+      bgClass: 'bg-[#1877F2]',
     },
     {
       key: 'store_youtube',
       label: 'YouTube',
       icon: YoutubeIcon,
+      bgClass: 'bg-[#FF0000]',
     },
     {
       key: 'store_instagram',
       label: 'Instagram',
       icon: InstagramIcon,
+      // Instagram's mark has never been one flat colour -- the gradient is
+      // the brand cue, more than any single hex in it would be.
+      bgClass: 'bg-gradient-to-tr from-[#FEDA75] via-[#D62976] to-[#4F5BD5]',
     },
     {
       key: 'store_tiktok',
       label: 'TikTok',
       icon: TikTokIcon,
+      bgClass: 'bg-black',
     },
   ].filter((social) => settings?.[social.key])
 
@@ -128,14 +136,17 @@ export function Footer({ settings }) {
                   </p>
 
                   <div className="flex flex-wrap gap-2.5">
-                    {socials.map(({ key, label, icon: Icon }) => (
+                    {socials.map(({ key, label, icon: Icon, bgClass }) => (
                       <a
                         key={key}
                         href={settings[key]}
                         target="_blank"
                         rel="noreferrer noopener"
                         aria-label={label}
-                        className="grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-white/75 transition-all duration-200 hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-brand-800"
+                        className={cx(
+                          'grid h-9 w-9 place-items-center rounded-full text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+                          bgClass,
+                        )}
                       >
                         <Icon className="h-4 w-4" />
                       </a>
@@ -251,12 +262,14 @@ export function Footer({ settings }) {
                   </p>
 
                   <div className="flex flex-wrap gap-2">
-                    {PAYMENT_METHODS.map(({ label, icon: Icon }) => (
+                    {PAYMENT_METHODS.map(({ label, icon: Icon, bgClass }) => (
                       <span
                         key={label}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/85"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-3 text-xs font-medium text-white/85"
                       >
-                        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-white', bgClass)}>
+                          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                        </span>
                         {label}
                       </span>
                     ))}
