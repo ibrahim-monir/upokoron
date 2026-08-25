@@ -431,27 +431,23 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
 function TopBar({ settings }) {
   return (
     <div className="hidden border-b border-white/10 bg-navy-800 text-white sm:block">
-      <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-between px-3 text-xs sm:px-4">
-        <div>
-          {settings?.store_phone ? (
-            <a href={`tel:${settings.store_phone}`} className="flex items-center gap-1.5 text-white/90 hover:text-white">
-              <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="font-medium">{settings.store_phone}</span>
-              {settings.store_support_hours && (
-                <span className="text-white/60">· {settings.store_support_hours}</span>
-              )}
-            </a>
-          ) : (
-            <span />
-          )}
-        </div>
-
+      <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-end gap-4 px-3 text-xs sm:px-4">
         <nav className="flex items-center gap-4">
           <Link to="/track" className="flex items-center gap-1.5 text-white/90 hover:text-white">
             <Package className="h-3.5 w-3.5" aria-hidden="true" />
             Order Track
           </Link>
         </nav>
+
+        {settings?.store_phone && (
+          <a href={`tel:${settings.store_phone}`} className="flex items-center gap-1.5 text-white/90 hover:text-white">
+            <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="font-medium">{settings.store_phone}</span>
+            {settings.store_support_hours && (
+              <span className="text-white/60">· {settings.store_support_hours}</span>
+            )}
+          </a>
+        )}
       </div>
     </div>
   )
