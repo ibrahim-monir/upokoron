@@ -35,7 +35,7 @@ const EARNING_FIELDS = [
   {
     key: 'points_per_hundred',
     label: 'Purchase',
-    hint: 'Points earned per 100 BDT spent',
+    hint: 'Points earned per 20 BDT spent',
   },
   {
     key: 'review_points',
@@ -156,7 +156,7 @@ function SettingsTab() {
   }
 
   const summary = [
-    `Purchase: ${values.points_per_hundred} pts per 100 BDT`,
+    `Purchase: ${values.points_per_hundred} pts per 20 BDT`,
     `1 point = ${values.redemption_rate} BDT discount`,
     `Redemption: min ${values.min_redeem_points} – max ${values.max_redeem_points} pts per order`,
     `Max discount: ${values.max_redeem_percent_of_order}% of cart value`,

@@ -27,6 +27,15 @@ use Illuminate\Support\Facades\DB;
  */
 class RewardPointsService
 {
+    /**
+     * BDT spent per earning "unit" -- the amount pointsForAmount() buckets a
+     * purchase into before multiplying by the points-per-unit setting. Named
+     * separately from that setting (which is still keyed 'points_per_hundred'
+     * in the database for backward compatibility) so the two can be read
+     * about together without the setting's own name implying a fixed 100.
+     */
+    private const EARNING_UNIT_BDT = '20';
+
     public function __construct(private readonly SettingsService $settings) {}
 
     /**
@@ -37,7 +46,7 @@ class RewardPointsService
         return [
             'rewards_enabled' => $this->settings->bool('rewards_enabled', true),
             'show_points_on_product_page' => $this->settings->bool('show_points_on_product_page', true),
-            'points_per_hundred' => $this->settings->int('points_per_hundred', 5),
+            'points_per_hundred' => $this->settings->int('points_per_hundred', 1),
             'review_points' => $this->settings->int('review_points', 10),
             'profile_completion_points' => $this->settings->int('profile_completion_points', 50),
             'birthday_points' => $this->settings->int('birthday_points', 200),
@@ -74,6 +83,10 @@ class RewardPointsService
      * How many points a purchase of this size would earn, at today's rate.
      * Used both to credit a delivered order and to preview the figure on a
      * product page before anyone has bought anything.
+     *
+     * Whole units only, same as the old per-100 version: BDT 39 on top of a
+     * clean multiple of the unit earns nothing until it rounds up to the
+     * next one.
      */
     public function pointsForAmount(Money $amount): int
     {
@@ -81,9 +94,9 @@ class RewardPointsService
             return 0;
         }
 
-        $hundreds = (int) bcdiv($amount->value(), '100', 0);
+        $units = (int) bcdiv($amount->value(), self::EARNING_UNIT_BDT, 0);
 
-        return $hundreds * $this->settings->int('points_per_hundred', 5);
+        return $units * $this->settings->int('points_per_hundred', 1);
     }
 
     /**
@@ -197,7 +210,7 @@ class RewardPointsService
     }
 
     /**
-     * Points earned on a delivered order, per points_per_hundred BDT of the
+     * Points earned on a delivered order, per EARNING_UNIT_BDT of the
      * product subtotal actually charged (after per-line discounts, before
      * shipping and any payment surcharge). Delivery is not something the
      * points program pays a customer to buy.

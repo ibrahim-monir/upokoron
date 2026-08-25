@@ -226,8 +226,10 @@ return [
             // (still crediting purchases) without advertising it yet.
             'show_points_on_product_page' => true,
 
-            // Earning.
-            'points_per_hundred' => 5, // Points earned per BDT 100 spent (delivered orders).
+            // Earning. The key is still named 'points_per_hundred' but the
+            // BDT-per-point bucket is 20, not 100 -- see
+            // RewardPointsService::EARNING_UNIT_BDT.
+            'points_per_hundred' => 1, // Points earned per BDT 20 spent (delivered orders).
             'review_points' => 10, // Points per approved product review.
             'profile_completion_points' => 50, // One-time bonus once name, phone and birthday are all on file.
             'birthday_points' => 200, // Awarded once a year, on the customer's birthday.

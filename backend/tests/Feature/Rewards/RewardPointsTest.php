@@ -102,7 +102,7 @@ class RewardPointsTest extends TestCase
         $variation = Product::factory()->create()->variations()->first();
         $variation->forceFill(['selling_price' => '1000.00'])->save();
 
-        // 2 units at 1000 = 2000 subtotal -> 20 hundreds -> 20 * 5 = 100 points.
+        // 2 units at 1000 = 2000 subtotal -> 100 units of 20 BDT -> 100 * 1 = 100 points.
         $this->deliverOrder($customer, $variation, '2');
 
         $this->assertSame(100, $customer->refresh()->reward_points_balance);
