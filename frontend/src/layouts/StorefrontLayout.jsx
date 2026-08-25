@@ -540,7 +540,7 @@ function CategoryBar() {
                 aria-expanded={hasChildren ? isOpen : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 className={cx(
-                  'relative flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium transition-colors duration-150',
+                  'relative flex items-center gap-1 whitespace-nowrap px-3 py-3 text-base font-semibold transition-colors duration-150',
                   isActive || isOpen ? 'text-brand-800' : 'text-ink-700 hover:text-brand-800',
                 )}
               >
