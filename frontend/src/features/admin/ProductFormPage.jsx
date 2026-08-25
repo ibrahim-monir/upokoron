@@ -1720,7 +1720,7 @@ export default function ProductFormPage() {
                   <div className="rounded-2xl border border-ink-200 bg-white p-4">
 
                     <p className="mb-4 text-sm font-semibold text-ink-900">
-                      Compare-at price
+                      Regular Price
                     </p>
 
                     <Field
@@ -1743,7 +1743,7 @@ export default function ProductFormPage() {
                   <div className="rounded-2xl border border-ink-200 bg-white p-4">
 
                     <p className="mb-4 text-sm font-semibold text-ink-900">
-                      Regular price
+                      Discount Price
                     </p>
 
                     <Field
