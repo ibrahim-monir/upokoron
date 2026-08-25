@@ -5,15 +5,19 @@ import {
   BarChart3,
   BookOpen,
   ChevronDown,
+  Cog,
   CreditCard,
   FileText,
+  Gift,
   Image as ImageIcon,
+  Layers,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
+  Megaphone,
   Menu,
   Package,
   ReceiptText,
-  Gift,
   ScrollText,
   Settings,
   Shapes,
@@ -24,6 +28,7 @@ import {
   Truck,
   UserPlus,
   Users,
+  Wallet,
   X,
 } from 'lucide-react'
 import { get } from '../lib/api'
@@ -51,6 +56,7 @@ const SECTIONS = [
   },
   {
     label: 'Catalogue',
+    icon: LayoutGrid,
     items: [
       {
         to: '/admin/products',
@@ -65,6 +71,7 @@ const SECTIONS = [
   },
   {
     label: 'Operations',
+    icon: Layers,
     items: [
       { to: '/admin/shipping', icon: Truck, label: 'Delivery', can: 'shipping.manage' },
       { to: '/admin/payment-methods', icon: CreditCard, label: 'Payments', can: 'payments.manage' },
@@ -72,6 +79,7 @@ const SECTIONS = [
   },
   {
     label: 'Marketing',
+    icon: Megaphone,
     items: [
       { to: '/admin/banners', icon: ImageIcon, label: 'Banners', can: 'banners.manage' },
       { to: '/admin/coupons', icon: Tag, label: 'Coupons', can: 'coupons.manage' },
@@ -81,6 +89,7 @@ const SECTIONS = [
   },
   {
     label: 'Finance',
+    icon: Wallet,
     items: [
       { to: '/admin/accounts', icon: BookOpen, label: 'Chart of accounts', can: 'accounting.view' },
       { to: '/admin/journal', icon: ScrollText, label: 'Journal', can: 'accounting.view' },
@@ -90,6 +99,7 @@ const SECTIONS = [
   },
   {
     label: 'Users',
+    icon: Users,
     items: [
       // `end`, or this stays highlighted while Add new user is open --
       // /admin/users is a prefix of /admin/users/new.
@@ -100,6 +110,7 @@ const SECTIONS = [
   },
   {
     label: 'Administration',
+    icon: Cog,
     items: [
       { to: '/admin/settings', icon: Settings, label: 'Settings', can: 'settings.manage' },
       { to: '/admin/audit-logs', icon: ScrollText, label: 'Audit log', can: 'audit.view' },
@@ -204,6 +215,7 @@ function usePendingOrderCount(enabled) {
 }
 
 function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
+  const Icon = section.icon
   const hasActiveItem = visibleItems.some((item) =>
     item.end ? pathname === item.to : pathname.startsWith(item.to),
   )
@@ -231,21 +243,48 @@ function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
 
   return (
     <div className="border-t border-navy-800/70 pt-3">
+      {/*
+         Built to the same spec as NavItem -- same height, icon tile, text
+         size and hover. A group header is a thing you click to get
+         somewhere, so it should not be styled as a caption while the rows
+         under it are styled as controls.
+      */}
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mb-1 flex h-7 w-full items-center gap-2 px-3 text-left"
+        className={cx(
+          'group mb-1 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors',
+          hasActiveItem
+            ? 'text-white'
+            : 'text-slate-300 hover:bg-white/[0.06] hover:text-white',
+        )}
         aria-expanded={open}
       >
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+        <span
+          className={cx(
+            'grid h-7 w-7 shrink-0 place-items-center rounded-md',
+            hasActiveItem ? 'text-white' : 'text-slate-400 group-hover:text-white',
+          )}
+        >
+          {Icon ? <Icon className="h-4 w-4" /> : null}
+        </span>
+
+        <span
+          className={cx(
+            'min-w-0 flex-1 truncate text-sm',
+            hasActiveItem ? 'font-semibold' : 'font-medium',
+          )}
+        >
           {section.label}
         </span>
 
-        <span className="ml-auto grid h-5 w-5 place-items-center rounded-md text-slate-500 transition hover:bg-white/[0.06] hover:text-white">
-          <ChevronDown
-            className={cx('h-3.5 w-3.5 transition-transform', !open && '-rotate-90')}
-          />
-        </span>
+        <ChevronDown
+          className={cx(
+            'h-4 w-4 shrink-0 text-slate-500 transition-transform group-hover:text-white',
+            !open && '-rotate-90',
+          )}
+          aria-hidden="true"
+        />
       </button>
 
       <div
