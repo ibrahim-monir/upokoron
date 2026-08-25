@@ -1720,33 +1720,6 @@ export default function ProductFormPage() {
                   <div className="rounded-2xl border border-ink-200 bg-white p-4">
 
                     <p className="text-sm font-semibold text-ink-900">
-                      Regular price
-                    </p>
-
-                    <p className="mb-4 mt-1 text-xs text-ink-500">
-                      Normal selling price.
-                    </p>
-
-                    <Field
-                      label="Selling price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      error={
-                        errors.selling_price
-                          ?.message
-                      }
-                      {...register(
-                        'selling_price',
-                      )}
-                    />
-
-                  </div>
-
-                  <div className="rounded-2xl border border-ink-200 bg-white p-4">
-
-                    <p className="text-sm font-semibold text-ink-900">
                       Compare-at price
                     </p>
 
@@ -1766,6 +1739,33 @@ export default function ProductFormPage() {
                       }
                       {...register(
                         'compare_at_price',
+                      )}
+                    />
+
+                  </div>
+
+                  <div className="rounded-2xl border border-ink-200 bg-white p-4">
+
+                    <p className="text-sm font-semibold text-ink-900">
+                      Regular price
+                    </p>
+
+                    <p className="mb-4 mt-1 text-xs text-ink-500">
+                      Normal selling price.
+                    </p>
+
+                    <Field
+                      label="Selling price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      error={
+                        errors.selling_price
+                          ?.message
+                      }
+                      {...register(
+                        'selling_price',
                       )}
                     />
 
