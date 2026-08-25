@@ -17,6 +17,7 @@ import {
   Plus,
   ShieldCheck,
   ShoppingCart,
+  Sparkles,
   Star,
   Truck,
 } from 'lucide-react'
@@ -36,6 +37,7 @@ import {
 import { FacebookIcon, WhatsAppIcon, XIcon } from '../../components/BrandIcons'
 import { useAuthStore } from '../../stores/authStore'
 import { applyServerErrors } from '../auth/applyServerErrors'
+import { AddToCart } from '../cart/AddToCart'
 import { useAddToCart } from '../cart/useCart'
 import { TrendingSection } from './HomePage'
 import { ProductCard, ProductCardSkeleton } from './ProductCard'
@@ -374,6 +376,150 @@ function RelatedProducts({ categorySlug, excludeId }) {
               className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1.5rem)/3)] md:w-[calc((100%-2.25rem)/4)] xl:w-[calc((100%-3rem)/5)]"
             >
               {product ? <ProductCard product={product} /> : <ProductCardSkeleton />}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * One accessory beside the product, as a row rather than a card.
+ *
+ * The full ProductCard is built for a grid: a square image, a two-line name,
+ * ratings, points and a button, all stacked. Two of those in a half-width
+ * column are taller than the product they are meant to accompany, which puts
+ * the cross-sell in a shouting match with the sale. A thumbnail, a name, a
+ * price and one button says the same thing in a fifth of the height.
+ */
+function GoesWithRow({ product }) {
+  const variation = product.default_variation
+  const price = variation?.effective_price ?? variation?.selling_price
+  const wasPrice = variation?.is_on_sale ? variation.selling_price : variation?.compare_at_price
+  const hasDiscount = Number(wasPrice ?? 0) > Number(price ?? 0)
+
+  return (
+    <li className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-ink-50">
+      <Link
+        to={`/products/${product.slug}`}
+        className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-white"
+      >
+        {product.primary_image ? (
+          <img
+            src={product.primary_image}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <ImageOff className="h-5 w-5 text-ink-300" aria-hidden="true" />
+        )}
+      </Link>
+
+      <div className="min-w-0 flex-1">
+        <Link
+          to={`/products/${product.slug}`}
+          className="line-clamp-1 text-sm font-medium text-ink-900 hover:text-brand-800"
+        >
+          {product.name}
+        </Link>
+
+        <p className="mt-0.5 flex items-baseline gap-2">
+          <span className="tabular text-sm font-bold text-brand-800">{money(price)}</span>
+          {hasDiscount && (
+            <span className="tabular text-xs text-ink-400 line-through">{money(wasPrice)}</span>
+          )}
+        </p>
+      </div>
+
+      {/*
+        Same rule as the product grid: straight into the basket when there is
+        only one thing it could mean, and off to the page when the shopper
+        still has a colour or a size to choose.
+      */}
+      <div className="w-36 shrink-0">
+        {(product.variations_count ?? 1) > 1 ? (
+          <Link
+            to={`/products/${product.slug}`}
+            className="flex h-8 items-center justify-center rounded-lg border border-brand-200 px-3 text-sm font-medium text-brand-800 transition-colors hover:bg-brand-50"
+          >
+            Choose options
+          </Link>
+        ) : (
+          <AddToCart variation={variation} compact />
+        )}
+      </div>
+    </li>
+  )
+}
+
+/**
+ * Accessories, from the categories the owner paired this one with.
+ *
+ * Distinct from Related Products below, which offers more of the same
+ * category -- alternatives to something already chosen. This offers the
+ * wire and the connector to go with the battery. Renders nothing when the
+ * category has no pairings, rather than falling back to something that
+ * misses the point.
+ *
+ * `compact` is the version that sits beside the product rather than under
+ * the page: a short grid instead of a rail, because a horizontal scroller
+ * in a half-width column shows two cropped cards and hides the rest behind
+ * a gesture nobody makes on a column that narrow.
+ */
+function GoesWith({ slug, compact = false }) {
+  const query = useQuery({
+    queryKey: ['shop', 'products', 'goes-with', slug],
+    queryFn: () => get(`/shop/products/${slug}/goes-with`, { params: { limit: 10 } }),
+    enabled: Boolean(slug),
+    select: (response) => response.data,
+  })
+
+  const products = query.data ?? []
+  const rail = useRail(products.length)
+
+  if (query.isLoading || products.length === 0) return null
+
+  if (compact) {
+    return (
+      <section className="overflow-hidden rounded-card border border-ink-200 bg-white">
+        <h2 className="flex items-center gap-2 border-b border-ink-100 bg-ink-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-ink-700">
+          <Sparkles className="h-4 w-4 text-brand-600" aria-hidden="true" />
+          Goes Well With
+        </h2>
+
+        {/* Four at most: this sits beside the thing being bought, and a wall
+            of accessories next to it competes with it for the same click. */}
+        <ul className="divide-y divide-ink-100">
+          {products.slice(0, 4).map((product) => (
+            <GoesWithRow key={product.id} product={product} />
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-ink-900">
+          <Sparkles className="h-5 w-5 text-brand-600" aria-hidden="true" />
+          Goes Well With
+        </h2>
+      </div>
+
+      {/* Positioned parent for the overlaid arrows. */}
+      <div className="relative">
+        <RailArrows rail={rail} label="accessories" />
+
+        <div ref={rail.ref} className="rail flex snap-x snap-mandatory gap-3 scroll-smooth pb-1">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1.5rem)/3)] md:w-[calc((100%-2.25rem)/4)] xl:w-[calc((100%-3rem)/5)]"
+            >
+              <ProductCard product={product} />
             </div>
           ))}
         </div>
@@ -773,6 +919,8 @@ export function ProductDetailPage() {
               </a>
             ))}
           </div>
+
+          <GoesWith slug={product.slug} compact />
         </div>
       </div>
 

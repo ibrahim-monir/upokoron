@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import {
   ArrowLeft,
+  Check,
   ChevronDown,
   ChevronRight,
   Image as ImageIcon,
@@ -286,6 +287,129 @@ const schema = z
   )
 
 /* ==========================================================================
+   ADDITIONAL PRODUCTS
+   ========================================================================== */
+
+/**
+ * Pick the accessories that go with this product.
+ *
+ * A search box rather than a checkbox list: a shop with a few hundred
+ * products cannot be scrolled through to find the one cable that goes with
+ * this battery, and the list would be mostly noise either way.
+ */
+function PairedProductPicker({ selected, onChange, excludeId }) {
+  const [term, setTerm] = useState('')
+
+  // Whatever is already picked, so the chips can show names rather than ids
+  // -- including on first load, before anything has been searched for.
+  const chosen = useQuery({
+    queryKey: ['admin', 'products', 'paired', selected],
+    queryFn: () => get('/admin/products', { params: { per_page: 100 } }),
+    enabled: selected.length > 0,
+    select: (response) =>
+      (response.data ?? []).filter((product) => selected.includes(product.id)),
+  })
+
+  const results = useQuery({
+    queryKey: ['admin', 'products', 'pair-search', term],
+    queryFn: () => get('/admin/products', { params: { search: term, per_page: 8 } }),
+    enabled: term.trim().length >= 2,
+    select: (response) => response.data ?? [],
+  })
+
+  const toggle = (productId) =>
+    onChange(
+      selected.includes(productId)
+        ? selected.filter((value) => value !== productId)
+        : [...selected, productId],
+    )
+
+  const matches = (results.data ?? []).filter(
+    (product) => product.id !== excludeId,
+  )
+
+  return (
+    <div className="mt-2 rounded-lg border border-ink-200 p-3">
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+          aria-hidden="true"
+        />
+
+        <input
+          value={term}
+          onChange={(event) => setTerm(event.target.value)}
+          placeholder="Search products to add..."
+          aria-label="Search products to pair"
+          className="h-10 w-full rounded-lg border border-ink-200 pl-9 pr-3 text-sm"
+        />
+      </div>
+
+      {term.trim().length >= 2 && (
+        <ul className="mt-2 max-h-48 divide-y divide-ink-100 overflow-y-auto rounded-lg border border-ink-200">
+          {matches.length === 0 ? (
+            <li className="px-3 py-3 text-sm text-ink-500">
+              {results.isFetching ? 'Searching…' : 'Nothing matched.'}
+            </li>
+          ) : (
+            matches.map((product) => {
+              const checked = selected.includes(product.id)
+
+              return (
+                <li key={product.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(product.id)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-ink-50"
+                  >
+                    <span
+                      className={cx(
+                        'grid h-4 w-4 shrink-0 place-items-center rounded border',
+                        checked
+                          ? 'border-brand-600 bg-brand-600 text-white'
+                          : 'border-ink-300',
+                      )}
+                    >
+                      {checked && <Check className="h-3 w-3" aria-hidden="true" />}
+                    </span>
+
+                    <span className="min-w-0 flex-1 truncate text-ink-800">
+                      {product.name}
+                    </span>
+                  </button>
+                </li>
+              )
+            })
+          )}
+        </ul>
+      )}
+
+      {selected.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {(chosen.data ?? []).map((product) => (
+            <span
+              key={product.id}
+              className="inline-flex items-center gap-1 rounded-full bg-brand-50 py-1 pl-2.5 pr-1 text-xs font-medium text-brand-800"
+            >
+              {product.name}
+
+              <button
+                type="button"
+                onClick={() => toggle(product.id)}
+                aria-label={`Remove ${product.name}`}
+                className="grid h-4 w-4 place-items-center rounded-full text-brand-800 hover:bg-brand-100"
+              >
+                <Trash2 className="h-3 w-3" aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ==========================================================================
    STOCK HELPERS
    ========================================================================== */
 
@@ -470,9 +594,10 @@ export default function ProductFormPage() {
   const [additionalInfo, setAdditionalInfo] =
     useState([])
 
-  // Categories beyond the primary one -- the product still lives mainly
-  // under `category_id`, this is just "also list it under these too".
-  const [extraCategoryIds, setExtraCategoryIds] =
+
+  // Accessories: what goes WITH this product, as opposed to the same-category
+  // products that are alternatives TO it.
+  const [pairedIds, setPairedIds] =
     useState([])
 
   const [seoOpen, setSeoOpen] =
@@ -606,11 +731,6 @@ export default function ProductFormPage() {
   const productName = useWatch({
     control,
     name: 'name',
-  })
-
-  const primaryCategoryId = useWatch({
-    control,
-    name: 'category_id',
   })
 
   /*
@@ -879,10 +999,10 @@ export default function ProductFormPage() {
         [],
     )
 
-    setExtraCategoryIds(
-      (product.additional_categories ?? []).map(
-        (category) => category.id,
-      ),
+
+    setPairedIds(
+      product.paired_product_ids ??
+        [],
     )
 
     if (product.attributes) {
@@ -1134,10 +1254,8 @@ export default function ProductFormPage() {
           row.description?.trim(),
       )
 
-    // Always sent, even empty -- the backend replaces the extra-category
-    // set with exactly this list, so unchecking every box has to clear it.
-    payload.category_ids =
-      extraCategoryIds
+    payload.paired_product_ids =
+      pairedIds
 
     try {
       let productId = id
@@ -1490,51 +1608,28 @@ export default function ProductFormPage() {
 
                 </div>
 
-                {categoryOptions.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-ink-800">
-                      Additional categories
-                    </p>
+                {/*
+                   Accessories, picked per product. "Related products" already
+                   offers the same category -- alternatives to something the
+                   shopper has chosen. These are what goes WITH it: the wire
+                   and the connector for a battery.
+                */}
+                <div>
+                  <p className="text-sm font-medium text-ink-800">
+                    Additional products
+                  </p>
 
-                    <p className="mt-0.5 text-xs text-ink-500">
-                      Optional. The product also appears under any category checked here, alongside its main one above.
-                    </p>
+                  <p className="mt-0.5 text-xs text-ink-500">
+                    Shown on this product's page as &ldquo;Goes Well With&rdquo;.
+                    Search for the accessories that go with it.
+                  </p>
 
-                    <div className="mt-2 grid max-h-48 grid-cols-1 gap-x-4 gap-y-1.5 overflow-y-auto rounded-lg border border-ink-200 p-3 sm:grid-cols-2">
-                      {categoryOptions
-                        .filter(
-                          (category) =>
-                            String(category.id) !== String(primaryCategoryId),
-                        )
-                        .map((category) => {
-                          const checked = extraCategoryIds.includes(category.id)
-
-                          return (
-                            <label
-                              key={category.id}
-                              className="flex items-center gap-2 text-sm text-ink-700"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() =>
-                                  setExtraCategoryIds((current) =>
-                                    checked
-                                      ? current.filter((cid) => cid !== category.id)
-                                      : [...current, category.id],
-                                  )
-                                }
-                                className="h-4 w-4 rounded border-ink-300"
-                              />
-
-                              {'— '.repeat(category.depth ?? 0)}
-                              {category.name}
-                            </label>
-                          )
-                        })}
-                    </div>
-                  </div>
-                )}
+                  <PairedProductPicker
+                    selected={pairedIds}
+                    onChange={setPairedIds}
+                    excludeId={id ? Number(id) : null}
+                  />
+                </div>
 
                 <div className="grid gap-5 md:grid-cols-2">
 

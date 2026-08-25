@@ -118,6 +118,13 @@ class ProductResource extends JsonResource
             ),
             'variations' => ProductVariationResource::collection($this->whenLoaded('variations')),
 
+            // Ids only -- the admin form matches them against the product
+            // list it is already searching.
+            'paired_product_ids' => $this->whenLoaded(
+                'pairedProducts',
+                fn () => $this->pairedProducts->pluck('id'),
+            ),
+
             'specifications' => $this->whenLoaded('attributeValues', fn () => $this->attributeValues
                 ->groupBy(fn ($v) => $v->attribute->name)
                 ->map(fn ($values) => $values->pluck('value'))),

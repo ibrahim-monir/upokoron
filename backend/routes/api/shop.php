@@ -49,6 +49,9 @@ Route::get('products', [ProductController::class, 'index'])
 Route::get('products/trending', [ProductController::class, 'trending'])
     ->name('products.trending');
 
+Route::get('products/{product:slug}/goes-with', [ProductController::class, 'goesWith'])
+    ->name('products.goes-with');
+
 Route::get('products/{product:slug}', [ProductController::class, 'show'])
     ->name('products.show');
 
@@ -134,6 +137,11 @@ Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.st
 
 Route::get('orders/{number}', [CheckoutController::class, 'showOrder'])->name('orders.show');
 Route::post('orders/{number}/cancel', [CheckoutController::class, 'cancel'])->name('orders.cancel');
+
+// "I have sent the money, here is the bKash id." A note for staff to check
+// against the statement -- it marks nothing paid on its own.
+Route::post('orders/{number}/payment-reference', [CheckoutController::class, 'submitPaymentReference'])
+    ->name('orders.payment-reference');
 
 Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::post('auth/logout', [LoginController::class, 'destroy'])

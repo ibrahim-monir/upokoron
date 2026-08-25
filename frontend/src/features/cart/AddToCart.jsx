@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Check, Minus, Plus, ShoppingCart } from 'lucide-react'
 import { Button, useToast } from '../../components/ui'
 import { useAddToCart } from './useCart'
+import { useCartDrawer } from './useCartDrawer'
 
 /**
  * The buy box.
@@ -29,6 +30,12 @@ export function AddToCart({ variation, compact = false }) {
       {
         onSuccess() {
           setAdded(true)
+
+          // Slide the basket out. This is the whole point of a side cart:
+          // you see what you just added, and what it comes to, without
+          // being taken off the page you were shopping on.
+          useCartDrawer.getState().show()
+
           // Long enough to register, short enough that the button is ready
           // again before someone tries to add a second item.
           setTimeout(() => setAdded(false), 2000)

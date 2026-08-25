@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Shop;
 
 use App\Enums\OrderStatus;
+use App\Enums\ProductStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
@@ -196,6 +197,38 @@ class ProductController extends Controller
 
             $products = $products->concat($filler);
         }
+
+        return ProductResource::collection($products);
+    }
+
+    /**
+     * Accessories for the product being viewed.
+     *
+     * NOT more of the same category -- that is what "related" already does,
+     * and it offers a shopper looking at a battery another battery. These
+     * are the products the owner picked as going with this one.
+     *
+     * Empty when nothing is paired, so the storefront simply shows no
+     * section rather than falling back to something that misses the point.
+     */
+    public function goesWith(Request $request, Product $product): AnonymousResourceCollection
+    {
+        abort_unless(
+            $product->status === ProductStatus::Active
+            && ($product->published_at === null || $product->published_at->lte(now())),
+            404,
+        );
+
+        $limit = min(max($request->integer('limit', 10), 1), 24);
+
+        $products = $product->pairedProducts()
+            ->published()
+            ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage', 'defaultVariation.inventory'])
+            ->withCount('variations')
+            // A paired product that was later withdrawn or unpublished drops
+            // out on its own; nobody has to remember to unpick it.
+            ->limit($limit)
+            ->get();
 
         return ProductResource::collection($products);
     }

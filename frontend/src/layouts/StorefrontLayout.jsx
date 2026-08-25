@@ -13,6 +13,7 @@ import {
   Package,
   Phone,
   Search,
+  ShoppingBag,
   ShoppingCart,
   User,
   X,
@@ -26,6 +27,8 @@ import { useFavicon } from '../lib/useFavicon'
 import { useAuthStore } from '../stores/authStore'
 import { Logo } from '../components/Logo'
 import { useCartCount } from '../features/cart/useCart'
+import { CartDrawer } from '../features/cart/CartDrawer'
+import { useCartDrawer } from '../features/cart/useCartDrawer'
 import { useWishlistCount } from '../stores/wishlistStore'
 import { Footer } from './Footer'
 
@@ -305,12 +308,17 @@ function SearchBar({ className }) {
  * count comes from local storage instead: saved items are per-device until
  * there is a wishlist table to hang them on.
  */
-function IconCounter({ icon: Icon, count = 0, label, to }) {
+function IconCounter({ icon: Icon, count = 0, label, to, onClick }) {
+  const Wrapper = onClick ? 'button' : Link
+
   return (
     // White on the navy bar, with the count in a white pill. The count uses
     // brand-800 rather than brand-600: at 10px on white the brighter orange
     // does not carry enough contrast to be read.
-    <Link to={to} className="relative flex items-center gap-1.5 text-white/95 hover:text-white">
+    <Wrapper
+      {...(onClick ? { type: 'button', onClick } : { to })}
+      className="relative flex items-center gap-1.5 text-white/95 hover:text-white"
+    >
       <span className="relative">
         <Icon className="h-5 w-5" aria-hidden="true" />
         <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-white px-1 text-[10px] font-bold text-brand-800">
@@ -318,7 +326,7 @@ function IconCounter({ icon: Icon, count = 0, label, to }) {
         </span>
       </span>
       {label && <span className="hidden whitespace-nowrap text-sm font-medium lg:inline">{label}</span>}
-    </Link>
+    </Wrapper>
   )
 }
 
@@ -329,6 +337,7 @@ function IconCounter({ icon: Icon, count = 0, label, to }) {
  */
 function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
   const wishlistCount = useWishlistCount()
+  const openCart = useCartDrawer((state) => state.show)
 
   return (
     <header className="sticky top-0 z-30 bg-navy-900 shadow-sm">
@@ -338,23 +347,23 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
         <SearchBar className="hidden max-w-sm flex-1 md:block lg:max-w-md" />
 
         <nav className="hidden items-center gap-5 lg:flex">
-          <NavLink to="/products" className="whitespace-nowrap text-sm font-medium text-white/95 hover:text-white">
+          <NavLink to="/products" className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white">
             Shop
           </NavLink>
           <NavLink
             to="/products?sort=oldest"
-            className="whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
+            className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white"
           >
             Offers
           </NavLink>
-          <NavLink to="/contact" className="whitespace-nowrap text-sm font-medium text-white/95 hover:text-white">
+          <NavLink to="/contact" className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white">
             Contact
           </NavLink>
         </nav>
 
         <div className="ml-auto flex items-center gap-3 lg:gap-4">
           <div className="hidden items-center gap-4 sm:flex">
-            <IconCounter icon={ShoppingCart} to="/cart" label="Cart" count={cartCount} />
+            <IconCounter icon={ShoppingCart} onClick={openCart} label="Cart" count={cartCount} />
             <IconCounter icon={Heart} to="/wishlist" label="Wishlist" count={wishlistCount} />
           </div>
 
@@ -461,7 +470,7 @@ function NewsTicker({ text }) {
 /** Announcement ticker on the left, support phone + Order Track on the right. Hidden on phones -- there is no room, and a tel: link is one tap away in the mobile menu instead. */
 function TopBar({ settings }) {
   return (
-    <div className="hidden border-b border-white/10 bg-navy-800 text-white sm:block">
+    <div className="hidden border-b border-white/10 bg-[#1C61E7] text-white sm:block">
       <div className="mx-auto flex h-9 max-w-[1400px] items-center gap-4 px-3 text-xs sm:px-4">
         <NewsTicker text={settings?.store_ticker_text} />
 
@@ -571,7 +580,7 @@ function CategoryBar() {
                 aria-expanded={hasChildren ? isOpen : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 className={cx(
-                  'relative flex items-center gap-1 whitespace-nowrap px-3 py-3 text-base font-semibold uppercase transition-colors duration-150',
+                  'relative flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-semibold uppercase transition-colors duration-150',
                   isActive || isOpen ? 'text-brand-800' : 'text-ink-700 hover:text-brand-800',
                 )}
               >
@@ -685,6 +694,7 @@ function CategoryBar() {
 
 function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
   const wishlistCount = useWishlistCount()
+  const openCart = useCartDrawer((state) => state.show)
 
   const categories = useStoreCategories()
   const categoryList = categories.data ?? []
@@ -707,7 +717,7 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
 
           <div className="flex items-center gap-3 lg:gap-4">
             <div className="hidden items-center gap-4 sm:flex">
-              <IconCounter icon={ShoppingCart} to="/cart" label="Cart" count={cartCount} />
+              <IconCounter icon={ShoppingCart} onClick={openCart} label="Cart" count={cartCount} />
               <IconCounter icon={Heart} to="/wishlist" label="Wishlist" count={wishlistCount} />
             </div>
 
@@ -788,6 +798,7 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
 export function StorefrontLayout() {
   const { data: settings } = useStoreSettings()
   const cartCount = useCartCount()
+  const openCart = useCartDrawer((state) => state.show)
   const user = useAuthStore((state) => state.user)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -833,21 +844,26 @@ export function StorefrontLayout() {
             <MessageCircle className="h-6 w-6" aria-hidden="true" />
           </a>
         )}
-
-        {/* Floating cart, as in the reference. */}
-        <Link
-          to="/cart"
-          aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
-          className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-raised ring-1 ring-ink-200 hover:ring-brand-300"
-        >
-          <span className="relative">
-            <ShoppingCart className="h-5 w-5 text-brand-800" aria-hidden="true" />
-            <span className="absolute -right-2.5 -top-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
-              {cartCount}
-            </span>
-          </span>
-        </Link>
       </div>
+
+      {/*
+         A tab on the edge of the window rather than a button in the corner:
+         it stays in one place down the whole page, and the count is spelled
+         out instead of squeezed into a dot.
+      */}
+      <button
+        type="button"
+        onClick={openCart}
+        aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+        className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-lg bg-brand-600 px-2.5 py-3.5 text-white shadow-raised transition-colors hover:bg-brand-700"
+      >
+        <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+        <span className="tabular whitespace-nowrap text-[11px] font-semibold leading-none">
+          {cartCount} {cartCount === 1 ? 'Item' : 'Items'}
+        </span>
+      </button>
+
+      <CartDrawer />
     </div>
   )
 }

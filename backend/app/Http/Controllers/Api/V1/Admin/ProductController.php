@@ -209,6 +209,9 @@ class ProductController extends Controller
             // stock movement, so it needs the current level to diff against.
             'variations.inventory',
             'attributeValues.attribute',
+            // The accessory picker on the form needs to know what is already
+            // chosen.
+            'pairedProducts:id',
         ]));
     }
 

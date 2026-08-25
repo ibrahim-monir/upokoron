@@ -164,6 +164,7 @@ class CategoryController extends Controller
             'is_featured' => ['sometimes', 'boolean'],
             'meta_title' => ['nullable', 'string', 'max:160'],
             'meta_description' => ['nullable', 'string', 'max:320'],
+
         ]);
     }
 }

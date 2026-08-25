@@ -128,6 +128,17 @@ class Product extends Model
         ])->save();
     }
 
+    /**
+     * Accessories for this product -- what goes WITH it, as opposed to the
+     * same-category products that are alternatives TO it.
+     */
+    public function pairedProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'product_pairings', 'product_id', 'paired_product_id')
+            ->withPivot('position')
+            ->orderBy('product_pairings.position');
+    }
+
     public function primaryImage(): HasOne
     {
         return $this->hasOne(ProductImage::class)->where('is_primary', true);

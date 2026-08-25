@@ -38,6 +38,7 @@ class ProductService
             $product = Product::create($this->productAttributes($data) + ['created_by' => Auth::id()]);
 
             $this->syncCategories($product, $data);
+            $this->syncPairings($product, $data);
             $this->syncSpecs($product, $data);
             $this->syncVariations($product, $data);
 
@@ -54,6 +55,7 @@ class ProductService
             $product->update($this->productAttributes($data, $product));
 
             $this->syncCategories($product, $data);
+            $this->syncPairings($product, $data);
             $this->syncSpecs($product, $data);
             $this->syncVariations($product->refresh(), $data);
 
@@ -313,6 +315,30 @@ class ProductService
     /**
      * @param  array<string, mixed>  $data
      */
+    /**
+     * The accessories picked for this product.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function syncPairings(Product $product, array $data): void
+    {
+        if (! array_key_exists('paired_product_ids', $data)) {
+            return;
+        }
+
+        // A product paired with itself would offer the shopper the page they
+        // are already on.
+        $ids = collect($data['paired_product_ids'] ?? [])
+            ->reject(fn ($id) => (int) $id === $product->id)
+            ->unique()
+            ->values();
+
+        // The order they were sent in is the order the storefront shows them.
+        $product->pairedProducts()->sync(
+            $ids->mapWithKeys(fn ($id, $index) => [$id => ['position' => $index]])->all(),
+        );
+    }
+
     private function syncCategories(Product $product, array $data): void
     {
         if (! array_key_exists('category_ids', $data)) {

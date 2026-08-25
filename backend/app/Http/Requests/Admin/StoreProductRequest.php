@@ -59,6 +59,10 @@ class StoreProductRequest extends FormRequest
             'category_ids' => ['sometimes', 'array'],
             'category_ids.*' => [Rule::exists('categories', 'id')->whereNull('deleted_at')],
 
+            // Accessories shown on this product's page.
+            'paired_product_ids' => ['sometimes', 'array'],
+            'paired_product_ids.*' => [Rule::exists('products', 'id')->whereNull('deleted_at')],
+
             // Descriptive specs. Do NOT create variations.
             'specifications' => ['sometimes', 'array'],
             'specifications.*' => ['array'],

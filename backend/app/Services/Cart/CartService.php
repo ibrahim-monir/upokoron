@@ -173,6 +173,7 @@ class CartService
         $cart->loadMissing([
             'items.variation.product:id,name,slug,status,published_at',
             'items.variation.image',
+            'items.variation.product.primaryImage',
             'items.variation.inventory',
             'items.reservation',
             'coupon',
@@ -207,7 +208,7 @@ class CartService
                 'slug' => $variation->product?->slug,
                 'variation' => $variation->displayName(),
                 'sku' => $variation->sku,
-                'image' => $variation->image?->url,
+                'image' => ($variation->image ?? $variation->product?->primaryImage)?->url(),
                 'quantity' => $item->quantity()->value(),
                 'list_price' => $line->listPrice->value(),
                 'unit_price' => $line->unitPrice->value(),
