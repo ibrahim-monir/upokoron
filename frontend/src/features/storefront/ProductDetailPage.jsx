@@ -5,11 +5,13 @@ import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Gift,
   Heart,
   ImageOff,
+  Layers,
   Minus,
   PackageOpen,
   Plus,
@@ -35,7 +37,9 @@ import { FacebookIcon, WhatsAppIcon, XIcon } from '../../components/BrandIcons'
 import { useAuthStore } from '../../stores/authStore'
 import { applyServerErrors } from '../auth/applyServerErrors'
 import { useAddToCart } from '../cart/useCart'
-import { PRODUCT_GRID, ProductCard, ProductCardSkeleton } from './ProductCard'
+import { TrendingSection } from './HomePage'
+import { ProductCard, ProductCardSkeleton } from './ProductCard'
+import { RailArrows, useRail } from './Rail'
 import {
   useDeleteReview,
   useMyReview,
@@ -319,29 +323,60 @@ function ReviewsPanel({ product }) {
   )
 }
 
-/** Real related products -- same category, current one excluded. Nothing shown if there is no category or nothing else in it. */
+/**
+ * Real related products -- same category, current one excluded. Styled the
+ * same way as the home page's Trending rail (icon heading, "See More", a
+ * snap-scroll row with overlaid arrows) so a product page reads as a
+ * continuation of the same design language rather than a different section
+ * type. Nothing shown if there is no category or nothing else in it.
+ */
 function RelatedProducts({ categorySlug, excludeId }) {
   const query = useQuery({
     queryKey: ['shop', 'products', 'related', categorySlug],
-    queryFn: () => get('/shop/products', { params: { category: categorySlug, per_page: 5 } }),
+    // More than fits on one row, so there is something to slide to -- the
+    // same reasoning TrendingSection uses for its own limit.
+    queryFn: () => get('/shop/products', { params: { category: categorySlug, per_page: 10 } }),
     enabled: Boolean(categorySlug),
     select: (response) => response.data,
   })
 
+  const products = (query.data ?? []).filter((product) => product.id !== excludeId)
+  const rail = useRail(products.length)
+
   if (!categorySlug) return null
-
-  const products = (query.data ?? []).filter((product) => product.id !== excludeId).slice(0, 4)
-
   if (query.isSuccess && products.length === 0) return null
 
   return (
     <section>
-      <h2 className="text-center text-xl font-bold text-ink-900">Explore Related Products</h2>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-ink-900">
+          <Layers className="h-5 w-5 text-brand-600" aria-hidden="true" />
+          Related Products
+        </h2>
 
-      <div className={cx('mt-5', PRODUCT_GRID)}>
-        {query.isLoading
-          ? Array.from({ length: 4 }).map((_, index) => <ProductCardSkeleton key={index} />)
-          : products.map((product) => <ProductCard key={product.id} product={product} />)}
+        <Link
+          to={`/category/${categorySlug}`}
+          className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+        >
+          See More
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      </div>
+
+      {/* Positioned parent for the overlaid arrows. */}
+      <div className="relative">
+        <RailArrows rail={rail} label="related products" />
+
+        <div ref={rail.ref} className="rail flex snap-x snap-mandatory gap-3 scroll-smooth pb-1">
+          {(query.isLoading ? Array.from({ length: 5 }) : products).map((product, index) => (
+            <div
+              key={product?.id ?? index}
+              className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1.5rem)/3)] md:w-[calc((100%-2.25rem)/4)] xl:w-[calc((100%-3rem)/5)]"
+            >
+              {product ? <ProductCard product={product} /> : <ProductCardSkeleton />}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )
@@ -810,6 +845,8 @@ export function ProductDetailPage() {
       </div>
 
       <RelatedProducts categorySlug={product.category?.slug} excludeId={product.id} />
+
+      <TrendingSection />
 
       <section className="grid gap-3 border-t border-ink-200 pt-6 sm:grid-cols-3">
         {TRUST.map(({ icon: Icon, title, body }) => (
