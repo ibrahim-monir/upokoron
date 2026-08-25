@@ -470,6 +470,11 @@ export default function ProductFormPage() {
   const [additionalInfo, setAdditionalInfo] =
     useState([])
 
+  // Categories beyond the primary one -- the product still lives mainly
+  // under `category_id`, this is just "also list it under these too".
+  const [extraCategoryIds, setExtraCategoryIds] =
+    useState([])
+
   const [seoOpen, setSeoOpen] =
     useState(false)
 
@@ -601,6 +606,11 @@ export default function ProductFormPage() {
   const productName = useWatch({
     control,
     name: 'name',
+  })
+
+  const primaryCategoryId = useWatch({
+    control,
+    name: 'category_id',
   })
 
   /*
@@ -869,6 +879,12 @@ export default function ProductFormPage() {
         [],
     )
 
+    setExtraCategoryIds(
+      (product.additional_categories ?? []).map(
+        (category) => category.id,
+      ),
+    )
+
     if (product.attributes) {
       setAttributes(
         product.attributes,
@@ -1117,6 +1133,11 @@ export default function ProductFormPage() {
           row.feature?.trim() &&
           row.description?.trim(),
       )
+
+    // Always sent, even empty -- the backend replaces the extra-category
+    // set with exactly this list, so unchecking every box has to clear it.
+    payload.category_ids =
+      extraCategoryIds
 
     try {
       let productId = id
@@ -1468,6 +1489,52 @@ export default function ProductFormPage() {
                   </Field>
 
                 </div>
+
+                {categoryOptions.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-ink-800">
+                      Additional categories
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-ink-500">
+                      Optional. The product also appears under any category checked here, alongside its main one above.
+                    </p>
+
+                    <div className="mt-2 grid max-h-48 grid-cols-1 gap-x-4 gap-y-1.5 overflow-y-auto rounded-lg border border-ink-200 p-3 sm:grid-cols-2">
+                      {categoryOptions
+                        .filter(
+                          (category) =>
+                            String(category.id) !== String(primaryCategoryId),
+                        )
+                        .map((category) => {
+                          const checked = extraCategoryIds.includes(category.id)
+
+                          return (
+                            <label
+                              key={category.id}
+                              className="flex items-center gap-2 text-sm text-ink-700"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  setExtraCategoryIds((current) =>
+                                    checked
+                                      ? current.filter((cid) => cid !== category.id)
+                                      : [...current, category.id],
+                                  )
+                                }
+                                className="h-4 w-4 rounded border-ink-300"
+                              />
+
+                              {'— '.repeat(category.depth ?? 0)}
+                              {category.name}
+                            </label>
+                          )
+                        })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid gap-5 md:grid-cols-2">
 
