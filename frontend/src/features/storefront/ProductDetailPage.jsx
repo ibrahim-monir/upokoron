@@ -512,7 +512,7 @@ export function ProductDetailPage() {
               <img
                 src={images[activeImage].url}
                 alt={images[activeImage].alt ?? product.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
             ) : (
               <div className="grid h-full place-items-center text-ink-300">
@@ -556,7 +556,7 @@ export function ProductDetailPage() {
                     index === activeImage ? 'border-brand-600' : 'border-ink-200',
                   )}
                 >
-                  <img src={image.url} alt="" className="h-full w-full object-cover" />
+                  <img src={image.url} alt="" className="h-full w-full object-contain" />
                 </button>
               ))}
             </div>
