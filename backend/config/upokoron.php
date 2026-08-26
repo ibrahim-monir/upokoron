@@ -210,14 +210,54 @@ return [
         /*
          * Footer content pages.
          *
-         * Empty by default and left that way on purpose: a privacy policy or
-         * terms document has to describe what this specific shop actually
-         * does, and shipping invented legal text would be worse than shipping
-         * none. The owner writes these in Settings; until then each page says
-         * so plainly rather than showing filler.
+         * Privacy and terms are empty on purpose: a legal document has to
+         * describe what this specific shop actually does, and shipping
+         * invented legal text would be worse than shipping none. The owner
+         * writes them in Settings; until then each page says so plainly.
+         *
+         * About is the exception, and the ownership notice is why. An empty
+         * notice is not a blank waiting to be filled -- it is the statement
+         * not being made, on the one page a customer goes looking for it.
+         * So it ships written, in both languages, and the owner edits the
+         * wording rather than starting from nothing.
          */
         'pages' => [
-            'page_about' => '',
+            'about_intro' => 'Upokoron.com is an online electronics shop working out of Dhaka. '.
+                'We stock the small, practical parts that keep everyday electronics running -- '.
+                'batteries, wires, connectors, chargers, cables, bulbs, earbuds and speakers -- '.
+                "and we deliver them across Bangladesh.\n\n".
+                'The name is the promise. Upokoron means the parts a thing is made of: the piece '.
+                "you actually need, in stock, at a price you can check before you order.\n\n".
+                'We keep real stock counts instead of taking orders for what we do not have. The '.
+                'price you see is the price at checkout, and you can pay cash when the parcel '.
+                "reaches your hand.\n\n".
+                'We are a small team and we are new at this. If something arrives wrong, tell us '.
+                '-- we would rather fix an order than win an argument.',
+
+            'about_intro_bangla' => 'Upokoron.com ঢাকা থেকে পরিচালিত একটি অনলাইন ইলেকট্রনিক্স দোকান। '.
+                'দৈনন্দিন ইলেকট্রনিক্স সচল রাখতে যে ছোট ছোট যন্ত্রাংশ দরকার হয় — ব্যাটারি, তার, কানেক্টর, '.
+                "চার্জার, ক্যাবল, বাল্ব, ইয়ারবাড, স্পিকার — আমরা সেগুলো স্টকে রাখি এবং সারা বাংলাদেশে পৌঁছে দিই।\n\n".
+                'নামটাই আমাদের প্রতিশ্রুতি। উপকরণ মানে যা দিয়ে জিনিসটা তৈরি — আপনার ঠিক যেটা প্রয়োজন, '.
+                "সেটাই স্টকে, আর দামটা অর্ডার করার আগেই দেখে নিতে পারবেন।\n\n".
+                'যা আমাদের কাছে নেই, তার অর্ডার আমরা নিই না — স্টকের হিসাব সত্যি রাখি। যে দাম দেখছেন, '.
+                "চেকআউটেও সেই দাম, আর পণ্য হাতে পেয়ে নগদে দাম পরিশোধ করার সুযোগ আছে।\n\n".
+                'আমরা ছোট একটি দল, আর এই কাজে আমরা নতুন। কিছু ভুল হলে আমাদের জানান — তর্ক জেতার চেয়ে '.
+                'অর্ডারটা ঠিক করে দেওয়াই আমাদের কাছে জরুরি।',
+
+            'about_notice' => 'Upokoron.com began trading in 2026 as a new and independent '.
+                'business. We have no connection -- of ownership, management, or liability -- to '.
+                'anyone who ran this business before us. Orders, payments, dues, warranties or '.
+                'promises made by any earlier operator are not ours, and we are not able to act '.
+                'on them. Everything you buy from Upokoron.com from 2026 onwards is ours, and we '.
+                'stand behind it.',
+
+            'about_notice_bangla' => 'Upokoron.com ২০২৬ সাল থেকে সম্পূর্ণ নতুন ও স্বতন্ত্র প্রতিষ্ঠান '.
+                'হিসেবে ব্যবসা শুরু করেছে। আমাদের আগে যাঁরা এই ব্যবসা পরিচালনা করেছেন, তাঁদের সঙ্গে '.
+                'মালিকানা, পরিচালনা বা দায়দায়িত্ব — কোনো দিক থেকেই আমাদের সম্পর্ক নেই। পূর্ববর্তী কোনো '.
+                'পরিচালকের নেওয়া অর্ডার, লেনদেন, পাওনা, ওয়ারেন্টি বা প্রতিশ্রুতির দায় আমাদের নয় এবং '.
+                'সেসব বিষয়ে আমাদের কিছু করার সুযোগ নেই। ২০২৬ সাল থেকে Upokoron.com থেকে আপনি যা '.
+                'কিনবেন, তার সম্পূর্ণ দায়িত্ব আমাদের।',
+
             'page_privacy' => '',
             'page_terms' => '',
         ],

@@ -101,7 +101,7 @@ export function RewardsPanel() {
           className={cx(
             'flex items-center gap-2 border-t px-4 py-2.5 text-xs',
             soon
-              ? 'border-warning-200 bg-warning-50 text-warning-800'
+              ? 'border-warning-500 bg-warning-50 text-warning-700'
               : 'border-ink-100 text-ink-500',
           )}
         >

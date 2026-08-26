@@ -26,6 +26,7 @@ import { ProductDetailPage } from '../features/storefront/ProductDetailPage'
 import { ContactPage, ContentPage } from '../features/storefront/ContentPage'
 import { CartPage } from '../features/cart/CartPage'
 import { RewardsPage } from '../features/storefront/RewardsPage'
+import { AboutPage } from '../features/storefront/AboutPage'
 import { WishlistPage } from '../features/wishlist/WishlistPage'
 import { CheckoutPage } from '../features/checkout/CheckoutPage'
 import { OrderCompletePage } from '../features/checkout/OrderCompletePage'
@@ -122,10 +123,7 @@ export const router = createBrowserRouter([
 
       // Footer pages. Bodies come from settings the owner writes.
       { path: 'contact', element: <ContactPage /> },
-      {
-        path: 'about',
-        element: <ContentPage title="About us" settingKey="page_about" />,
-      },
+      { path: 'about', element: <AboutPage /> },
       {
         path: 'privacy',
         element: <ContentPage title="Privacy policy" settingKey="page_privacy" />,

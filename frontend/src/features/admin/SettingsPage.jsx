@@ -48,7 +48,10 @@ const COLOUR_HINTS = {
 
 /** Long-form settings that need room to write in. */
 const MULTILINE = [
-  'page_about',
+  'about_intro',
+  'about_intro_bangla',
+  'about_notice',
+  'about_notice_bangla',
   'page_privacy',
   'page_terms',
   'store_address',
@@ -63,6 +66,11 @@ const CODE_KEYS = ['custom_header_scripts', 'custom_footer_scripts']
 
 /** Plain-text settings whose expected format is not obvious from the label alone. */
 const HINTS = {
+  about_intro: 'The About page body, in English. Blank lines separate paragraphs.',
+  about_intro_bangla: 'The same story in Bangla. Readers switch between the two on the page itself.',
+  about_notice:
+    'The ownership notice, in English. It sits in a highlighted panel near the top of the About page, and both languages of it are always shown -- whichever one the reader is not on appears underneath. Emptying both hides the panel, which is the statement not being made.',
+  about_notice_bangla: 'The ownership notice in Bangla.',
   google_site_verification:
     "From Search Console: Settings > Ownership verification > HTML tag. Paste only the tag's content value, not the whole <meta> tag.",
   google_analytics_id: 'The GA4 Measurement ID from Admin > Data streams, in the form G-XXXXXXXXXX.',
