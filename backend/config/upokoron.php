@@ -54,7 +54,7 @@ return [
      * public was silently demoted to private the first time anyone saved it
      * through the admin API.
      */
-    'public_setting_groups' => ['store', 'pages', 'theme', 'home', 'marketing'],
+    'public_setting_groups' => ['store', 'pages', 'theme', 'home', 'marketing', 'product', 'faq'],
 
     'settings' => [
 
@@ -180,6 +180,31 @@ return [
             // <head>, footer at the end of <body>, on every storefront page.
             'custom_header_scripts' => '',
             'custom_footer_scripts' => '',
+        ],
+
+        /*
+         * The product page.
+         *
+         * Public, because the storefront renders it for visitors who have
+         * not signed in.
+         */
+        'product' => [
+            'product_pairs_title' => 'You May Also Like',
+
+            // With more accessories than fit, either slide through them or
+            // show the first two and stop. Off by default: the block sits in
+            // half a row beside the description, and arrows there compete
+            // with the product itself for the same attention.
+            'product_pairs_slide' => false,
+        ],
+
+        /*
+         * The FAQ block on the contact page. The questions themselves live
+         * in their own table; only the framing is a setting.
+         */
+        'faq' => [
+            'faq_title' => 'Frequently asked questions',
+            'faq_intro' => 'Got a question? These come up most often.',
         ],
 
         /*

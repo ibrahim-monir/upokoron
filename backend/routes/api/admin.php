@@ -19,6 +19,8 @@ use App\Http\Controllers\Api\V1\Admin\PaymentMethodController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\RewardController;
+use App\Http\Controllers\Api\V1\Admin\ContactMessageController;
+use App\Http\Controllers\Api\V1\Admin\FaqController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
@@ -107,6 +109,16 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::put('reviews/{review}/status', [ReviewController::class, 'updateStatus'])->name('reviews.status');
     Route::delete('reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
+    Route::get('faqs', [FaqController::class, 'index'])->name('faqs.index');
+    Route::post('faqs', [FaqController::class, 'store'])->name('faqs.store');
+    Route::put('faqs/reorder', [FaqController::class, 'reorder'])->name('faqs.reorder');
+    Route::put('faqs/{faq}', [FaqController::class, 'update'])->name('faqs.update');
+    Route::delete('faqs/{faq}', [FaqController::class, 'destroy'])->name('faqs.destroy');
+
+    Route::get('contact-messages', [ContactMessageController::class, 'index'])->name('contact.index');
+    Route::put('contact-messages/{message}/status', [ContactMessageController::class, 'updateStatus'])->name('contact.status');
+    Route::delete('contact-messages/{message}', [ContactMessageController::class, 'destroy'])->name('contact.destroy');
 
     /*
     |----------------------------------------------------------------------

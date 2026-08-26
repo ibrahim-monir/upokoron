@@ -21,6 +21,7 @@ const GROUP_LABELS = {
   inventory: 'Inventory',
   theme: 'Brand colours',
   home: 'Home page',
+  product: 'Product page',
   marketing: 'Analytics & search console',
   audit: 'Audit log',
 }
@@ -71,6 +72,10 @@ const HINTS = {
     'Same as header scripts, but placed at the end of the page instead -- for anything documented to go right before </body>.',
   store_ticker_text:
     'One message per line, scrolling in the header top bar. Leave blank to show nothing there.',
+  product_pairs_title:
+    'Heading above the accessories picked for a product, beside the description.',
+  product_pairs_slide:
+    'With more than two accessories: on, they slide with arrows; off, only the first two are shown.',
 }
 
 /** Settings that hold an image URL, so they get a picker instead of a text box. */
@@ -154,6 +159,7 @@ export default function SettingsPage() {
       if (group === 'pages') return key.startsWith('page_')
       if (group === 'theme') return key.startsWith('theme_')
       if (group === 'home') return key.startsWith('home_')
+      if (group === 'product') return key.startsWith('product_')
       if (group === 'marketing') return key.startsWith('google_') || key.startsWith('custom_')
       if (group === 'inventory') return key === 'allow_negative_stock' || key === 'low_stock_alert'
       return (

@@ -82,6 +82,16 @@
   --color-ink-950: #111a1f;
 
   /*
+   * The sale flag on a product card.
+   *
+   * Its own colour, not danger's. The rule right below is that "this worked"
+   * must never be confusable with "this is a price" -- and a discount badge
+   * borrowing the error red would break it in the other direction.
+   */
+  --color-sale-600: #a11b1b;
+  --color-sale-700: #861414;
+
+  /*
    * Semantic colours are separate from the accent on purpose: "this worked"
    * must never be confusable with "this is a price".
    */
@@ -223,6 +233,52 @@
     to {
       transform: translateX(-50%);
     }
+  }
+}
+
+/*
+ * Entrance motion.
+ *
+ * Two keyframes rather than a library, and both are switched off wholesale
+ * by the reduced-motion block right below -- so anything using them respects
+ * that preference without having to ask.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@layer utilities {
+  /*
+   * Starts invisible so a staggered delay does not flash the whole group in
+   * first and then animate it -- `both` holds the from-state during the wait.
+   */
+  .rise {
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .pop {
+    animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
 

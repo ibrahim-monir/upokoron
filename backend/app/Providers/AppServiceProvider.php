@@ -76,6 +76,12 @@ class AppServiceProvider extends ServiceProvider
             ->by($request->user()?->id ?: $request->ip()));
 
         // Checkout: expensive, transactional, and a target for stock-probing.
+        // Anyone can post to this without an account, so it is the
+        // tightest limit on the site. Five is generous for a person with a
+        // question and useless to anything sending in bulk.
+        RateLimiter::for('contact', fn (Request $request) => Limit::perMinute(5)
+            ->by($request->ip()));
+
         RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)
             ->by($request->user()?->id ?: $request->ip()));
     }

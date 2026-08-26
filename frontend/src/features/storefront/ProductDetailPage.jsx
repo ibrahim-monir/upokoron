@@ -37,7 +37,6 @@ import {
 import { FacebookIcon, WhatsAppIcon, XIcon } from '../../components/BrandIcons'
 import { useAuthStore } from '../../stores/authStore'
 import { applyServerErrors } from '../auth/applyServerErrors'
-import { AddToCart } from '../cart/AddToCart'
 import { useAddToCart } from '../cart/useCart'
 import { TrendingSection } from './HomePage'
 import { ProductCard, ProductCardSkeleton } from './ProductCard'
@@ -393,82 +392,23 @@ function RelatedProducts({ categorySlug, excludeId }) {
  * the cross-sell in a shouting match with the sale. A thumbnail, a name, a
  * price and one button says the same thing in a fifth of the height.
  */
-function GoesWithRow({ product }) {
-  const variation = product.default_variation
-  const price = variation?.effective_price ?? variation?.selling_price
-  const wasPrice = variation?.is_on_sale ? variation.selling_price : variation?.compare_at_price
-  const hasDiscount = Number(wasPrice ?? 0) > Number(price ?? 0)
-
-  return (
-    <li className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-ink-50">
-      <Link
-        to={`/products/${product.slug}`}
-        className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-white"
-      >
-        {product.primary_image ? (
-          <img
-            src={product.primary_image}
-            alt={product.name}
-            loading="lazy"
-            className="h-full w-full object-contain"
-          />
-        ) : (
-          <ImageOff className="h-5 w-5 text-ink-300" aria-hidden="true" />
-        )}
-      </Link>
-
-      <div className="min-w-0 flex-1">
-        <Link
-          to={`/products/${product.slug}`}
-          className="line-clamp-1 text-sm font-medium text-ink-900 hover:text-brand-800"
-        >
-          {product.name}
-        </Link>
-
-        <p className="mt-0.5 flex items-baseline gap-2">
-          <span className="tabular text-sm font-bold text-brand-800">{money(price)}</span>
-          {hasDiscount && (
-            <span className="tabular text-xs text-ink-400 line-through">{money(wasPrice)}</span>
-          )}
-        </p>
-      </div>
-
-      {/*
-        Same rule as the product grid: straight into the basket when there is
-        only one thing it could mean, and off to the page when the shopper
-        still has a colour or a size to choose.
-      */}
-      <div className="w-36 shrink-0">
-        {(product.variations_count ?? 1) > 1 ? (
-          <Link
-            to={`/products/${product.slug}`}
-            className="flex h-8 items-center justify-center rounded-lg border border-brand-200 px-3 text-sm font-medium text-brand-800 transition-colors hover:bg-brand-50"
-          >
-            Choose options
-          </Link>
-        ) : (
-          <AddToCart variation={variation} compact />
-        )}
-      </div>
-    </li>
-  )
+/**
+ * The accessories picked for this product.
+ *
+ * A hook rather than a query inside the block, because the page itself has
+ * to know whether there are any before it can decide how wide the
+ * description gets.
+ */
+function useStoreSettings() {
+  return useQuery({
+    queryKey: ['shop', 'settings'],
+    queryFn: () => get('/shop/settings'),
+    staleTime: 5 * 60 * 1000,
+    select: (response) => response.data,
+  })
 }
 
-/**
- * Accessories, from the categories the owner paired this one with.
- *
- * Distinct from Related Products below, which offers more of the same
- * category -- alternatives to something already chosen. This offers the
- * wire and the connector to go with the battery. Renders nothing when the
- * category has no pairings, rather than falling back to something that
- * misses the point.
- *
- * `compact` is the version that sits beside the product rather than under
- * the page: a short grid instead of a rail, because a horizontal scroller
- * in a half-width column shows two cropped cards and hides the rest behind
- * a gesture nobody makes on a column that narrow.
- */
-function GoesWith({ slug, compact = false }) {
+function useGoesWith(slug) {
   const query = useQuery({
     queryKey: ['shop', 'products', 'goes-with', slug],
     queryFn: () => get(`/shop/products/${slug}/goes-with`, { params: { limit: 10 } }),
@@ -476,38 +416,45 @@ function GoesWith({ slug, compact = false }) {
     select: (response) => response.data,
   })
 
-  const products = query.data ?? []
-  const rail = useRail(products.length)
+  return query.data ?? []
+}
 
-  if (query.isLoading || products.length === 0) return null
+/**
+ * Accessories as full cards, beside the description.
+ *
+ * Two across, because this sits in half a row next to the description. What
+ * happens when there are more than two is the owner's call: slide through
+ * them, or show the first two and stop. Off by default -- arrows here
+ * compete with the product itself for the same attention.
+ */
+function GoesWithCards({ products, title, slide }) {
+  const canSlide = slide && products.length > 2
+  const rail = useRail(canSlide ? products.length : 0)
 
-  if (compact) {
+  const heading = (
+    <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+      <Sparkles className="h-5 w-5 text-brand-600" aria-hidden="true" />
+      {title}
+    </h2>
+  )
+
+  if (!canSlide) {
     return (
-      <section className="overflow-hidden rounded-card border border-ink-200 bg-white">
-        <h2 className="flex items-center gap-2 border-b border-ink-100 bg-ink-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-ink-700">
-          <Sparkles className="h-4 w-4 text-brand-600" aria-hidden="true" />
-          Goes Well With
-        </h2>
+      <section>
+        <div className="mb-3">{heading}</div>
 
-        {/* Four at most: this sits beside the thing being bought, and a wall
-            of accessories next to it competes with it for the same click. */}
-        <ul className="divide-y divide-ink-100">
-          {products.slice(0, 4).map((product) => (
-            <GoesWithRow key={product.id} product={product} />
+        <div className="grid grid-cols-2 gap-3">
+          {products.slice(0, 2).map((product) => (
+            <ProductCard key={product.id} product={product} />
           ))}
-        </ul>
+        </div>
       </section>
     )
   }
 
   return (
     <section>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-ink-900">
-          <Sparkles className="h-5 w-5 text-brand-600" aria-hidden="true" />
-          Goes Well With
-        </h2>
-      </div>
+      <div className="mb-3">{heading}</div>
 
       {/* Positioned parent for the overlaid arrows. */}
       <div className="relative">
@@ -517,7 +464,9 @@ function GoesWith({ slug, compact = false }) {
           {products.map((product) => (
             <div
               key={product.id}
-              className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-1.5rem)/3)] md:w-[calc((100%-2.25rem)/4)] xl:w-[calc((100%-3rem)/5)]"
+              // Two visible, the same as the grid above, so turning sliding
+              // on changes how many there are rather than how big they look.
+              className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start"
             >
               <ProductCard product={product} />
             </div>
@@ -538,6 +487,9 @@ export function ProductDetailPage() {
   const [variationId, setVariationId] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [tab, setTab] = useState('description')
+
+  const goesWith = useGoesWith(slug)
+  const { data: settings } = useStoreSettings()
 
   const wishlistItems = useWishlistStore((state) => state.items)
   const toggleWishlist = useWishlistStore((state) => state.toggle)
@@ -919,13 +871,28 @@ export function ProductDetailPage() {
               </a>
             ))}
           </div>
-
-          <GoesWith slug={product.slug} compact />
         </div>
       </div>
 
-      {/* ------------------------------------------------------------ tabs */}
-      <div>
+      {/*
+         --------------------------------------------------- tabs
+
+         Accessories take half the row when there are any, and the
+         description takes the other half. With nothing to pair, a
+         half-width description beside an empty column would be worse than
+         the full width it had before -- so the split only exists when
+         there is something to put in it.
+      */}
+      <div className={cx(goesWith.length > 0 && 'grid items-start gap-8 lg:grid-cols-2')}>
+        {goesWith.length > 0 && (
+          <GoesWithCards
+            products={goesWith}
+            title={settings?.product_pairs_title || 'You May Also Like'}
+            slide={settings?.product_pairs_slide === true}
+          />
+        )}
+
+        <div>
         <div className="flex gap-6 border-b border-ink-200" role="tablist">
           {TABS.map((item) => (
             <button
@@ -989,6 +956,7 @@ export function ProductDetailPage() {
             ))}
 
           {tab === 'review' && <ReviewsPanel product={product} />}
+          </div>
         </div>
       </div>
 

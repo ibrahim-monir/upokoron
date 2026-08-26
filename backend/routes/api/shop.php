@@ -26,6 +26,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('settings', [SettingController::class, 'publicSettings'])
     ->name('settings');
 
+Route::get('faqs', [\App\Http\Controllers\Api\V1\Shop\FaqController::class, 'index'])
+    ->name('faqs');
+
+// Open to anyone, hence its own tight limiter.
+Route::post('contact', [\App\Http\Controllers\Api\V1\Shop\ContactController::class, 'store'])
+    ->middleware('throttle:contact')
+    ->name('contact.store');
+
 Route::get('banners', [BannerController::class, 'index'])
     ->name('banners.index');
 

@@ -32,11 +32,29 @@ function saving(price, wasPrice) {
   return before - now
 }
 
+/**
+ * The same discount as a percentage, for the flag on the card.
+ *
+ * Rounded, and null below half a percent: "0% off" is worse than no badge,
+ * and a rounding artefact on a two-taka saving is not a promotion.
+ */
+function savingPercent(price, wasPrice) {
+  const now = Number(price ?? 0)
+  const before = Number(wasPrice ?? 0)
+
+  if (!before || before <= now) return null
+
+  const percent = Math.round((1 - now / before) * 100)
+
+  return percent > 0 ? percent : null
+}
+
 export function ProductCard({ product }) {
   const variation = product.default_variation
   const price = variation?.effective_price ?? variation?.selling_price
   const wasPrice = variation?.is_on_sale ? variation.selling_price : variation?.compare_at_price
   const discount = saving(price, wasPrice)
+  const discountPercent = savingPercent(price, wasPrice)
 
   const rating = Number(product.rating_avg ?? 0)
   const sold = Number(product.sold_count ?? 0)
@@ -56,9 +74,9 @@ export function ProductCard({ product }) {
      * long-named ones in the same row.
      */
     <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-ink-200 bg-white transition-shadow hover:shadow-raised">
-      {discount !== null && (
-        <span className="absolute left-0 top-2 z-10 rounded-r-md bg-accent-500 px-2 py-1 text-xs font-semibold text-white">
-          − {money(discount)}
+      {discountPercent !== null && (
+        <span className="absolute left-2.5 top-2.5 z-10 rounded-full bg-sale-600 px-2 py-0.5 text-[11px] font-bold leading-5 text-white">
+          − {discountPercent}%
         </span>
       )}
 

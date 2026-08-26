@@ -88,6 +88,11 @@ final class Permissions
                 'reviews.view' => 'View product reviews',
                 'reviews.moderate' => 'Approve, reject or delete reviews',
             ],
+            'Contact' => [
+                'contact.view' => 'Read messages sent from the contact page',
+                'contact.manage' => 'Mark contact messages read, and delete them',
+                'faqs.manage' => 'Write the questions answered on the contact page',
+            ],
             'Money' => [
                 'expenses.view' => 'View expenses',
                 'expenses.manage' => 'Record expenses',
@@ -161,6 +166,7 @@ final class Permissions
                 'banners.manage', 'coupons.manage', 'discounts.manage',
                 'rewards.view', 'rewards.adjust', 'affiliate.view', 'affiliate.manage',
                 'reviews.view', 'reviews.moderate',
+                'contact.view', 'contact.manage', 'faqs.manage',
                 'expenses.view', 'expenses.manage',
                 'reports.sales', 'reports.inventory',
                 'shipping.manage', 'payments.manage',
@@ -206,6 +212,7 @@ final class Permissions
                 'customers.view', 'customers.manage',
                 'rewards.view',
                 'reviews.view', 'reviews.moderate',
+                'contact.view', 'contact.manage',
             ],
 
             // Storefront accounts. No admin permissions at all.

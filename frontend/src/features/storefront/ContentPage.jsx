@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { FileText, Mail, MapPin, Phone } from 'lucide-react'
+import { Clock, FileText, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { get } from '../../lib/api'
 import { Card, PageLoader } from '../../components/ui'
+import { ContactForm } from './ContactForm'
+import { FaqSection } from './FaqSection'
 
 function useStoreSettings() {
   return useQuery({
@@ -70,43 +72,109 @@ export function ContactPage() {
       href: `tel:${settings?.store_phone_alt}`,
     },
     { icon: Mail, label: 'Email', value: settings?.store_email, href: `mailto:${settings?.store_email}` },
+    { icon: Clock, label: 'Hours', value: settings?.store_support_hours, href: null },
   ].filter((row) => row.value)
 
   return (
-    <div className="mx-auto max-w-3xl py-4">
-      <h1 className="text-2xl font-semibold text-ink-900">Contact us</h1>
-      <p className="mt-2 text-ink-600">
-        Questions about an order, a product, or a return — reach us any of these ways.
-      </p>
+    <div className="mx-auto max-w-6xl py-4">
+      {/*
+         A banner in the same language as the home page hero -- gradient,
+         dot texture -- so the contact page reads as part of the shop rather
+         than a form bolted onto it.
+      */}
+      <section className="rise relative overflow-hidden rounded-card bg-gradient-to-br from-brand-600 to-brand-900 px-6 py-10 text-white sm:px-10 sm:py-14">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-[0.13]"
+          style={{
+            backgroundImage: 'radial-gradient(currentColor 1.5px, transparent 1.5px)',
+            backgroundSize: '22px 22px',
+          }}
+        />
 
-      {rows.length === 0 ? (
-        <Card className="mt-6 p-5">
-          <p className="font-medium text-ink-800">No contact details have been added yet.</p>
-          <p className="mt-1 text-sm text-ink-600">
-            The store owner can add them under <span className="font-medium">Admin → Settings → Store</span>.
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"
+        />
+
+        <div className="relative max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
+            <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+            We are listening
+          </span>
+
+          <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">Contact us</h1>
+
+          <p className="mt-3 text-white/85">
+            A question about an order, a product, or a return — call us, write to us, or leave a
+            message below and we will come back to you.
           </p>
-        </Card>
-      ) : (
-        <Card className="mt-6 divide-y divide-ink-100">
-          {rows.map(({ icon: Icon, label, value, href }) => (
-            <div key={label} className="flex items-start gap-3 p-4">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-800">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide text-ink-500">{label}</p>
-                {href ? (
-                  <a href={href} className="text-ink-900 hover:text-brand-800">
-                    {value}
-                  </a>
-                ) : (
-                  <p className="whitespace-pre-line text-ink-900">{value}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </Card>
-      )}
+        </div>
+      </section>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
+        <div className="flex h-full flex-col gap-3">
+          {rows.length === 0 ? (
+            <Card className="rise flex-1 p-5">
+              <p className="font-medium text-ink-800">No contact details have been added yet.</p>
+              <p className="mt-1 text-sm text-ink-600">
+                The store owner can add them under{' '}
+                <span className="font-medium">Admin → Settings → Store</span>.
+              </p>
+            </Card>
+          ) : (
+            rows.map(({ icon: Icon, label, value, href }, index) => {
+              const body = (
+                <>
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-800 transition-colors group-hover:bg-brand-600 group-hover:text-white">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+
+                  <span className="min-w-0">
+                    <span className="block text-xs font-medium uppercase tracking-wide text-ink-500">
+                      {label}
+                    </span>
+                    <span className="mt-0.5 block whitespace-pre-line text-ink-900">{value}</span>
+                  </span>
+                </>
+              )
+
+              /*
+                 Each card waits a little longer than the one above it, so
+                 the column arrives as a sequence rather than a block. Small
+                 steps -- 60ms is felt, 300ms is waited for.
+              */
+              const style = { animationDelay: `${80 + index * 60}ms` }
+
+              return href ? (
+                <a
+                  key={label}
+                  href={href}
+                  style={style}
+                  className="rise group flex flex-1 items-center gap-3 rounded-card border border-ink-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card"
+                >
+                  {body}
+                </a>
+              ) : (
+                <div
+                  key={label}
+                  style={style}
+                  className="rise group flex flex-1 items-center gap-3 rounded-card border border-ink-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card"
+                >
+                  {body}
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        <ContactForm />
+      </div>
+
+      <FaqSection
+        title={settings?.faq_title || 'Frequently asked questions'}
+        intro={settings?.faq_intro}
+      />
     </div>
   )
 }
