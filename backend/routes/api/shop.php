@@ -26,6 +26,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('settings', [SettingController::class, 'publicSettings'])
     ->name('settings');
 
+Route::get('rewards', [\App\Http\Controllers\Api\V1\Shop\RewardInfoController::class, 'show'])
+    ->name('rewards');
+
 Route::get('faqs', [\App\Http\Controllers\Api\V1\Shop\FaqController::class, 'index'])
     ->name('faqs');
 

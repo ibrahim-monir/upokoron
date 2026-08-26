@@ -28,13 +28,14 @@ use Illuminate\Support\Facades\DB;
 class RewardPointsService
 {
     /**
-     * BDT spent per earning "unit" -- the amount pointsForAmount() buckets a
-     * purchase into before multiplying by the points-per-unit setting. Named
-     * separately from that setting (which is still keyed 'points_per_hundred'
-     * in the database for backward compatibility) so the two can be read
-     * about together without the setting's own name implying a fixed 100.
+     * Fallback for the BDT-per-earning-unit setting, used only when nothing
+     * has been stored yet.
+     *
+     * This was a hard constant, which made the shop's own earning rate the
+     * one figure on the rewards page the owner could not change: they could
+     * set the points, but not the amount those points were per.
      */
-    private const EARNING_UNIT_BDT = '20';
+    public const DEFAULT_EARNING_UNIT_BDT = '20';
 
     public function __construct(private readonly SettingsService $settings) {}
 
@@ -46,6 +47,7 @@ class RewardPointsService
         return [
             'rewards_enabled' => $this->settings->bool('rewards_enabled', true),
             'show_points_on_product_page' => $this->settings->bool('show_points_on_product_page', true),
+            'earning_unit_bdt' => $this->earningUnit(),
             'points_per_hundred' => $this->settings->int('points_per_hundred', 1),
             'review_points' => $this->settings->int('review_points', 10),
             'profile_completion_points' => $this->settings->int('profile_completion_points', 50),
@@ -88,13 +90,24 @@ class RewardPointsService
      * clean multiple of the unit earns nothing until it rounds up to the
      * next one.
      */
+    /**
+     * Taka per earning unit, never zero -- a zero would divide by nothing,
+     * and a shop that wants no earning turns the points themselves off.
+     */
+    public function earningUnit(): string
+    {
+        $unit = $this->settings->int('earning_unit_bdt', (int) self::DEFAULT_EARNING_UNIT_BDT);
+
+        return (string) max(1, $unit);
+    }
+
     public function pointsForAmount(Money $amount): int
     {
         if (! $amount->isPositive()) {
             return 0;
         }
 
-        $units = (int) bcdiv($amount->value(), self::EARNING_UNIT_BDT, 0);
+        $units = (int) bcdiv($amount->value(), $this->earningUnit(), 0);
 
         return $units * $this->settings->int('points_per_hundred', 1);
     }
@@ -210,7 +223,7 @@ class RewardPointsService
     }
 
     /**
-     * Points earned on a delivered order, per EARNING_UNIT_BDT of the
+     * Points earned on a delivered order, per earning unit of the
      * product subtotal actually charged (after per-line discounts, before
      * shipping and any payment surcharge). Delivery is not something the
      * points program pays a customer to buy.

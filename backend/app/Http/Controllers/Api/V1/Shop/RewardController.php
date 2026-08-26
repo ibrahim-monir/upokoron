@@ -39,7 +39,12 @@ class RewardController extends Controller
                 'points' => $t->points,
                 'note' => $t->note,
                 'order_number' => $t->order?->number,
-                'expires_at' => $t->expires_at?->toIso8601String(),
+                // Only an earn row that still holds points can expire.
+                // A lot spent down to nothing keeps its old expires_at, and
+                // showing that date would be telling a shopper that points
+                // they no longer have are about to run out.
+                'remaining_points' => (int) $t->remaining_points,
+                'expires_at' => $t->remaining_points > 0 ? $t->expires_at?->toIso8601String() : null,
                 'created_at' => $t->created_at?->toIso8601String(),
             ])->all(),
             'meta' => [
@@ -49,7 +54,33 @@ class RewardController extends Controller
                 'total' => $transactions->total(),
             ],
             'balance' => $this->rewards->balance($customer),
+
+            // The one date that matters more than the whole history: what
+            // goes first, and when. Points expire oldest lot first, so this
+            // is the front of the queue.
+            'expiring_next' => $this->expiringNext($customer),
         ]);
+    }
+
+    /**
+     * @return array{points: int, at: string}|null
+     */
+    private function expiringNext(Customer $customer): ?array
+    {
+        $lot = $customer->rewardPointTransactions()
+            ->where('remaining_points', '>', 0)
+            ->whereNotNull('expires_at')
+            ->orderBy('expires_at')
+            ->first();
+
+        if ($lot === null) {
+            return null;
+        }
+
+        return [
+            'points' => (int) $lot->remaining_points,
+            'at' => $lot->expires_at->toIso8601String(),
+        ];
     }
 
     private function customer(Request $request): Customer

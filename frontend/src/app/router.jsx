@@ -25,6 +25,7 @@ import { ProductListPage } from '../features/storefront/ProductListPage'
 import { ProductDetailPage } from '../features/storefront/ProductDetailPage'
 import { ContactPage, ContentPage } from '../features/storefront/ContentPage'
 import { CartPage } from '../features/cart/CartPage'
+import { RewardsPage } from '../features/storefront/RewardsPage'
 import { WishlistPage } from '../features/wishlist/WishlistPage'
 import { CheckoutPage } from '../features/checkout/CheckoutPage'
 import { OrderCompletePage } from '../features/checkout/OrderCompletePage'
@@ -88,6 +89,7 @@ export const router = createBrowserRouter([
       // are deliberately not behind RequireAuth.
       { path: 'cart', element: <CartPage /> },
       { path: 'wishlist', element: <WishlistPage /> },
+      { path: 'rewards', element: <RewardsPage /> },
       { path: 'checkout', element: <CheckoutPage /> },
 
       // A single order is public, because a guest who has just bought

@@ -677,11 +677,18 @@ export function ProductDetailPage() {
             {hasDiscount && <span className="tabular text-lg text-ink-400 line-through">{money(wasPrice)}</span>}
           </div>
 
+          {/*
+             The promise now leads to its terms. It said "earn 12 points"
+             with nowhere on the site explaining what a point is worth.
+          */}
           {Number(selected?.reward_points) > 0 && (
-            <p className="flex items-center gap-1.5 text-sm font-medium text-accent-600">
+            <Link
+              to="/rewards"
+              className="flex w-fit items-center gap-1.5 text-sm font-medium text-accent-600 hover:text-accent-700 hover:underline"
+            >
               <Gift className="h-4 w-4" aria-hidden="true" />
               Earn {selected.reward_points} reward points on this purchase
-            </p>
+            </Link>
           )}
 
           {product.short_description &&

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -24,22 +25,31 @@ function splitName(full) {
   return { first: parts[0], last: parts.slice(1).join(' ') }
 }
 
-const schema = z
-  .object({
-    first_name: z.string().min(1, 'Enter your first name.').max(60),
-    last_name: z.string().max(60),
-    email: z.string().email('Enter a valid email address.').or(z.literal('')),
-    phone: z
-      .string()
-      .regex(/^01[3-9]\d{8}$/, 'Enter a valid mobile number.')
-      .or(z.literal('')),
-    gender: z.enum(['', 'male', 'female', 'other']),
-    date_of_birth: z.string().or(z.literal('')),
-  })
-  .refine((values) => values.phone !== '' || values.email !== '', {
-    message: 'Keep at least one of mobile number or email address.',
-    path: ['phone'],
-  })
+const KEPT = 'You were given reward points for this, so it cannot be emptied.'
+
+/*
+ * Once the profile-completion bonus has been paid, the details it was paid
+ * for stop being optional. The server is where that is enforced; this only
+ * saves the shopper a round trip to find out.
+ */
+function buildSchema(locked) {
+  const phone = z.string().regex(/^01[3-9]\d{8}$/, 'Enter a valid mobile number.')
+  const birth = z.string()
+
+  return z
+    .object({
+      first_name: z.string().min(1, 'Enter your first name.').max(60),
+      last_name: z.string().max(60),
+      email: z.string().email('Enter a valid email address.').or(z.literal('')),
+      phone: locked ? phone : phone.or(z.literal('')),
+      gender: z.enum(['', 'male', 'female', 'other']),
+      date_of_birth: locked ? birth.min(1, KEPT) : birth.or(z.literal('')),
+    })
+    .refine((values) => values.phone !== '' || values.email !== '', {
+      message: 'Keep at least one of mobile number or email address.',
+      path: ['phone'],
+    })
+}
 
 export function PersonalInformation() {
   const user = useAuthStore((state) => state.user)
@@ -47,6 +57,8 @@ export function PersonalInformation() {
   const toast = useToast()
 
   const { first, last } = splitName(user?.name)
+  const locked = user?.customer?.profile_locked === true
+  const schema = useMemo(() => buildSchema(locked), [locked])
 
   const {
     register,
@@ -141,8 +153,10 @@ export function PersonalInformation() {
 
         <AccountField
           label="Phone"
+          required={locked}
           inputMode="tel"
           placeholder="01XXXXXXXXX"
+          hint={locked ? KEPT : undefined}
           error={errors.phone?.message}
           {...register('phone')}
         />
@@ -163,6 +177,8 @@ export function PersonalInformation() {
         <AccountField
           label="Date of birth"
           htmlFor="date_of_birth"
+          required={locked}
+          hint={locked ? KEPT : undefined}
           error={errors.date_of_birth?.message}
         >
           <input

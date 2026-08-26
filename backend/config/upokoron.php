@@ -256,10 +256,14 @@ return [
             // (still crediting purchases) without advertising it yet.
             'show_points_on_product_page' => true,
 
-            // Earning. The key is still named 'points_per_hundred' but the
-            // BDT-per-point bucket is 20, not 100 -- see
-            // RewardPointsService::EARNING_UNIT_BDT.
-            'points_per_hundred' => 1, // Points earned per BDT 20 spent (delivered orders).
+            // Earning. A purchase is bucketed into units of
+            // 'earning_unit_bdt' taka, and each whole unit earns
+            // 'points_per_hundred' points. The second key keeps its old name
+            // for the settings already in customers' databases; it has never
+            // meant "per hundred", which is exactly why the amount it is per
+            // had to stop being a constant in the code.
+            'earning_unit_bdt' => 20, // Taka spent per earning unit.
+            'points_per_hundred' => 1, // Points earned per unit (delivered orders).
             'review_points' => 10, // Points per approved product review.
             'profile_completion_points' => 50, // One-time bonus once name, phone and birthday are all on file.
             'birthday_points' => 200, // Awarded once a year, on the customer's birthday.

@@ -25,6 +25,17 @@ const TYPE_META = {
   expired: { icon: Timer, shell: 'bg-ink-100 text-ink-500' },
 }
 
+const day = (iso) =>
+  new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+
+/*
+ * How many whole days from now, so "expires in 6 days" can be said in a
+ * different tone from "expires in 6 months".
+ */
+function daysUntil(iso) {
+  return Math.ceil((new Date(iso) - Date.now()) / 86_400_000)
+}
+
 function RewardHistoryRow({ transaction }) {
   const meta = TYPE_META[transaction.type] ?? { icon: Gift, shell: 'bg-ink-100 text-ink-500' }
   const Icon = meta.icon
@@ -43,7 +54,8 @@ function RewardHistoryRow({ transaction }) {
           {transaction.order_number && ` · Order ${transaction.order_number}`}
         </p>
         <p className="text-xs text-ink-400">
-          {transaction.created_at ? new Date(transaction.created_at).toLocaleDateString() : ''}
+          {transaction.created_at ? day(transaction.created_at) : ''}
+          {transaction.expires_at && ` · expires ${day(transaction.expires_at)}`}
         </p>
       </div>
 
@@ -66,6 +78,11 @@ export function RewardsPanel() {
 
   const balance = query.data?.balance ?? 0
   const rows = query.data?.data ?? []
+  const next = query.data?.expiring_next ?? null
+
+  // A month is the point at which "use them or lose them" is still useful
+  // advice rather than an alarm about something a year away.
+  const soon = next !== null && daysUntil(next.at) <= 30
 
   return (
     <Card className="overflow-hidden">
@@ -73,11 +90,30 @@ export function RewardsPanel() {
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700">
           <Gift className="h-5 w-5" aria-hidden="true" />
         </span>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-500">Reward points</p>
           <p className="tabular text-xl font-bold text-ink-900">{balance}</p>
         </div>
       </div>
+
+      {next && (
+        <p
+          className={cx(
+            'flex items-center gap-2 border-t px-4 py-2.5 text-xs',
+            soon
+              ? 'border-warning-200 bg-warning-50 text-warning-800'
+              : 'border-ink-100 text-ink-500',
+          )}
+        >
+          <Timer className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>
+            <strong className="font-semibold">{next.points}</strong>{' '}
+            {next.points === 1 ? 'point expires' : 'points expire'} on{' '}
+            <strong className="font-semibold">{day(next.at)}</strong>. The oldest are always spent
+            first.
+          </span>
+        </p>
+      )}
 
       <div className="border-t border-ink-100 px-4">
         {query.isLoading ? (

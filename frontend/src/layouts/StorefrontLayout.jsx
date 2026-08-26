@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ImageOff,
   Loader2,
+  Gift,
   Heart,
   LogIn,
   Megaphone,
@@ -29,6 +30,7 @@ import { Logo } from '../components/Logo'
 import { useCartCount } from '../features/cart/useCart'
 import { CartDrawer } from '../features/cart/CartDrawer'
 import { useCartDrawer } from '../features/cart/useCartDrawer'
+import { useRewardInfo } from '../features/storefront/useRewardInfo'
 import { useWishlistCount } from '../stores/wishlistStore'
 import { Footer } from './Footer'
 
@@ -468,7 +470,20 @@ function NewsTicker({ text }) {
 }
 
 /** Announcement ticker on the left, support phone + Order Track on the right. Hidden on phones -- there is no room, and a tel: link is one tap away in the mobile menu instead. */
+/**
+ * Whether the shop is advertising its rewards programme.
+ *
+ * Not the ticker, deliberately: the ticker scrolls, and a link that moves
+ * while you aim at it is not a call to action. This sits still, next to
+ * Order Track, on every page.
+ */
+function useRewardsAdvertised() {
+  return useRewardInfo().data?.advertised === true
+}
+
 function TopBar({ settings }) {
+  const rewardsOn = useRewardsAdvertised()
+
   return (
     <div className="hidden border-b border-white/10 bg-[#1C61E7] text-white sm:block">
       <div className="mx-auto flex h-9 max-w-[1400px] items-center gap-4 px-3 text-xs sm:px-4">
@@ -476,6 +491,16 @@ function TopBar({ settings }) {
 
         <div className="ml-auto flex shrink-0 items-center gap-4">
           <nav className="flex items-center gap-4">
+            {rewardsOn && (
+              <Link
+                to="/rewards"
+                className="flex items-center gap-1.5 font-semibold text-white hover:text-white/80"
+              >
+                <Gift className="h-3.5 w-3.5" aria-hidden="true" />
+                Earn rewards
+              </Link>
+            )}
+
             <Link to="/track" className="flex items-center gap-1.5 text-white/90 hover:text-white">
               <Package className="h-3.5 w-3.5" aria-hidden="true" />
               Order Track

@@ -31,11 +31,18 @@ import {
 } from '../../components/ui'
 import { useList, useRecord } from './useResource'
 
-const EARNING_FIELDS = [
+const earningFields = (unit) => [
+  {
+    key: 'earning_unit_bdt',
+    label: 'Earning Unit',
+    hint: 'Taka a shopper spends per earning unit',
+    suffix: 'BDT',
+    min: '1',
+  },
   {
     key: 'points_per_hundred',
     label: 'Purchase',
-    hint: 'Points earned per 20 BDT spent',
+    hint: `Points earned per ${unit} BDT spent`,
   },
   {
     key: 'review_points',
@@ -92,7 +99,7 @@ function NumberField({ field, value, onChange }) {
           <input
             id={id}
             type="number"
-            min="0"
+            min={field.min ?? '0'}
             step={field.key === 'redemption_rate' ? '0.01' : '1'}
             value={value ?? ''}
             onChange={(event) => onChange(field.key, event.target.value)}
@@ -156,7 +163,7 @@ function SettingsTab() {
   }
 
   const summary = [
-    `Purchase: ${values.points_per_hundred} pts per 20 BDT`,
+    `Purchase: ${values.points_per_hundred} pts per ${values.earning_unit_bdt} BDT`,
     `1 point = ${values.redemption_rate} BDT discount`,
     `Redemption: min ${values.min_redeem_points} – max ${values.max_redeem_points} pts per order`,
     `Max discount: ${values.max_redeem_percent_of_order}% of cart value`,
@@ -208,7 +215,7 @@ function SettingsTab() {
               </span>
             </label>
 
-            {EARNING_FIELDS.map((field) => (
+            {earningFields(values.earning_unit_bdt).map((field) => (
               <NumberField key={field.key} field={field} value={values[field.key]} onChange={set} />
             ))}
           </div>

@@ -38,6 +38,8 @@ class RewardController extends Controller
         $data = $request->validate([
             'rewards_enabled' => ['sometimes', 'boolean'],
             'show_points_on_product_page' => ['sometimes', 'boolean'],
+            // min:1 -- the unit is a divisor.
+            'earning_unit_bdt' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'points_per_hundred' => ['sometimes', 'integer', 'min:0', 'max:1000'],
             'review_points' => ['sometimes', 'integer', 'min:0', 'max:1000'],
             'profile_completion_points' => ['sometimes', 'integer', 'min:0', 'max:5000'],

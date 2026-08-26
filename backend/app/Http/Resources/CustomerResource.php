@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\RewardPointType;
 use App\Models\Customer;
+use App\Models\RewardPointTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +28,18 @@ class CustomerResource extends JsonResource
             'email' => $this->email,
             'gender' => $this->gender,
             'date_of_birth' => $this->date_of_birth?->toDateString(),
+
+            // Whether the profile-completion bonus has been paid, and so
+            // whether phone and date of birth are now fixed. Computed only
+            // for the shopper looking at their own account -- the admin
+            // customer list renders this resource by the hundred and has no
+            // use for it.
+            'profile_locked' => $this->when(
+                $request->user()?->customer?->id === $this->id,
+                fn (): bool => RewardPointTransaction::where('customer_id', $this->id)
+                    ->where('type', RewardPointType::ProfileCompletion->value)
+                    ->exists(),
+            ),
             'group' => $this->whenLoaded('group', fn () => [
                 'id' => $this->group?->id,
                 'name' => $this->group?->name,
