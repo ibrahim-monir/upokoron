@@ -1058,6 +1058,21 @@ function Skeleton() {
   return (
     <div className="space-y-4">
       <div className="h-9 w-56 animate-pulse rounded-lg bg-ink-200" />
+
+      {/*
+         The site cards, in the same grid at the same height. Without them
+         everything below lands two rows lower than it was drawn, and the
+         page appears to jump when the data arrives.
+      */}
+      <div>
+        <div className="mb-2.5 h-3 w-28 animate-pulse rounded bg-ink-200" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <div key={index} className="h-[100px] animate-pulse rounded-2xl bg-ink-200" />
+          ))}
+        </div>
+      </div>
+
       <div className="h-48 animate-pulse rounded-2xl bg-ink-200" />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1175,6 +1190,8 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      <SiteOverview site={query.data.site} />
+
       <HeroBand month={month} trend={trend} monthLabel={monthLabel} showProfit={seesMoney} />
 
       {/* Tiles */}
@@ -1242,8 +1259,6 @@ export default function DashboardPage() {
       </div>
 
       {seesMoney && <LatestOrders orders={recent} />}
-
-      <SiteOverview site={query.data.site} />
     </div>
   )
 }
