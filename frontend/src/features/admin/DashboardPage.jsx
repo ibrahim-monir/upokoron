@@ -10,12 +10,24 @@ import {
   CheckCircle2,
   Clock3,
   Cog,
+  FolderTree,
+  GalleryHorizontal,
+  Gift,
+  HelpCircle,
+  Images,
+  MessageSquare,
   Navigation,
+  Package,
   PackageCheck,
   PauseCircle,
   RefreshCw,
+  ShieldCheck,
   ShoppingBag,
+  Star,
+  Tag,
+  Ticket,
   Truck,
+  Users,
   Wallet,
 } from 'lucide-react'
 
@@ -632,6 +644,217 @@ function Tile({ label, value, hint, icon: Icon, tone = 'neutral', href, change, 
 
 
 /* -------------------------------------------------------
+   Site overview
+------------------------------------------------------- */
+
+function bytes(value) {
+  const n = Number(value) || 0
+
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`
+
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
+/*
+ * The standing state of the shop, one card per area.
+ *
+ * `value` is what that area's screen opens on and `hint` is the part worth
+ * doing something about -- so a card can be clicked without the number
+ * changing underneath you. Anything that counts as work waiting turns amber
+ * only while there is some.
+ *
+ * Order is deliberate: catalogue first, then the people, then the things
+ * that go stale if nobody looks at them.
+ */
+const SITE_CARDS = [
+  {
+    key: 'products',
+    label: 'Products',
+    icon: Package,
+    href: '/admin/products',
+    hint: (d) => `${d.live} live on the storefront`,
+  },
+  {
+    key: 'categories',
+    label: 'Categories',
+    icon: FolderTree,
+    href: '/admin/categories',
+    hint: (d) => `${d.live} active`,
+  },
+  {
+    key: 'brands',
+    label: 'Brands',
+    icon: Tag,
+    href: '/admin/brands',
+    hint: (d) => `${d.live} active`,
+  },
+  {
+    key: 'media',
+    label: 'Media',
+    icon: Images,
+    href: '/admin/media',
+    hint: (d) => `${bytes(d.live)} stored`,
+  },
+  {
+    key: 'customers',
+    label: 'Customers',
+    icon: Users,
+    // No link: the admin has no customer screen yet, and a card that opens
+    // nothing is better than one that opens the wrong list.
+    hint: (d) => `${d.live} joined this month`,
+  },
+  {
+    key: 'staff',
+    label: 'Logins',
+    icon: ShieldCheck,
+    href: '/admin/users',
+    hint: (d) => `${d.live} with a staff role`,
+  },
+  {
+    key: 'rewards',
+    label: 'Points held',
+    icon: Gift,
+    href: '/admin/rewards',
+    hint: (d) => `by ${d.live} customer${d.live === 1 ? '' : 's'}`,
+  },
+  {
+    key: 'reviews',
+    label: 'Reviews',
+    icon: Star,
+    href: '/admin/reviews',
+    hint: (d) => (d.live ? `${d.live} awaiting moderation` : 'nothing waiting'),
+    busy: (d) => d.live > 0,
+  },
+  {
+    key: 'messages',
+    label: 'Messages',
+    icon: MessageSquare,
+    href: '/admin/contact-messages',
+    hint: (d) => (d.live ? `${d.live} unread` : 'all read'),
+    busy: (d) => d.live > 0,
+  },
+  {
+    key: 'coupons',
+    label: 'Coupons',
+    icon: Ticket,
+    href: '/admin/coupons',
+    hint: (d) => `${d.live} running now`,
+  },
+  {
+    key: 'banners',
+    label: 'Banners',
+    icon: GalleryHorizontal,
+    href: '/admin/banners',
+    hint: (d) => `${d.live} active`,
+  },
+  {
+    key: 'faqs',
+    label: 'FAQ',
+    icon: HelpCircle,
+    href: '/admin/faqs',
+    hint: (d) => `${d.live} shown on the site`,
+  },
+]
+
+function SiteCard({ card, data }) {
+  const Icon = card.icon
+  const busy = card.busy?.(data) ?? false
+
+  const body = (
+    <div
+      className={cx(
+        'group relative h-full overflow-hidden rounded-2xl border bg-white p-3 shadow-card',
+        'transition duration-200',
+        busy ? 'border-warning-500/40' : 'border-ink-200',
+        card.href && 'hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-raised',
+      )}
+    >
+      {/* A wash that only shows on hover -- the "premium" is the restraint. */}
+      <div
+        aria-hidden="true"
+        className={cx(
+          'pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200',
+          'bg-gradient-to-br from-brand-50/80 to-transparent',
+          card.href && 'group-hover:opacity-100',
+        )}
+      />
+
+      <div className="relative flex items-center gap-2">
+        <span
+          className={cx(
+            'grid h-7 w-7 shrink-0 place-items-center rounded-lg',
+            busy ? 'bg-warning-50 text-warning-700' : 'bg-ink-100 text-ink-600',
+            card.href && 'transition-colors group-hover:bg-brand-600 group-hover:text-white',
+          )}
+        >
+          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
+
+        <p className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">
+          {card.label}
+        </p>
+
+        {card.href && (
+          <ArrowRight
+            className="h-3 w-3 shrink-0 text-ink-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600"
+            aria-hidden="true"
+          />
+        )}
+      </div>
+
+      <p className="relative mt-2 text-[20px] font-semibold leading-none tracking-tight text-ink-900">
+        {compact(data.total)}
+      </p>
+
+      <p
+        className={cx(
+          'relative mt-1.5 truncate text-[11px]',
+          busy ? 'font-medium text-warning-700' : 'text-ink-500',
+        )}
+      >
+        {card.hint(data)}
+      </p>
+    </div>
+  )
+
+  return card.href ? (
+    <Link to={card.href} className="block h-full">
+      {body}
+    </Link>
+  ) : (
+    body
+  )
+}
+
+function SiteOverview({ site }) {
+  // Every area the viewer cannot see arrives as null, so this is also the
+  // permission filter -- there is nothing to hide that was ever sent.
+  const cards = SITE_CARDS.filter((card) => site?.[card.key])
+
+  if (cards.length === 0) return null
+
+  return (
+    <section>
+      <div className="mb-2.5 flex items-center gap-2">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-500">
+          Across the site
+        </h2>
+        <span className="h-px flex-1 bg-ink-200" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        {cards.map((card) => (
+          <SiteCard key={card.key} card={card} data={site[card.key]} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+
+/* -------------------------------------------------------
    Pipeline
 ------------------------------------------------------- */
 
@@ -1019,6 +1242,8 @@ export default function DashboardPage() {
       </div>
 
       {seesMoney && <LatestOrders orders={recent} />}
+
+      <SiteOverview site={query.data.site} />
     </div>
   )
 }

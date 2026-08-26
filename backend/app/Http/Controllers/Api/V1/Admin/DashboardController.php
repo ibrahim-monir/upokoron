@@ -5,9 +5,21 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\OrderStatus;
+use App\Enums\ReviewStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Banner;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\ContactMessage;
+use App\Models\Coupon;
+use App\Models\Customer;
+use App\Models\Faq;
 use App\Models\Inventory;
+use App\Models\Media;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductReview;
+use App\Models\User;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,8 +55,114 @@ class DashboardController extends Controller
                 'stock' => $request->user()->can('inventory.view') ? $this->stock() : null,
                 'trend' => $this->trend($timezone),
                 'recent' => $this->recentOrders(),
+                'site' => $this->site($request->user()),
             ],
         ]);
+    }
+
+    /**
+     * The rest of the shop, counted.
+     *
+     * Everything above this is money moving. This is the standing state of
+     * the site -- how much catalogue there is, how much of it is live, and
+     * what is sitting unanswered -- because none of it reached the dashboard
+     * before and some of it is work waiting.
+     *
+     * Each entry is null when the viewer cannot see that area. Gating it in
+     * the frontend would still have sent the number, and a count is
+     * information: how many customers a shop has is not something a
+     * warehouse login should learn from a tile it cannot click.
+     *
+     * 'total' is always what that area's own screen opens on, never a
+     * filtered slice presented as the whole -- the same rule the order tiles
+     * follow, so a number can be clicked without it changing. 'live' is the
+     * part worth acting on.
+     *
+     * @return array<string, array<string, int>|null>
+     */
+    private function site(User $user): array
+    {
+        $now = Carbon::now(config('upokoron.display_timezone'));
+
+        return [
+            'products' => $user->can('products.view') ? [
+                'total' => Product::count(),
+                // The scope, not a status check: a product can be Active and
+                // still not on the storefront because its publish date has
+                // not arrived. 'Live' has to mean what a shopper can see.
+                'live' => Product::published()->count(),
+            ] : null,
+
+            'categories' => $user->can('categories.manage') ? [
+                'total' => Category::count(),
+                'live' => Category::where('is_active', true)->count(),
+            ] : null,
+
+            'brands' => $user->can('brands.manage') ? [
+                'total' => Brand::count(),
+                'live' => Brand::where('is_active', true)->count(),
+            ] : null,
+
+            'customers' => $user->can('customers.view') ? [
+                'total' => Customer::count(),
+                'live' => Customer::where('created_at', '>=', $now->copy()->startOfMonth()->utc())->count(),
+            ] : null,
+
+            'reviews' => $user->can('reviews.view') ? [
+                'total' => ProductReview::count(),
+                'live' => ProductReview::where('status', ReviewStatus::Pending->value)->count(),
+            ] : null,
+
+            'messages' => $user->can('contact.view') ? [
+                'total' => ContactMessage::count(),
+                'live' => ContactMessage::unread()->count(),
+            ] : null,
+
+            'faqs' => $user->can('faqs.manage') ? [
+                'total' => Faq::count(),
+                'live' => Faq::where('is_active', true)->count(),
+            ] : null,
+
+            // Switched on AND inside its dates. A coupon whose window shut
+            // last week is still is_active in the table, and counting that as
+            // running is how a shop comes to believe it has an offer live
+            // that no checkout will accept.
+            'coupons' => $user->can('coupons.manage') ? [
+                'total' => Coupon::count(),
+                'live' => Coupon::where('is_active', true)
+                    ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now->utc()))
+                    ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', $now->utc()))
+                    ->count(),
+            ] : null,
+
+            'banners' => $user->can('banners.manage') ? [
+                'total' => Banner::count(),
+                'live' => Banner::where('is_active', true)->count(),
+            ] : null,
+
+            // 'live' carries bytes rather than a count here: what a media
+            // library is running out of is disk, not files.
+            'media' => $user->can('media.view') ? [
+                'total' => Media::count(),
+                'live' => (int) Media::sum('size'),
+            ] : null,
+
+            // The users screen lists everyone with a login, shoppers
+            // included, so that is what the total counts. The ones holding a
+            // role are the staff.
+            'staff' => $user->can('users.view') ? [
+                'total' => User::count(),
+                'live' => User::whereHas('roles')->count(),
+            ] : null,
+
+            // Points customers are holding: what the shop owes in discounts
+            // if every balance were spent tomorrow. A liability, so it is
+            // worth a number of its own.
+            'rewards' => $user->can('rewards.view') ? [
+                'total' => (int) Customer::sum('reward_points_balance'),
+                'live' => Customer::where('reward_points_balance', '>', 0)->count(),
+            ] : null,
+        ];
     }
 
     /**
