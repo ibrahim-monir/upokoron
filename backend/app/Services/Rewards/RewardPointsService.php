@@ -47,7 +47,9 @@ class RewardPointsService
         return [
             'rewards_enabled' => $this->settings->bool('rewards_enabled', true),
             'show_points_on_product_page' => $this->settings->bool('show_points_on_product_page', true),
-            'earning_unit_bdt' => $this->earningUnit(),
+            // An int here like its neighbours; earningUnit() returns a
+            // string only because bcdiv() wants one.
+            'earning_unit_bdt' => (int) $this->earningUnit(),
             'points_per_hundred' => $this->settings->int('points_per_hundred', 1),
             'review_points' => $this->settings->int('review_points', 10),
             'profile_completion_points' => $this->settings->int('profile_completion_points', 50),
