@@ -25,6 +25,10 @@
     RewriteRule ^sanctum/ api/index.php [L]
     RewriteRule ^up$ api/index.php [L]
 
+    # The XML sitemap Search Console expects at the site root, not buried
+    # under /api. Laravel builds it fresh from the product/category tables.
+    RewriteRule ^sitemap\.xml$ api/index.php [L]
+
     # A real file or directory is served as-is.
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
