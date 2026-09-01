@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { AlertTriangle, Check, Copy, ShoppingBag, Truck } from 'lucide-react'
 import { cx, money } from '../../lib/format'
+import { useTranslation } from '../../lib/i18n'
 import { Button, EmptyState, ErrorState, Field, Spinner, useToast } from '../../components/ui'
 import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { DistrictSelect } from '../../components/DistrictSelect'
@@ -41,6 +42,7 @@ function Section({ step, title, children }) {
 }
 
 export function CheckoutPage() {
+  const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -55,8 +57,8 @@ export function CheckoutPage() {
   const copyReceiveNumber = (number) => {
     navigator.clipboard
       .writeText(number)
-      .then(() => toast.success('Number copied.'))
-      .catch(() => toast.error('Could not copy the number.'))
+      .then(() => toast.success(t('checkout.numberCopied')))
+      .catch(() => toast.error(t('checkout.copyFailed')))
   }
 
   const form = useForm({
@@ -140,17 +142,17 @@ export function CheckoutPage() {
 
   const submit = form.handleSubmit((values) => {
     if (!rateId) {
-      toast.error('Choose a delivery option first.')
+      toast.error(t('checkout.chooseDeliveryFirst'))
       return
     }
 
     if (coupon && !coupon.is_valid) {
-      toast.error(coupon.message ?? 'That coupon no longer applies. Remove it in your cart and try again.')
+      toast.error(coupon.message ?? t('checkout.couponExpired'))
       return
     }
 
     if (rewardPoints && !rewardPoints.is_valid) {
-      toast.error(rewardPoints.message ?? 'That points redemption no longer applies. Remove it in your cart and try again.')
+      toast.error(rewardPoints.message ?? t('checkout.pointsExpired'))
       return
     }
 
@@ -192,7 +194,7 @@ export function CheckoutPage() {
           })
         }
 
-        toast.error(error?.message ?? 'Could not place the order.')
+        toast.error(error?.message ?? t('checkout.placeOrderFailed'))
       },
     })
   })
@@ -215,14 +217,14 @@ export function CheckoutPage() {
         <div className="rounded-card border border-ink-200 bg-white">
           <EmptyState
             icon={ShoppingBag}
-            title="Nothing to check out"
-            description="Your cart is empty."
+            title={t('checkout.empty')}
+            description={t('checkout.emptyBody')}
             action={
               <Link
                 to="/products"
                 className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
               >
-                Start shopping
+                {t('cart.startShopping')}
               </Link>
             }
           />
@@ -235,24 +237,24 @@ export function CheckoutPage() {
     <form onSubmit={submit} className="flex flex-col gap-4">
       <CheckoutSteps current="checkout" />
 
-      <h1 className="text-xl font-semibold text-ink-900">Checkout</h1>
+      <h1 className="text-xl font-semibold text-ink-900">{t('checkout.title')}</h1>
 
       {data.has_unheld_items && (
         <div className="flex items-start gap-2 rounded-card border border-warning-500/40 bg-warning-50 p-3 text-sm text-warning-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <p>
-            Some items are no longer reserved for you.{' '}
+            {t('checkout.unheldWarning1')}{' '}
             <Link to="/cart" className="font-semibold underline">
-              Open your cart
+              {t('checkout.openYourCart')}
             </Link>{' '}
-            and adjust them before ordering.
+            {t('checkout.unheldWarning2')}
           </p>
         </div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-4">
-          <Section step="1" title="Delivery address">
+          <Section step="1" title={t('checkout.deliveryAddress')}>
             {addresses.length > 0 && (
               <div className="mb-3 grid gap-2 sm:grid-cols-2">
                 {addresses.map((address) => (
@@ -275,8 +277,8 @@ export function CheckoutPage() {
                 ))}
 
                 <Choice selected={addressId === null} onSelect={() => setAddressId(null)}>
-                  <p className="text-sm font-medium text-ink-900">Deliver somewhere else</p>
-                  <p className="mt-0.5 text-sm text-ink-500">Enter a new address</p>
+                  <p className="text-sm font-medium text-ink-900">{t('checkout.deliverElsewhere')}</p>
+                  <p className="mt-0.5 text-sm text-ink-500">{t('checkout.enterNewAddress')}</p>
                 </Choice>
               </div>
             )}
@@ -284,43 +286,43 @@ export function CheckoutPage() {
             {addressId === null && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field
-                  label="Full name"
+                  label={t('checkout.fullName')}
                   required
                   error={form.formState.errors.name?.message}
-                  {...form.register('name', { required: 'Your name is required.' })}
+                  {...form.register('name', { required: t('checkout.nameRequired') })}
                 />
 
                 <Field
-                  label="Mobile number"
+                  label={t('checkout.mobileNumber')}
                   required
                   placeholder="01XXXXXXXXX"
                   inputMode="tel"
                   error={form.formState.errors.phone?.message}
                   {...form.register('phone', {
-                    required: 'A mobile number is required.',
+                    required: t('checkout.mobileRequired'),
                     pattern: {
                       value: /^(\+?88)?01[3-9]\d{8}$/,
-                      message: 'Enter a valid Bangladeshi mobile number.',
+                      message: t('checkout.mobileInvalid'),
                     },
                   })}
                 />
 
                 <Field
                   className="sm:col-span-2"
-                  label="Address"
+                  label={t('checkout.address')}
                   required
-                  placeholder="House, road, block"
+                  placeholder={t('checkout.addressPlaceholder')}
                   error={form.formState.errors.address_line1?.message}
-                  {...form.register('address_line1', { required: 'An address is required.' })}
+                  {...form.register('address_line1', { required: t('checkout.addressRequired') })}
                 />
 
-                <Field label="Area (optional)" placeholder="Mirpur, Uttara…" {...form.register('area')} />
+                <Field label={t('checkout.area')} placeholder={t('checkout.areaPlaceholder')} {...form.register('area')} />
 
                 <Field
-                  label="City"
+                  label={t('checkout.city')}
                   required
                   error={form.formState.errors.city?.message}
-                  {...form.register('city', { required: 'A city is required.' })}
+                  {...form.register('city', { required: t('checkout.cityRequired') })}
                 />
 
                 {/*
@@ -328,12 +330,12 @@ export function CheckoutPage() {
                   and a spelling no zone matches would quietly bill the
                   customer for the far side of the country.
                 */}
-                <Field label="District" required error={form.formState.errors.district?.message}>
+                <Field label={t('checkout.district')} required error={form.formState.errors.district?.message}>
                   {({ id: fieldId, invalid }) => (
                     <DistrictSelect
                       id={fieldId}
                       invalid={invalid}
-                      {...form.register('district', { required: 'Choose your district.' })}
+                      {...form.register('district', { required: t('checkout.districtRequired') })}
                     />
                   )}
                 </Field>
@@ -342,17 +344,15 @@ export function CheckoutPage() {
           </Section>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Section step="2" title="Delivery option">
+            <Section step="2" title={t('checkout.deliveryOption')}>
               {!district ? (
-                <p className="text-sm text-ink-500">Enter a district above to see delivery options.</p>
+                <p className="text-sm text-ink-500">{t('checkout.enterDistrictFirst')}</p>
               ) : shippingOptions.isPending ? (
                 <div className="flex items-center gap-2 text-sm text-ink-500">
-                  <Spinner className="h-4 w-4" /> Checking delivery to {district}…
+                  <Spinner className="h-4 w-4" /> {t('checkout.checkingDelivery', { district })}
                 </div>
               ) : options.length === 0 ? (
-                <p className="text-sm text-danger-700">
-                  No delivery option covers that address with this payment method.
-                </p>
+                <p className="text-sm text-danger-700">{t('checkout.noDeliveryOption')}</p>
               ) : (
                 <div className="grid gap-2">
                   {options.map((option) => (
@@ -370,7 +370,7 @@ export function CheckoutPage() {
                           {option.estimate && <p className="text-xs text-ink-500">{option.estimate}</p>}
                         </div>
                         <span className="tabular text-sm font-semibold text-brand-800">
-                          {option.is_free ? 'Free' : money(option.charge)}
+                          {option.is_free ? t('checkout.free') : money(option.charge)}
                         </span>
                       </div>
                     </Choice>
@@ -379,7 +379,7 @@ export function CheckoutPage() {
               )}
             </Section>
 
-            <Section step="3" title="Payment">
+            <Section step="3" title={t('checkout.payment')}>
               <div className="grid gap-2">
                 {methods.map((paymentMethod) => (
                   <Choice
@@ -397,7 +397,7 @@ export function CheckoutPage() {
                     </div>
                     {paymentMethod.id === methodId && paymentMethod.receive_number && (
                       <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
-                        <span className="text-sm text-ink-600">Send payment to</span>
+                        <span className="text-sm text-ink-600">{t('checkout.sendPaymentTo')}</span>
                         <span className="tabular text-sm font-semibold text-brand-800">
                           {paymentMethod.receive_number}
                         </span>
@@ -421,7 +421,7 @@ export function CheckoutPage() {
                             event.stopPropagation()
                             copyReceiveNumber(paymentMethod.receive_number)
                           }}
-                          aria-label="Copy the receive number"
+                          aria-label={t('checkout.copyReceiveNumber')}
                           className="ml-auto grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded text-brand-700 hover:bg-brand-100"
                         >
                           <Copy className="h-3.5 w-3.5" aria-hidden="true" />
@@ -438,8 +438,8 @@ export function CheckoutPage() {
 
               <Field
                 className="mt-3"
-                label="Note for us (optional)"
-                placeholder="Any delivery instructions"
+                label={t('checkout.noteForUs')}
+                placeholder={t('checkout.deliveryInstructions')}
                 {...form.register('customer_note')}
               />
             </Section>
@@ -448,7 +448,7 @@ export function CheckoutPage() {
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
           <div className="rounded-card border border-ink-200 bg-white p-4">
-            <h2 className="text-sm font-semibold text-ink-900">Order summary</h2>
+            <h2 className="text-sm font-semibold text-ink-900">{t('checkout.orderSummary')}</h2>
 
             <div className="mt-3 flex flex-col gap-2">
               <CouponBox coupon={coupon} />
@@ -469,17 +469,17 @@ export function CheckoutPage() {
 
             <dl className="mt-3 flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-ink-600">Subtotal</dt>
+                <dt className="text-ink-600">{t('checkout.subtotal')}</dt>
                 <dd className="tabular text-ink-900">{money(totals.subtotal)}</dd>
               </div>
 
               {coupon && (
                 <div className="flex justify-between">
                   <dt className={coupon.is_valid ? 'text-ink-600' : 'text-warning-700'}>
-                    Coupon ({coupon.code})
+                    {t('checkout.couponLabel', { code: coupon.code })}
                   </dt>
                   <dd className={cx('tabular', coupon.is_valid ? 'text-accent-600' : 'text-warning-700')}>
-                    {coupon.is_valid ? `− ${money(couponDiscount)}` : (coupon.message ?? 'no longer applies')}
+                    {coupon.is_valid ? `− ${money(couponDiscount)}` : (coupon.message ?? t('checkout.noLongerApplies'))}
                   </dd>
                 </div>
               )}
@@ -487,32 +487,32 @@ export function CheckoutPage() {
               {rewardPoints && (
                 <div className="flex justify-between">
                   <dt className={rewardPoints.is_valid ? 'text-ink-600' : 'text-warning-700'}>
-                    Points ({rewardPoints.points})
+                    {t('checkout.pointsLabel', { points: rewardPoints.points })}
                   </dt>
                   <dd className={cx('tabular', rewardPoints.is_valid ? 'text-accent-600' : 'text-warning-700')}>
                     {rewardPoints.is_valid
                       ? `− ${money(rewardPointsDiscount)}`
-                      : (rewardPoints.message ?? 'no longer applies')}
+                      : (rewardPoints.message ?? t('checkout.noLongerApplies'))}
                   </dd>
                 </div>
               )}
 
               <div className="flex justify-between">
-                <dt className="text-ink-600">Delivery</dt>
+                <dt className="text-ink-600">{t('checkout.delivery')}</dt>
                 <dd className="tabular text-ink-900">
-                  {rate ? (rate.is_free ? 'Free' : money(totals.delivery)) : '—'}
+                  {rate ? (rate.is_free ? t('checkout.free') : money(totals.delivery)) : '—'}
                 </dd>
               </div>
 
               {totals.extra > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-ink-600">Payment charge</dt>
+                  <dt className="text-ink-600">{t('checkout.paymentCharge')}</dt>
                   <dd className="tabular text-ink-900">{money(totals.extra)}</dd>
                 </div>
               )}
 
               <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
-                <dt className="text-ink-900">Total</dt>
+                <dt className="text-ink-900">{t('checkout.total')}</dt>
                 <dd className="tabular text-brand-800">{money(totals.total)}</dd>
               </div>
             </dl>
@@ -536,13 +536,13 @@ export function CheckoutPage() {
               }
             >
               <Check className="h-4 w-4" aria-hidden="true" />
-              Place order
+              {t('checkout.placeOrder')}
             </Button>
 
             {method?.is_cod && (
               <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-500">
                 <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Pay {money(totals.total)} to the courier when your order arrives.
+                {t('checkout.payToCourier', { amount: money(totals.total) })}
               </p>
             )}
           </div>

@@ -167,6 +167,82 @@ const STRINGS = {
   'reward.pointsToRedeemAriaLabel': { en: 'Reward points to redeem', bn: 'ব্যবহারের রিওয়ার্ড পয়েন্ট' },
   'reward.redeem': { en: 'Redeem', bn: 'ব্যবহার করুন' },
   'reward.none': { en: "You don't have any reward points yet.", bn: 'আপনার এখনো কোনো রিওয়ার্ড পয়েন্ট নেই।' },
+
+  // ----------------------------------------------------- checkout steps
+  'steps.cart': { en: 'Cart', bn: 'কার্ট' },
+  'steps.checkout': { en: 'Checkout', bn: 'চেকআউট' },
+  'steps.orderComplete': { en: 'Order complete', bn: 'অর্ডার সম্পন্ন' },
+
+  // ------------------------------------------------------- checkout page
+  'checkout.numberCopied': { en: 'Number copied.', bn: 'নম্বর কপি হয়েছে।' },
+  'checkout.copyFailed': { en: 'Could not copy the number.', bn: 'নম্বরটি কপি করা যায়নি।' },
+  'checkout.title': { en: 'Checkout', bn: 'চেকআউট' },
+  'checkout.empty': { en: 'Nothing to check out', bn: 'চেকআউট করার মতো কিছু নেই' },
+  'checkout.emptyBody': { en: 'Your cart is empty.', bn: 'আপনার কার্ট খালি।' },
+  'checkout.unheldWarning1': { en: 'Some items are no longer reserved for you.', bn: 'কিছু পণ্য আর আপনার জন্য সংরক্ষিত নেই।' },
+  'checkout.openYourCart': { en: 'Open your cart', bn: 'আপনার কার্ট খুলুন' },
+  'checkout.unheldWarning2': { en: 'and adjust them before ordering.', bn: 'এবং অর্ডার করার আগে পরিবর্তন করুন।' },
+
+  'checkout.deliveryAddress': { en: 'Delivery address', bn: 'ডেলিভারি ঠিকানা' },
+  'checkout.deliverElsewhere': { en: 'Deliver somewhere else', bn: 'অন্য কোথাও ডেলিভারি' },
+  'checkout.enterNewAddress': { en: 'Enter a new address', bn: 'নতুন ঠিকানা লিখুন' },
+  'checkout.fullName': { en: 'Full name', bn: 'পুরো নাম' },
+  'checkout.nameRequired': { en: 'Your name is required.', bn: 'আপনার নাম আবশ্যক।' },
+  'checkout.mobileNumber': { en: 'Mobile number', bn: 'মোবাইল নম্বর' },
+  'checkout.mobileRequired': { en: 'A mobile number is required.', bn: 'একটি মোবাইল নম্বর আবশ্যক।' },
+  'checkout.mobileInvalid': { en: 'Enter a valid Bangladeshi mobile number.', bn: 'একটি সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।' },
+  'checkout.address': { en: 'Address', bn: 'ঠিকানা' },
+  'checkout.addressPlaceholder': { en: 'House, road, block', bn: 'বাড়ি, রোড, ব্লক' },
+  'checkout.addressRequired': { en: 'An address is required.', bn: 'একটি ঠিকানা আবশ্যক।' },
+  'checkout.area': { en: 'Area (optional)', bn: 'এলাকা (ঐচ্ছিক)' },
+  'checkout.areaPlaceholder': { en: 'Mirpur, Uttara…', bn: 'মিরপুর, উত্তরা…' },
+  'checkout.city': { en: 'City', bn: 'শহর' },
+  'checkout.cityRequired': { en: 'A city is required.', bn: 'একটি শহর আবশ্যক।' },
+  'checkout.district': { en: 'District', bn: 'জেলা' },
+  'checkout.districtRequired': { en: 'Choose your district.', bn: 'আপনার জেলা বেছে নিন।' },
+
+  'checkout.deliveryOption': { en: 'Delivery option', bn: 'ডেলিভারি অপশন' },
+  'checkout.enterDistrictFirst': {
+    en: 'Enter a district above to see delivery options.',
+    bn: 'ডেলিভারি অপশন দেখতে উপরে জেলা লিখুন।',
+  },
+  'checkout.checkingDelivery': { en: 'Checking delivery to {district}…', bn: '{district}-এ ডেলিভারি যাচাই হচ্ছে…' },
+  'checkout.noDeliveryOption': {
+    en: 'No delivery option covers that address with this payment method.',
+    bn: 'এই ঠিকানা ও পেমেন্ট পদ্ধতির জন্য কোনো ডেলিভারি অপশন নেই।',
+  },
+  'checkout.free': { en: 'Free', bn: 'ফ্রি' },
+
+  'checkout.payment': { en: 'Payment', bn: 'পেমেন্ট' },
+  'checkout.sendPaymentTo': { en: 'Send payment to', bn: 'যেখানে পেমেন্ট পাঠাবেন' },
+  'checkout.copyReceiveNumber': { en: 'Copy the receive number', bn: 'নম্বরটি কপি করুন' },
+  'checkout.noteForUs': { en: 'Note for us (optional)', bn: 'আমাদের জন্য নোট (ঐচ্ছিক)' },
+  'checkout.deliveryInstructions': { en: 'Any delivery instructions', bn: 'ডেলিভারি সংক্রান্ত নির্দেশনা' },
+
+  'checkout.orderSummary': { en: 'Order summary', bn: 'অর্ডার সারাংশ' },
+  'checkout.subtotal': { en: 'Subtotal', bn: 'সাবটোটাল' },
+  'checkout.couponLabel': { en: 'Coupon ({code})', bn: 'কুপন ({code})' },
+  'checkout.pointsLabel': { en: 'Points ({points})', bn: 'পয়েন্ট ({points})' },
+  'checkout.noLongerApplies': { en: 'no longer applies', bn: 'আর প্রযোজ্য নয়' },
+  'checkout.delivery': { en: 'Delivery', bn: 'ডেলিভারি' },
+  'checkout.paymentCharge': { en: 'Payment charge', bn: 'পেমেন্ট চার্জ' },
+  'checkout.total': { en: 'Total', bn: 'সর্বমোট' },
+  'checkout.placeOrder': { en: 'Place order', bn: 'অর্ডার করুন' },
+  'checkout.payToCourier': {
+    en: 'Pay {amount} to the courier when your order arrives.',
+    bn: 'অর্ডার পৌঁছালে ডেলিভারিম্যানকে {amount} পরিশোধ করুন।',
+  },
+
+  'checkout.chooseDeliveryFirst': { en: 'Choose a delivery option first.', bn: 'প্রথমে একটি ডেলিভারি অপশন বেছে নিন।' },
+  'checkout.couponExpired': {
+    en: 'That coupon no longer applies. Remove it in your cart and try again.',
+    bn: 'এই কুপন আর প্রযোজ্য নয়। কার্ট থেকে সরিয়ে আবার চেষ্টা করুন।',
+  },
+  'checkout.pointsExpired': {
+    en: 'That points redemption no longer applies. Remove it in your cart and try again.',
+    bn: 'এই পয়েন্ট ব্যবহার আর প্রযোজ্য নয়। কার্ট থেকে সরিয়ে আবার চেষ্টা করুন।',
+  },
+  'checkout.placeOrderFailed': { en: 'Could not place the order.', bn: 'অর্ডারটি করা যায়নি।' },
 }
 
 /**

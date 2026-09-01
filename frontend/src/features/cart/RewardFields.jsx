@@ -26,6 +26,15 @@ export function CouponBox({ coupon }) {
   const apply = useApplyCoupon()
   const remove = useRemoveCoupon()
 
+  const submitCoupon = () => {
+    if (!code.trim()) return
+
+    apply.mutate(code.trim(), {
+      onSuccess: () => setCode(''),
+      onError: (error) => toast.error(error?.message ?? t('coupon.applyFailed')),
+    })
+  }
+
   return (
     <div className="rounded-lg border border-ink-200 p-3">
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
@@ -55,30 +64,35 @@ export function CouponBox({ coupon }) {
           </button>
         </div>
       ) : (
-        <form
-          className="grid gap-2"
-          onSubmit={(event) => {
-            event.preventDefault()
-
-            if (!code.trim()) return
-
-            apply.mutate(code.trim(), {
-              onSuccess: () => setCode(''),
-              onError: (error) => toast.error(error?.message ?? t('coupon.applyFailed')),
-            })
-          }}
-        >
+        // A <div>, not a <form> -- this box renders inside checkout's own
+        // <form>, and a nested <form> is invalid HTML (React warns of a
+        // hydration mismatch, and some browsers submit the wrong one).
+        // Enter-to-submit still works via the input's onKeyDown below.
+        <div className="grid gap-2">
           <Input
             value={code}
             onChange={(event) => setCode(event.target.value.toUpperCase())}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                submitCoupon()
+              }
+            }}
             placeholder={t('coupon.enterCode')}
             aria-label={t('coupon.title')}
             className="w-full uppercase placeholder:normal-case"
           />
-          <Button type="submit" variant="soft" className="w-full" loading={apply.isPending} disabled={!code.trim()}>
+          <Button
+            type="button"
+            variant="soft"
+            className="w-full"
+            loading={apply.isPending}
+            disabled={!code.trim()}
+            onClick={submitCoupon}
+          >
             {t('coupon.apply')}
           </Button>
-        </form>
+        </div>
       )}
     </div>
   )
@@ -104,6 +118,24 @@ export function RewardPointsBox({ rewardPoints, balance }) {
   const remove = useRemoveRewardPoints()
   const check = useRewardBalanceByPhone()
 
+  const submitPhoneCheck = () => {
+    if (!phone.trim()) return
+
+    check.mutate(phone.trim(), {
+      onError: (error) => toast.error(error?.message ?? t('reward.checkFailed')),
+    })
+  }
+
+  const submitRedeem = () => {
+    const requested = parseInt(points, 10)
+    if (!requested || requested <= 0) return
+
+    redeem.mutate(requested, {
+      onSuccess: () => setPoints(''),
+      onError: (error) => toast.error(error?.message ?? t('reward.redeemFailed')),
+    })
+  }
+
   return (
     <div className="rounded-lg border border-ink-200 p-3">
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
@@ -113,30 +145,33 @@ export function RewardPointsBox({ rewardPoints, balance }) {
 
       {!isAuthenticated ? (
         <div className="flex flex-col gap-2">
-          <form
-            className="grid gap-2"
-            onSubmit={(event) => {
-              event.preventDefault()
-
-              if (!phone.trim()) return
-
-              check.mutate(phone.trim(), {
-                onError: (error) => toast.error(error?.message ?? t('reward.checkFailed')),
-              })
-            }}
-          >
+          {/* A <div>, not a <form> -- nested inside checkout's own <form> when this box renders there. */}
+          <div className="grid gap-2">
             <Input
               type="tel"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  submitPhoneCheck()
+                }
+              }}
               placeholder={t('reward.phonePlaceholder')}
               aria-label={t('reward.phoneAriaLabel')}
               className="w-full"
             />
-            <Button type="submit" variant="soft" className="w-full" loading={check.isPending} disabled={!phone.trim()}>
+            <Button
+              type="button"
+              variant="soft"
+              className="w-full"
+              loading={check.isPending}
+              disabled={!phone.trim()}
+              onClick={submitPhoneCheck}
+            >
               {t('reward.checkBalance')}
             </Button>
-          </form>
+          </div>
 
           {check.isSuccess && (
             <div
@@ -185,20 +220,8 @@ export function RewardPointsBox({ rewardPoints, balance }) {
           </button>
         </div>
       ) : balance > 0 ? (
-        <form
-          className="grid gap-2"
-          onSubmit={(event) => {
-            event.preventDefault()
-
-            const requested = parseInt(points, 10)
-            if (!requested || requested <= 0) return
-
-            redeem.mutate(requested, {
-              onSuccess: () => setPoints(''),
-              onError: (error) => toast.error(error?.message ?? t('reward.redeemFailed')),
-            })
-          }}
-        >
+        // A <div>, not a <form> -- see the comment on the coupon box above.
+        <div className="grid gap-2">
           <p className="text-sm text-ink-600">
             {t('reward.youHave')} <span className="font-semibold text-ink-900">{balance}</span>{' '}
             {t('reward.pointsAvailableSuffix')}
@@ -209,14 +232,27 @@ export function RewardPointsBox({ rewardPoints, balance }) {
             max={balance}
             value={points}
             onChange={(event) => setPoints(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                submitRedeem()
+              }
+            }}
             placeholder={t('reward.pointsToRedeemPlaceholder')}
             aria-label={t('reward.pointsToRedeemAriaLabel')}
             className="w-full"
           />
-          <Button type="submit" variant="soft" className="w-full" loading={redeem.isPending} disabled={!points}>
+          <Button
+            type="button"
+            variant="soft"
+            className="w-full"
+            loading={redeem.isPending}
+            disabled={!points}
+            onClick={submitRedeem}
+          >
             {t('reward.redeem')}
           </Button>
-        </form>
+        </div>
       ) : (
         <p className="text-sm text-ink-500">{t('reward.none')}</p>
       )}

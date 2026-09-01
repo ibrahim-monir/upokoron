@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { cx } from '../lib/format'
+import { useTranslation } from '../lib/i18n'
 
 const STEPS = [
-  { key: 'cart', label: 'Cart', to: '/cart' },
-  { key: 'checkout', label: 'Checkout', to: '/checkout' },
-  { key: 'complete', label: 'Order complete', to: null },
+  { key: 'cart', labelKey: 'steps.cart', to: '/cart' },
+  { key: 'checkout', labelKey: 'steps.checkout', to: '/checkout' },
+  { key: 'complete', labelKey: 'steps.orderComplete', to: null },
 ]
 
 /**
@@ -16,6 +17,7 @@ const STEPS = [
  * jump to before one has been placed.
  */
 export function CheckoutSteps({ current }) {
+  const { t } = useTranslation()
   const currentIndex = STEPS.findIndex((step) => step.key === current)
 
   return (
@@ -45,7 +47,7 @@ export function CheckoutSteps({ current }) {
               >
                 {isPast ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : index + 1}
               </span>
-              {step.label}
+              {t(step.labelKey)}
             </span>
           )
 
