@@ -71,6 +71,20 @@ class SitemapService
         return array_chunk($this->all()[$segment] ?? [], self::BATCH_SIZE);
     }
 
+    /**
+     * The filename for one batch. The first batch of a segment is never
+     * numbered -- "sitemap-products.xml", not "sitemap-products-1.xml" --
+     * so a segment that never outgrows one batch keeps a single stable URL.
+     * A second batch onward is "sitemap-products-2.xml", "...-3.xml", and so
+     * on.
+     */
+    public static function batchFilename(string $segment, int $batchIndex): string
+    {
+        return $batchIndex === 0
+            ? "sitemap-{$segment}.xml"
+            : "sitemap-{$segment}-".($batchIndex + 1).'.xml';
+    }
+
     private function baseUrl(): string
     {
         return rtrim((string) config('app.frontend_url'), '/');

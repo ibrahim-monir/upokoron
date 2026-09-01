@@ -27,7 +27,7 @@ class SitemapController extends Controller
 
         foreach (array_keys(SitemapService::segments()) as $segment) {
             foreach (array_keys($this->sitemap->batches($segment)) as $batchIndex) {
-                $refs[] = "{$baseUrl}/sitemap-{$segment}-".($batchIndex + 1).'.xml';
+                $refs[] = $baseUrl.'/'.SitemapService::batchFilename($segment, $batchIndex);
             }
         }
 
@@ -38,9 +38,11 @@ class SitemapController extends Controller
 
     /**
      * One batch of at most SitemapService::BATCH_SIZE URLs for a single
-     * content type, e.g. /sitemap-products-2.xml.
+     * content type. The first batch has no number in its URL
+     * (/sitemap-products.xml); a second batch onward does
+     * (/sitemap-products-2.xml) -- see SitemapService::batchFilename().
      */
-    public function show(string $segment, int $batch): Response
+    public function show(string $segment, int $batch = 1): Response
     {
         abort_unless(array_key_exists($segment, SitemapService::segments()), 404);
 

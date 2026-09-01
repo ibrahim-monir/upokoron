@@ -31,7 +31,7 @@ class SitemapController extends Controller
                 'label' => $label,
                 'url_count' => array_sum(array_map('count', $batches)),
                 'batches' => array_map(
-                    static fn (int $index): string => "{$baseUrl}/sitemap-{$key}-".($index + 1).'.xml',
+                    static fn (int $index): string => $baseUrl.'/'.SitemapService::batchFilename($key, $index),
                     array_keys($batches),
                 ),
             ];
