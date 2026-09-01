@@ -409,11 +409,7 @@ export function CartPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-72">
-              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
-            </div>
-
+          <div className="flex justify-end px-1">
             <button
               type="button"
               onClick={() => {
@@ -472,8 +468,9 @@ export function CartPage() {
               </div>
             </dl>
 
-            <div className="mt-3">
+            <div className="mt-3 flex flex-col gap-2">
               <CouponBox coupon={coupon} />
+              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
             </div>
 
             {/*
