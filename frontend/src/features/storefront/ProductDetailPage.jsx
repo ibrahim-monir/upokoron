@@ -473,14 +473,18 @@ function RelatedProductRow({ product }) {
 }
 
 /**
- * The paired-product picks, as a sidebar beside the gallery and info --
- * scrolls internally past a handful of rows rather than pushing the page
+ * The paired-product picks, as a sidebar beside the gallery and info.
+ *
+ * A left border rather than its own card -- a fully boxed card read as a
+ * separate, generic widget dropped beside the product instead of a part of
+ * it. The divider ties it to the same panel as the gallery and price.
+ * Scrolls internally past a handful of rows rather than pushing the page
  * height around, and stays in view while the shopper scrolls the tabs
  * below on a wide screen.
  */
 function RelatedProductsSidebar({ products, title }) {
   return (
-    <aside className="rounded-card border border-ink-200 bg-white p-4 lg:sticky lg:top-20 lg:self-start">
+    <aside className="border-t border-ink-200 pt-6 lg:sticky lg:top-20 lg:self-start lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
       <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-ink-900">
         <Sparkles className="h-4.5 w-4.5 text-brand-600" aria-hidden="true" />
         {title}

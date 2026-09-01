@@ -190,12 +190,6 @@ return [
          */
         'product' => [
             'product_pairs_title' => 'People Buy It With',
-
-            // With more accessories than fit, either slide through them or
-            // show the first two and stop. Off by default: the block sits in
-            // half a row beside the description, and arrows there compete
-            // with the product itself for the same attention.
-            'product_pairs_slide' => false,
         ],
 
         /*

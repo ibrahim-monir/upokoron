@@ -82,8 +82,6 @@ const HINTS = {
     'One message per line, scrolling in the header top bar. Leave blank to show nothing there.',
   product_pairs_title:
     'Heading above the accessories picked for a product, shown in the sidebar beside its gallery and price.',
-  product_pairs_slide:
-    'With more than two accessories: on, they slide with arrows; off, only the first two are shown.',
 }
 
 /** Settings that hold an image URL, so they get a picker instead of a text box. */
