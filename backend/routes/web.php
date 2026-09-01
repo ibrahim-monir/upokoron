@@ -18,6 +18,18 @@ Route::get('sitemap.xml', [SitemapController::class, 'index'])
     ->withoutMiddleware('web')
     ->name('sitemap.index');
 
+// XSL stylesheets the XML views above link to via an xml-stylesheet
+// processing instruction, so a person opening any of these URLs in a
+// browser sees a table of clickable links rather than the raw document
+// tree. Crawlers never fetch these -- they read the XML directly.
+Route::get('sitemap-index.xsl', [SitemapController::class, 'indexStylesheet'])
+    ->withoutMiddleware('web')
+    ->name('sitemap.index.xsl');
+
+Route::get('sitemap-urlset.xsl', [SitemapController::class, 'urlsetStylesheet'])
+    ->withoutMiddleware('web')
+    ->name('sitemap.urlset.xsl');
+
 // A segment's first (and maybe only) batch, e.g. /sitemap-products.xml --
 // unnumbered, so a segment that never outgrows 200 URLs keeps one stable
 // filename instead of forever being "...-1.xml". Segment gets its pattern

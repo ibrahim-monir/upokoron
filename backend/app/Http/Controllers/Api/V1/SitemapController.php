@@ -54,4 +54,28 @@ class SitemapController extends Controller
 
         return response($xml, 200)->header('Content-Type', 'application/xml; charset=UTF-8');
     }
+
+    /**
+     * The stylesheet the index links to, so opening /sitemap.xml in a
+     * browser renders a table of clickable links instead of the raw
+     * document tree. Crawlers ignore it; it is for a human clicking
+     * through from Search Console.
+     */
+    public function indexStylesheet(): Response
+    {
+        $xsl = view('sitemap-index-xsl')->render();
+
+        return response($xsl, 200)->header('Content-Type', 'text/xsl; charset=UTF-8');
+    }
+
+    /**
+     * The stylesheet a batch file links to -- same idea as indexStylesheet(),
+     * for /sitemap-products.xml and friends.
+     */
+    public function urlsetStylesheet(): Response
+    {
+        $xsl = view('sitemap-urlset-xsl')->render();
+
+        return response($xsl, 200)->header('Content-Type', 'text/xsl; charset=UTF-8');
+    }
 }
