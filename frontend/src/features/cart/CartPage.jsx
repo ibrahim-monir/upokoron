@@ -169,65 +169,67 @@ function CouponBox({ coupon }) {
   const apply = useApplyCoupon()
   const remove = useRemoveCoupon()
 
-  if (coupon) {
-    return (
-      <div
-        className={cx(
-          'flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm',
-          coupon.is_valid
-            ? 'border-accent-500/40 bg-accent-50 text-accent-700'
-            : 'border-warning-500/40 bg-warning-50 text-warning-700',
-        )}
-      >
-        <span className="flex items-center gap-1.5 font-medium">
-          <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          {coupon.is_valid ? (
-            <>
-              “{coupon.code}” applied — you save {money(coupon.discount)}
-            </>
-          ) : (
-            <>
-              “{coupon.code}”: {coupon.message ?? 'no longer applies'}
-            </>
-          )}
-        </span>
-        <button
-          type="button"
-          onClick={() => remove.mutate()}
-          disabled={remove.isPending}
-          className="font-medium underline underline-offset-2 disabled:opacity-50"
-        >
-          Remove
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <form
-      className="flex gap-2"
-      onSubmit={(event) => {
-        event.preventDefault()
+    <div className="rounded-lg border border-ink-200 p-3">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
+        <Tag className="h-3.5 w-3.5" aria-hidden="true" />
+        Coupon code
+      </p>
 
-        if (!code.trim()) return
+      {coupon ? (
+        <div
+          className={cx(
+            'flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm',
+            coupon.is_valid ? 'bg-accent-50 text-accent-700' : 'bg-warning-50 text-warning-700',
+          )}
+        >
+          <span className="font-medium">
+            {coupon.is_valid ? (
+              <>
+                “{coupon.code}” applied — you save {money(coupon.discount)}
+              </>
+            ) : (
+              <>
+                “{coupon.code}”: {coupon.message ?? 'no longer applies'}
+              </>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => remove.mutate()}
+            disabled={remove.isPending}
+            className="font-medium underline underline-offset-2 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <form
+          className="grid gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
 
-        apply.mutate(code.trim(), {
-          onSuccess: () => setCode(''),
-          onError: (error) => toast.error(error?.message ?? 'That coupon could not be applied.'),
-        })
-      }}
-    >
-      <Input
-        value={code}
-        onChange={(event) => setCode(event.target.value)}
-        placeholder="Coupon code"
-        aria-label="Coupon code"
-        className="min-w-0 flex-1"
-      />
-      <Button type="submit" variant="soft" loading={apply.isPending} disabled={!code.trim()}>
-        Apply coupon
-      </Button>
-    </form>
+            if (!code.trim()) return
+
+            apply.mutate(code.trim(), {
+              onSuccess: () => setCode(''),
+              onError: (error) => toast.error(error?.message ?? 'That coupon could not be applied.'),
+            })
+          }}
+        >
+          <Input
+            value={code}
+            onChange={(event) => setCode(event.target.value.toUpperCase())}
+            placeholder="Enter code"
+            aria-label="Coupon code"
+            className="w-full uppercase placeholder:normal-case"
+          />
+          <Button type="submit" variant="soft" className="w-full" loading={apply.isPending} disabled={!code.trim()}>
+            Apply coupon
+          </Button>
+        </form>
+      )}
+    </div>
   )
 }
 
@@ -250,117 +252,122 @@ function RewardPointsBox({ rewardPoints, balance }) {
   const remove = useRemoveRewardPoints()
   const check = useRewardBalanceByPhone()
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col gap-2">
+  return (
+    <div className="rounded-lg border border-ink-200 p-3">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
+        <Gift className="h-3.5 w-3.5" aria-hidden="true" />
+        Reward points
+      </p>
+
+      {!isAuthenticated ? (
+        <div className="flex flex-col gap-2">
+          <form
+            className="grid gap-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+
+              if (!phone.trim()) return
+
+              check.mutate(phone.trim(), {
+                onError: (error) => toast.error(error?.message ?? 'Could not check that number.'),
+              })
+            }}
+          >
+            <Input
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="Your phone number"
+              aria-label="Phone number"
+              className="w-full"
+            />
+            <Button type="submit" variant="soft" className="w-full" loading={check.isPending} disabled={!phone.trim()}>
+              Check balance
+            </Button>
+          </form>
+
+          {check.isSuccess && (
+            <div
+              className={cx(
+                'rounded-lg px-3 py-2 text-sm',
+                check.data.balance > 0 ? 'bg-accent-50 text-accent-700' : 'bg-ink-50 text-ink-600',
+              )}
+            >
+              {check.data.balance > 0 ? (
+                <>
+                  <span className="font-semibold">{check.data.balance} points</span> on this number.{' '}
+                  <Link to="/login" className="font-medium underline underline-offset-2">
+                    Log in
+                  </Link>{' '}
+                  to redeem them.
+                </>
+              ) : (
+                'No reward points found for this number.'
+              )}
+            </div>
+          )}
+        </div>
+      ) : rewardPoints ? (
+        <div
+          className={cx(
+            'flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm',
+            rewardPoints.is_valid ? 'bg-accent-50 text-accent-700' : 'bg-warning-50 text-warning-700',
+          )}
+        >
+          <span className="font-medium">
+            {rewardPoints.is_valid ? (
+              <>
+                {rewardPoints.points} points applied — you save {money(rewardPoints.discount)}
+              </>
+            ) : (
+              <>{rewardPoints.points} points: {rewardPoints.message ?? 'no longer applies'}</>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => remove.mutate()}
+            disabled={remove.isPending}
+            className="font-medium underline underline-offset-2 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      ) : balance > 0 ? (
         <form
-          className="flex gap-2"
+          className="grid gap-2"
           onSubmit={(event) => {
             event.preventDefault()
 
-            if (!phone.trim()) return
+            const requested = parseInt(points, 10)
+            if (!requested || requested <= 0) return
 
-            check.mutate(phone.trim(), {
-              onError: (error) => toast.error(error?.message ?? 'Could not check that number.'),
+            redeem.mutate(requested, {
+              onSuccess: () => setPoints(''),
+              onError: (error) => toast.error(error?.message ?? 'Those points could not be redeemed.'),
             })
           }}
         >
+          <p className="text-sm text-ink-600">
+            You have <span className="font-semibold text-ink-900">{balance} points</span> available.
+          </p>
           <Input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="Phone number to check reward points"
-            aria-label="Phone number"
-            className="min-w-0 flex-1"
+            type="number"
+            min="1"
+            max={balance}
+            value={points}
+            onChange={(event) => setPoints(event.target.value)}
+            placeholder="Points to redeem"
+            aria-label="Reward points to redeem"
+            className="w-full"
           />
-          <Button type="submit" variant="soft" loading={check.isPending} disabled={!phone.trim()}>
-            <Gift className="h-4 w-4" aria-hidden="true" />
-            Check balance
+          <Button type="submit" variant="soft" className="w-full" loading={redeem.isPending} disabled={!points}>
+            Redeem
           </Button>
         </form>
-
-        {check.isSuccess && (
-          <p className="text-sm text-ink-600">
-            {check.data.balance > 0 ? (
-              <>
-                This number has <strong className="text-ink-900">{check.data.balance} points</strong>.{' '}
-                <Link to="/login" className="font-medium text-brand-700 underline">
-                  Log in
-                </Link>{' '}
-                to redeem them.
-              </>
-            ) : (
-              'No reward points found for this number.'
-            )}
-          </p>
-        )}
-      </div>
-    )
-  }
-
-  if (rewardPoints) {
-    return (
-      <div
-        className={cx(
-          'flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm',
-          rewardPoints.is_valid
-            ? 'border-accent-500/40 bg-accent-50 text-accent-700'
-            : 'border-warning-500/40 bg-warning-50 text-warning-700',
-        )}
-      >
-        <span className="flex items-center gap-1.5 font-medium">
-          <Gift className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          {rewardPoints.is_valid ? (
-            <>
-              {rewardPoints.points} points applied — you save {money(rewardPoints.discount)}
-            </>
-          ) : (
-            <>{rewardPoints.points} points: {rewardPoints.message ?? 'no longer applies'}</>
-          )}
-        </span>
-        <button
-          type="button"
-          onClick={() => remove.mutate()}
-          disabled={remove.isPending}
-          className="font-medium underline underline-offset-2 disabled:opacity-50"
-        >
-          Remove
-        </button>
-      </div>
-    )
-  }
-
-  if (balance <= 0) return null
-
-  return (
-    <form
-      className="flex gap-2"
-      onSubmit={(event) => {
-        event.preventDefault()
-
-        const requested = parseInt(points, 10)
-        if (!requested || requested <= 0) return
-
-        redeem.mutate(requested, {
-          onSuccess: () => setPoints(''),
-          onError: (error) => toast.error(error?.message ?? 'Those points could not be redeemed.'),
-        })
-      }}
-    >
-      <Input
-        type="number"
-        min="1"
-        value={points}
-        onChange={(event) => setPoints(event.target.value)}
-        placeholder={`Redeem points (you have ${balance})`}
-        aria-label="Reward points to redeem"
-        className="min-w-0 flex-1"
-      />
-      <Button type="submit" variant="soft" loading={redeem.isPending} disabled={!points}>
-        <Gift className="h-4 w-4" aria-hidden="true" />
-        Redeem
-      </Button>
-    </form>
+      ) : (
+        <p className="text-sm text-ink-500">You don't have any reward points yet.</p>
+      )}
+    </div>
   )
 }
 
@@ -527,15 +534,8 @@ export function CartPage() {
             </dl>
 
             <div className="mt-3 flex flex-col gap-2">
-              <div className="rounded-lg border border-ink-200 p-3">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">Coupon code</p>
-                <CouponBox coupon={coupon} />
-              </div>
-
-              <div className="rounded-lg border border-ink-200 p-3">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">Reward points</p>
-                <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
-              </div>
+              <CouponBox coupon={coupon} />
+              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
             </div>
 
             {/*
