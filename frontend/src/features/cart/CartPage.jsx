@@ -223,7 +223,7 @@ function CouponBox({ coupon }) {
         aria-label="Coupon code"
         className="min-w-0 flex-1"
       />
-      <Button type="submit" variant="secondary" loading={apply.isPending} disabled={!code.trim()}>
+      <Button type="submit" variant="soft" loading={apply.isPending} disabled={!code.trim()}>
         Apply coupon
       </Button>
     </form>
@@ -272,7 +272,7 @@ function RewardPointsBox({ rewardPoints, balance }) {
             aria-label="Phone number"
             className="min-w-0 flex-1"
           />
-          <Button type="submit" variant="secondary" loading={check.isPending} disabled={!phone.trim()}>
+          <Button type="submit" variant="soft" loading={check.isPending} disabled={!phone.trim()}>
             <Gift className="h-4 w-4" aria-hidden="true" />
             Check balance
           </Button>
@@ -355,7 +355,7 @@ function RewardPointsBox({ rewardPoints, balance }) {
         aria-label="Reward points to redeem"
         className="min-w-0 flex-1"
       />
-      <Button type="submit" variant="secondary" loading={redeem.isPending} disabled={!points}>
+      <Button type="submit" variant="soft" loading={redeem.isPending} disabled={!points}>
         <Gift className="h-4 w-4" aria-hidden="true" />
         Redeem
       </Button>
