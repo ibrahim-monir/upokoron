@@ -421,6 +421,8 @@ export function CartPage() {
     )
   }
 
+  const rawQuantity = lines.reduce((sum, line) => sum + Number(line.quantity), 0)
+  const totalQuantity = Number.isInteger(rawQuantity) ? rawQuantity : rawQuantity.toFixed(3)
   const subtotal = Number(data.subtotal)
   const discount = Number(data.discount)
   const coupon = data.coupon
@@ -455,9 +457,13 @@ export function CartPage() {
             {/* Column headers, shown once the row layout has room for them. */}
             <div className="hidden grid-cols-[auto_1fr_6rem_9rem_6rem] gap-4 bg-brand-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white sm:grid">
               <span aria-hidden="true" />
-              <span>Product</span>
+              <span>
+                Product <span className="normal-case text-white/70">({lines.length})</span>
+              </span>
               <span>Price</span>
-              <span>Quantity</span>
+              <span>
+                Quantity <span className="normal-case text-white/70">({totalQuantity})</span>
+              </span>
               <span className="text-right">Subtotal</span>
             </div>
 
