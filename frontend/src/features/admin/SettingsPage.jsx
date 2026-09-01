@@ -81,7 +81,7 @@ const HINTS = {
   store_ticker_text:
     'One message per line, scrolling in the header top bar. Leave blank to show nothing there.',
   product_pairs_title:
-    'Heading above the accessories picked for a product, beside the description.',
+    'Heading above the accessories picked for a product, shown in the sidebar beside its gallery and price.',
   product_pairs_slide:
     'With more than two accessories: on, they slide with arrows; off, only the first two are shown.',
 }

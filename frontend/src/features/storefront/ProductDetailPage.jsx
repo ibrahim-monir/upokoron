@@ -900,7 +900,7 @@ export function ProductDetailPage() {
 
         {/* ---------------------------------------------- related sidebar */}
         {goesWith.length > 0 && (
-          <RelatedProductsSidebar products={goesWith} title={settings?.product_pairs_title || 'Related Products'} />
+          <RelatedProductsSidebar products={goesWith} title={settings?.product_pairs_title || 'People Buy It With'} />
         )}
       </div>
 

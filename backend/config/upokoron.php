@@ -189,7 +189,7 @@ return [
          * not signed in.
          */
         'product' => [
-            'product_pairs_title' => 'You May Also Like',
+            'product_pairs_title' => 'People Buy It With',
 
             // With more accessories than fit, either slide through them or
             // show the first two and stop. Off by default: the block sits in
