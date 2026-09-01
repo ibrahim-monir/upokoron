@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Image as ImageIcon } from 'lucide-react'
 import { useList, useWrite } from './useResource'
 import { useAuthStore } from '../../stores/authStore'
@@ -113,8 +114,18 @@ function humanise(key) {
 }
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient()
   const query = useList('admin.settings', '/admin/settings')
-  const write = useWrite('admin.settings', { successMessage: 'Settings saved.' })
+  const write = useWrite('admin.settings', {
+    successMessage: 'Settings saved.',
+    // The storefront reads settings through its own public query, cached
+    // for 5 minutes on the frontend. Without this, a setting saved here --
+    // store_whatsapp, the header style, a banner colour -- would keep
+    // showing its old value on the storefront for up to 5 minutes, or until
+    // a hard reload started a fresh query client, even though the save
+    // itself succeeded.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['shop', 'settings'] }),
+  })
   const [values, setValues] = useState({})
 
   // Which image setting the picker is currently choosing for, if any.
