@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Gift, Heart, ImageOff, Star } from 'lucide-react'
 import { cx, money } from '../../lib/format'
+import { useTranslation } from '../../lib/i18n'
 import { AddToCart } from '../cart/AddToCart'
 import { useWishlistStore } from '../../stores/wishlistStore'
 
@@ -50,6 +51,7 @@ function savingPercent(price, wasPrice) {
 }
 
 export function ProductCard({ product }) {
+  const { t } = useTranslation()
   const variation = product.default_variation
   const price = variation?.effective_price ?? variation?.selling_price
   const wasPrice = variation?.is_on_sale ? variation.selling_price : variation?.compare_at_price
@@ -86,10 +88,10 @@ export function ProductCard({ product }) {
         aria-pressed={saved}
         aria-label={
           saved
-            ? `Remove ${product.name} from your wishlist`
-            : `Save ${product.name} to your wishlist`
+            ? t('cart.removeFromWishlist', { name: product.name })
+            : t('cart.saveNamedToWishlist', { name: product.name })
         }
-        title={saved ? 'Saved to your wishlist' : 'Save to your wishlist'}
+        title={saved ? t('wishlist.saved') : t('cart.saveToWishlist')}
         className={cx(
           'absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/85 backdrop-blur transition-colors hover:bg-white',
           saved ? 'text-danger-500 hover:text-danger-700' : 'text-brand-800 hover:text-brand-800',
@@ -145,13 +147,15 @@ export function ProductCard({ product }) {
               {rating.toFixed(1)}/5 ({product.rating_count ?? 0})
             </span>
             <span aria-hidden="true">·</span>
-            <span className="tabular">{sold % 1 === 0 ? sold : sold.toFixed(0)} Sold</span>
+            <span className="tabular">
+              {sold % 1 === 0 ? sold : sold.toFixed(0)} {t('cart.sold')}
+            </span>
           </div>
 
           {Number(variation?.reward_points) > 0 && (
             <span className="flex shrink-0 items-center gap-1 font-medium text-accent-600">
               <Gift className="h-3.5 w-3.5" aria-hidden="true" />
-              +{variation.reward_points} pts
+              {t('cart.rewardPoints', { points: variation.reward_points })}
             </span>
           )}
         </div>
@@ -167,7 +171,7 @@ export function ProductCard({ product }) {
               to={`/products/${product.slug}`}
               className="flex h-8 items-center justify-center rounded-lg border border-brand-200 px-3 text-sm font-medium text-brand-800 transition-colors hover:bg-brand-50"
             >
-              Choose options
+              {t('cart.chooseOptions')}
             </Link>
           ) : (
             <AddToCart variation={variation} compact />

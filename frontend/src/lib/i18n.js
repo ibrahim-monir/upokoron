@@ -66,6 +66,41 @@ const STRINGS = {
   'footer.cashOnDelivery': { en: 'Cash on Delivery', bn: 'ক্যাশ অন ডেলিভারি' },
   'footer.bankTransfer': { en: 'Bank Transfer', bn: 'ব্যাংক ট্রান্সফার' },
   'footer.allRightsReserved': { en: 'All Rights Reserved', bn: 'সর্বস্বত্ব সংরক্ষিত' },
+
+  // ----------------------------------------------------------- homepage
+  'home.promotions': { en: 'Promotions', bn: 'প্রোমোশন' },
+  'home.showSlide': { en: 'Show slide {n}', bn: '{n} নম্বর স্লাইড দেখান' },
+  'home.shopNow': { en: 'Shop now', bn: 'কেনাকাটা করুন' },
+  'home.noCategoriesYet': { en: 'No categories yet.', bn: 'এখনো কোনো ক্যাটাগরি নেই।' },
+  'home.itemsCount': { en: '{count} items', bn: '{count} টি পণ্য' },
+  'home.seeMore': { en: 'See More', bn: 'আরও দেখুন' },
+  'home.shopByCategory': { en: 'Shop by category', bn: 'ক্যাটাগরি অনুযায়ী কেনাকাটা' },
+  'home.trendingRightNow': { en: 'Trending right now', bn: 'এখন যা জনপ্রিয়' },
+  'home.latestProducts': { en: 'Latest products', bn: 'সাম্প্রতিক পণ্য' },
+  'home.noProductsYet': { en: 'No products yet', bn: 'এখনো কোনো পণ্য নেই' },
+  'home.noProductsYetBody': {
+    en: 'Once products are published they will appear here, grouped by category.',
+    bn: 'পণ্য প্রকাশিত হলে এখানে ক্যাটাগরি অনুযায়ী দেখা যাবে।',
+  },
+
+  // -------------------------------------------- add to cart / buy box
+  'cart.addToCart': { en: 'Add to cart', bn: 'কার্টে যোগ করুন' },
+  'cart.added': { en: 'Added', bn: 'যোগ হয়েছে' },
+  'cart.addedToCart': { en: 'Added to cart', bn: 'কার্টে যোগ হয়েছে' },
+  'cart.outOfStock': { en: 'Out of stock', bn: 'স্টকে নেই' },
+  'cart.inStock': { en: 'In stock', bn: 'স্টকে আছে' },
+  'cart.onlyLeft': { en: '— only {count} left', bn: '— মাত্র {count} টি বাকি' },
+  'cart.reduceQuantity': { en: 'Reduce quantity', bn: 'পরিমাণ কমান' },
+  'cart.increaseQuantity': { en: 'Increase quantity', bn: 'পরিমাণ বাড়ান' },
+  'cart.viewCart': { en: 'View cart', bn: 'কার্ট দেখুন' },
+  'cart.addFailed': { en: 'Could not add that to your cart.', bn: 'কার্টে যোগ করা যায়নি।' },
+  'cart.chooseOptions': { en: 'Choose options', bn: 'অপশন বেছে নিন' },
+  'cart.sold': { en: 'Sold', bn: 'বিক্রি হয়েছে' },
+  'cart.saveToWishlist': { en: 'Save to your wishlist', bn: 'পছন্দের তালিকায় রাখুন' },
+  'cart.removeFromWishlist': { en: 'Remove {name} from your wishlist', bn: 'পছন্দের তালিকা থেকে {name} সরান' },
+  'cart.saveNamedToWishlist': { en: 'Save {name} to your wishlist', bn: '{name} পছন্দের তালিকায় রাখুন' },
+  'cart.rewardPoints': { en: '+{points} pts', bn: '+{points} পয়েন্ট' },
+  'wishlist.saved': { en: 'Saved to your wishlist', bn: 'পছন্দের তালিকায় রাখা হয়েছে' },
 }
 
 /**

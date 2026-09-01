@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, ChevronRight, Flame, SlidersHorizontal } from 'lucide-react'
 import { get } from '../../lib/api'
 import { cx } from '../../lib/format'
+import { useTranslation } from '../../lib/i18n'
 import { EmptyState } from '../../components/ui'
 import { PRODUCT_GRID, ProductCard, ProductCardSkeleton } from './ProductCard'
 import { RailArrows, useRail } from './Rail'
@@ -31,6 +32,7 @@ function useStoreSettingsForHero() {
 }
 
 function HeroCarousel() {
+  const { t } = useTranslation()
   const [index, setIndex] = useState(0)
   const settings = useStoreSettingsForHero()
 
@@ -52,7 +54,7 @@ function HeroCarousel() {
             eyebrow: null,
             title: settings.data?.store_name ?? 'Welcome',
             body: settings.data?.store_tagline ?? null,
-            cta_label: 'Shop now',
+            cta_label: t('home.shopNow'),
             link: '/products',
             theme: 'brand',
             image: null,
@@ -85,7 +87,7 @@ function HeroCarousel() {
   return (
     <section
       aria-roledescription="carousel"
-      aria-label="Promotions"
+      aria-label={t('home.promotions')}
       className={cx(
         'relative flex min-h-64 flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br p-6 text-white sm:min-h-[25rem] sm:p-10 lg:h-[25rem]',
         theme.from,
@@ -123,7 +125,7 @@ function HeroCarousel() {
           to={slide.link ?? '/products'}
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 transition-colors hover:bg-brand-50"
         >
-          {slide.cta_label ?? 'Shop now'}
+          {slide.cta_label ?? t('home.shopNow')}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
@@ -135,7 +137,7 @@ function HeroCarousel() {
               key={item.id}
               type="button"
               onClick={() => setIndex(i)}
-              aria-label={`Show slide ${i + 1}`}
+              aria-label={t('home.showSlide', { n: i + 1 })}
               aria-current={i === index}
               className={cx(
                 'h-1.5 rounded-full transition-all',
@@ -150,6 +152,7 @@ function HeroCarousel() {
 }
 
 function CategorySidebar() {
+  const { t } = useTranslation()
   const query = useQuery({
     queryKey: ['shop', 'categories'],
     queryFn: () => get('/shop/categories'),
@@ -163,7 +166,7 @@ function CategorySidebar() {
     <aside className="hidden w-64 shrink-0 flex-col overflow-hidden rounded-lg border border-ink-200 bg-white lg:flex lg:h-[25rem]">
       <h2 className="flex shrink-0 items-center gap-2 bg-brand-600 px-4 py-3.5 font-semibold text-white">
         <SlidersHorizontal className="h-4.5 w-4.5" aria-hidden="true" />
-        All Categories
+        {t('header.allCategories')}
       </h2>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -177,7 +180,7 @@ function CategorySidebar() {
             ))}
           </ul>
         ) : categories.length === 0 ? (
-          <p className="p-4 text-sm text-ink-500">No categories yet.</p>
+          <p className="p-4 text-sm text-ink-500">{t('home.noCategoriesYet')}</p>
         ) : (
           <ul className="divide-y divide-ink-100">
             {categories.map((category) => (
@@ -213,6 +216,8 @@ function CategorySidebar() {
 }
 
 function CategorySection({ section }) {
+  const { t } = useTranslation()
+
   return (
     <section className="mt-8">
       <div className="mb-3 flex items-center justify-between gap-4">
@@ -225,7 +230,7 @@ function CategorySection({ section }) {
           to={section.slug ? `/category/${section.slug}` : '/products'}
           className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
         >
-          See More
+          {t('home.seeMore')}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
@@ -240,6 +245,7 @@ function CategorySection({ section }) {
 }
 
 function CategoryStrip() {
+  const { t } = useTranslation()
   const settings = useStoreSettingsForHero()
 
   const categories = useQuery({
@@ -253,7 +259,7 @@ function CategoryStrip() {
   const rail = useRail(list.length, { autoAdvanceMs: 3000 })
 
   const style = settings.data?.home_categories_style ?? 'circle'
-  const title = settings.data?.home_categories_title ?? 'Shop by category'
+  const title = settings.data?.home_categories_title ?? t('home.shopByCategory')
   const enabled = settings.data?.home_categories_enabled !== false
 
   if (!enabled || (categories.isLoading === false && list.length === 0)) return null
@@ -278,6 +284,7 @@ function CategoryStrip() {
 
 /** One category, drawn the way the store's settings ask for. */
 function CategoryChip({ category, style }) {
+  const { t } = useTranslation()
   const to = `/category/${category.slug}`
   const count = category.product_count ?? 0
 
@@ -295,7 +302,7 @@ function CategoryChip({ category, style }) {
           <span className="block truncate text-sm font-semibold text-ink-900 group-hover:text-brand-800">
             {category.name}
           </span>
-          {count > 0 && <span className="block text-[11px] text-ink-500">{count} items</span>}
+          {count > 0 && <span className="block text-[11px] text-ink-500">{t('home.itemsCount', { count })}</span>}
         </span>
       </Link>
     )
@@ -326,7 +333,7 @@ function CategoryChip({ category, style }) {
           <span className="block truncate text-sm font-semibold text-ink-900 group-hover:text-brand-800">
             {category.name}
           </span>
-          {count > 0 && <span className="mt-0.5 block text-[11px] text-ink-500">{count} items</span>}
+          {count > 0 && <span className="mt-0.5 block text-[11px] text-ink-500">{t('home.itemsCount', { count })}</span>}
         </span>
       </Link>
     )
@@ -357,11 +364,12 @@ function CategoryChip({ category, style }) {
  * order data.
  */
 export function TrendingSection() {
+  const { t } = useTranslation()
   const settings = useStoreSettingsForHero()
 
   const days = Number(settings.data?.home_trending_days ?? 30)
   const enabled = settings.data?.home_trending_enabled !== false
-  const title = settings.data?.home_trending_title ?? 'Trending right now'
+  const title = settings.data?.home_trending_title ?? t('home.trendingRightNow')
 
   const query = useQuery({
     queryKey: ['shop', 'trending', days],
@@ -388,7 +396,7 @@ export function TrendingSection() {
         </h2>
 
         <Link to="/products" className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700">
-          See More
+          {t('home.seeMore')}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
@@ -419,6 +427,7 @@ export function TrendingSection() {
 }
 
 export function HomePage() {
+  const { t } = useTranslation()
   const sections = useQuery({
     queryKey: ['shop', 'home-sections'],
     queryFn: () => get('/shop/categories/featured', { params: { per_category: 5, limit: 4 } }),
@@ -459,13 +468,13 @@ export function HomePage() {
         sections.data.map((section) => <CategorySection key={section.id} section={section} />)
       ) : (latest.data?.data ?? []).length > 0 ? (
         <CategorySection
-          section={{ id: 'latest', name: 'Latest products', slug: '', products: latest.data.data }}
+          section={{ id: 'latest', name: t('home.latestProducts'), slug: '', products: latest.data.data }}
         />
       ) : (
         <div className="mt-8 rounded-lg border border-ink-200 bg-white">
           <EmptyState
-            title="No products yet"
-            description="Once products are published they will appear here, grouped by category."
+            title={t('home.noProductsYet')}
+            description={t('home.noProductsYetBody')}
           />
         </div>
       )}

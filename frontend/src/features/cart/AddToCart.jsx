@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, Minus, Plus, ShoppingCart } from 'lucide-react'
 import { Button, useToast } from '../../components/ui'
+import { useTranslation } from '../../lib/i18n'
 import { useAddToCart } from './useCart'
 import { useCartDrawer } from './useCartDrawer'
 
@@ -13,6 +14,7 @@ import { useCartDrawer } from './useCartDrawer'
  * can actually have, not three that exist somewhere in other people's carts.
  */
 export function AddToCart({ variation, compact = false }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const addToCart = useAddToCart()
   const [quantity, setQuantity] = useState(1)
@@ -41,7 +43,7 @@ export function AddToCart({ variation, compact = false }) {
           setTimeout(() => setAdded(false), 2000)
         },
         onError(error) {
-          toast.error(error?.message ?? 'Could not add that to your cart.')
+          toast.error(error?.message ?? t('cart.addFailed'))
         },
       },
     )
@@ -53,12 +55,12 @@ export function AddToCart({ variation, compact = false }) {
         {added ? (
           <>
             <Check className="h-4 w-4" aria-hidden="true" />
-            Added
+            {t('cart.added')}
           </>
         ) : (
           <>
             <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-            {inStock ? 'Add to cart' : 'Out of stock'}
+            {inStock ? t('cart.addToCart') : t('cart.outOfStock')}
           </>
         )}
       </Button>
@@ -69,13 +71,13 @@ export function AddToCart({ variation, compact = false }) {
     <div className="rounded-card border border-ink-200 bg-white p-4">
       {inStock ? (
         <p className="text-sm text-ink-600">
-          <span className="font-semibold text-success-700">In stock</span>
+          <span className="font-semibold text-success-700">{t('cart.inStock')}</span>
           {available <= 5 && (
-            <span className="text-ink-500"> — only {available} left</span>
+            <span className="text-ink-500"> {t('cart.onlyLeft', { count: available })}</span>
           )}
         </p>
       ) : (
-        <p className="text-sm font-semibold text-danger-700">Out of stock</p>
+        <p className="text-sm font-semibold text-danger-700">{t('cart.outOfStock')}</p>
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -84,7 +86,7 @@ export function AddToCart({ variation, compact = false }) {
             type="button"
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
             disabled={quantity <= 1 || !inStock}
-            aria-label="Reduce quantity"
+            aria-label={t('cart.reduceQuantity')}
             className="grid h-10 w-10 place-items-center rounded-l-lg text-ink-600 enabled:hover:bg-ink-50 disabled:opacity-40"
           >
             <Minus className="h-4 w-4" aria-hidden="true" />
@@ -98,7 +100,7 @@ export function AddToCart({ variation, compact = false }) {
             // here rather than as a server error after a click.
             onClick={() => setQuantity((q) => Math.min(available, q + 1))}
             disabled={quantity >= available || !inStock}
-            aria-label="Increase quantity"
+            aria-label={t('cart.increaseQuantity')}
             className="grid h-10 w-10 place-items-center rounded-r-lg text-ink-600 enabled:hover:bg-ink-50 disabled:opacity-40"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -114,12 +116,12 @@ export function AddToCart({ variation, compact = false }) {
           {added ? (
             <>
               <Check className="h-4 w-4" aria-hidden="true" />
-              Added to cart
+              {t('cart.addedToCart')}
             </>
           ) : (
             <>
               <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-              Add to cart
+              {t('cart.addToCart')}
             </>
           )}
         </Button>
@@ -130,7 +132,7 @@ export function AddToCart({ variation, compact = false }) {
           to="/cart"
           className="mt-3 block text-center text-sm font-medium text-brand-800 hover:text-brand-800"
         >
-          View cart →
+          {t('cart.viewCart')} →
         </Link>
       )}
     </div>
