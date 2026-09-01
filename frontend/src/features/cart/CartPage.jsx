@@ -58,6 +58,12 @@ function QuantityStepper({ value, onChange, disabled }) {
 function CartRow({ line, busy, onQuantity, onRemove }) {
   const { t } = useTranslation()
 
+  // A lapsed hold with nothing left to adjust to -- "change the quantity"
+  // would be a lie, so this gets its own harder-stop treatment: red instead
+  // of amber, and the stepper disabled, rather than the general "reserved
+  // for a while" warning.
+  const outOfStock = !line.is_held && Number(line.available) === 0
+
   return (
     <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3 p-3 sm:grid-cols-[auto_1fr_6rem_9rem_6rem] sm:items-center sm:gap-4 sm:p-4">
       <button
@@ -109,13 +115,18 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
             the stock is no longer theirs and checkout will refuse the line.
           */}
           {!line.is_held && (
-            <p className="mt-1 flex items-start gap-1.5 text-xs font-medium text-warning-700">
+            <p
+              className={cx(
+                'mt-1 flex items-start gap-1.5 text-xs font-medium',
+                outOfStock ? 'text-danger-700' : 'text-warning-700',
+              )}
+            >
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>
                 {t('cart.noLongerReserved')}{' '}
-                {Number(line.available) > 0
-                  ? t('cart.leftInStock', { count: Number(line.available) })
-                  : t('cart.outOfStockSuffix')}
+                {outOfStock
+                  ? t('cart.outOfStockSuffix')
+                  : t('cart.leftInStock', { count: Number(line.available) })}
               </span>
             </p>
           )}
@@ -132,7 +143,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
       <div className="col-start-2 row-start-2 sm:col-start-4 sm:row-start-1">
         <QuantityStepper
           value={line.quantity}
-          disabled={busy}
+          disabled={busy || outOfStock}
           onChange={(next) => onQuantity(line.id, next)}
         />
       </div>
@@ -199,6 +210,12 @@ export function CartPage() {
     )
   }
 
+  // The generic "adjust the quantity" banner only makes sense when there is
+  // still something to adjust to -- a lapsed hold on a fully out-of-stock
+  // line gets its own red, non-actionable warning on the row instead (see
+  // CartRow), so it does not double up with advice that would not help it.
+  const hasAdjustableUnheld = lines.some((line) => !line.is_held && Number(line.available) > 0)
+
   const rawQuantity = lines.reduce((sum, line) => sum + Number(line.quantity), 0)
   const totalQuantity = Number.isInteger(rawQuantity) ? rawQuantity : rawQuantity.toFixed(3)
   const subtotal = Number(data.subtotal)
@@ -221,7 +238,7 @@ export function CartPage() {
         {t('cart.title')} <span className="text-ink-400">({lines.length})</span>
       </h1>
 
-      {data.has_unheld_items && (
+      {hasAdjustableUnheld && (
         <div className="flex items-start gap-2 rounded-card border border-warning-500/40 bg-warning-50 p-3 text-sm text-warning-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <p>{t('cart.unheldWarning')}</p>
