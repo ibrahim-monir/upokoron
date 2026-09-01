@@ -19,7 +19,7 @@ export function CheckoutSteps({ current }) {
   const currentIndex = STEPS.findIndex((step) => step.key === current)
 
   return (
-    <div className="flex justify-center rounded-card border border-ink-200 bg-ink-50 px-4 py-3 sm:px-6">
+    <div className="flex justify-center rounded-card border border-ink-200 bg-ink-50 py-2">
       <ol className="flex flex-wrap items-center justify-center gap-2 text-sm sm:gap-3">
         {STEPS.map((step, index) => {
           const isCurrent = index === currentIndex
