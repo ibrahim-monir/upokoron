@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { AlertTriangle, Check, Copy, ShoppingBag, Truck } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Field, Spinner, useToast } from '../../components/ui'
+import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { DistrictSelect } from '../../components/DistrictSelect'
 import { CouponBox, RewardPointsBox } from '../cart/RewardFields'
 import { useCheckout, usePlaceOrder, useShippingOptions } from './useCheckout'
@@ -208,26 +209,32 @@ export function CheckoutPage() {
 
   if ((data?.item_count ?? 0) === 0) {
     return (
-      <div className="rounded-card border border-ink-200 bg-white">
-        <EmptyState
-          icon={ShoppingBag}
-          title="Nothing to check out"
-          description="Your cart is empty."
-          action={
-            <Link
-              to="/products"
-              className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-            >
-              Start shopping
-            </Link>
-          }
-        />
+      <div className="flex flex-col gap-4">
+        <CheckoutSteps current="checkout" />
+
+        <div className="rounded-card border border-ink-200 bg-white">
+          <EmptyState
+            icon={ShoppingBag}
+            title="Nothing to check out"
+            description="Your cart is empty."
+            action={
+              <Link
+                to="/products"
+                className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Start shopping
+              </Link>
+            }
+          />
+        </div>
       </div>
     )
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
+      <CheckoutSteps current="checkout" />
+
       <h1 className="text-xl font-semibold text-ink-900">Checkout</h1>
 
       {data.has_unheld_items && (

@@ -1,7 +1,8 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, ImageOff, Truck } from 'lucide-react'
+import { CheckCircle2, ImageOff, Truck } from 'lucide-react'
 import { dateTime, money } from '../../lib/format'
 import { Badge, ErrorState, Spinner } from '../../components/ui'
+import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { TrustBadges } from '../../components/TrustBadges'
 import { statusTone } from './orderStatus'
 import { PhoneGate } from './PhoneGate'
@@ -50,13 +51,9 @@ export function OrderCompletePage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 print:max-w-full">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-ink-500 print:hidden">
-        <Link to="/" className="hover:text-ink-900">
-          Home
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-        <span className="text-ink-900">Order confirmed</span>
-      </nav>
+      <div className="print:hidden">
+        <CheckoutSteps current="complete" />
+      </div>
 
       <div className="flex flex-col items-center gap-2 py-4 text-center">
         <span className="grid h-14 w-14 place-items-center rounded-full bg-success-50 text-success-700">

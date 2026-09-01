@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { AlertTriangle, ArrowRight, ImageOff, Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { EmptyState, ErrorState, Spinner, useToast } from '../../components/ui'
+import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { TrustBadges } from '../../components/TrustBadges'
 import { CouponBox, RewardPointsBox } from './RewardFields'
 import { useCart, useClearCart, useRemoveCartItem, useUpdateCartItem } from './useCart'
@@ -171,20 +172,24 @@ export function CartPage() {
 
   if (lines.length === 0) {
     return (
-      <div className="rounded-card border border-ink-200 bg-white">
-        <EmptyState
-          icon={ShoppingBag}
-          title="Your cart is empty"
-          description="Nothing here yet. Browse the shop and add something you like."
-          action={
-            <Link
-              to="/products"
-              className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-            >
-              Start shopping
-            </Link>
-          }
-        />
+      <div className="flex flex-col gap-4">
+        <CheckoutSteps current="cart" />
+
+        <div className="rounded-card border border-ink-200 bg-white">
+          <EmptyState
+            icon={ShoppingBag}
+            title="Your cart is empty"
+            description="Nothing here yet. Browse the shop and add something you like."
+            action={
+              <Link
+                to="/products"
+                className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Start shopping
+              </Link>
+            }
+          />
+        </div>
       </div>
     )
   }
@@ -205,6 +210,8 @@ export function CartPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <CheckoutSteps current="cart" />
+
       <h1 className="text-xl font-semibold text-ink-900">
         Your cart <span className="text-ink-400">({lines.length})</span>
       </h1>
