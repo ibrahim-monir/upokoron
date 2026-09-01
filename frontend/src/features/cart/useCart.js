@@ -42,6 +42,12 @@ function useCartMutation(mutationFn) {
     mutationFn,
     onSuccess(response) {
       queryClient.setQueryData(CART_KEY, response)
+
+      // Checkout reads the same server-side cart through its own query, so
+      // a coupon or reward points applied there (or here, while checkout
+      // sits open in another tab) would otherwise go on showing stale
+      // totals until something else happened to refetch it.
+      queryClient.invalidateQueries({ queryKey: ['shop', 'checkout'] })
     },
   })
 }

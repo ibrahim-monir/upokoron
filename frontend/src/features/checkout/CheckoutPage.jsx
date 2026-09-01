@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Copy, ShoppingBag, Truck } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Field, Spinner, useToast } from '../../components/ui'
 import { DistrictSelect } from '../../components/DistrictSelect'
+import { CouponBox, RewardPointsBox } from '../cart/RewardFields'
 import { useCheckout, usePlaceOrder, useShippingOptions } from './useCheckout'
 
 /** A selectable card. Used for addresses, delivery options and payment. */
@@ -440,7 +441,12 @@ export function CheckoutPage() {
           <div className="rounded-card border border-ink-200 bg-white p-4">
             <h2 className="text-sm font-semibold text-ink-900">Order summary</h2>
 
-            <ul className="mt-3 flex flex-col gap-2 border-b border-ink-100 pb-3">
+            <div className="mt-3 flex flex-col gap-2">
+              <CouponBox coupon={coupon} />
+              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
+            </div>
+
+            <ul className="mt-3 flex flex-col gap-2 border-t border-ink-100 pb-3 pt-3">
               {(data.items ?? []).map((line) => (
                 <li key={line.id} className="flex justify-between gap-3 text-sm">
                   <span className="min-w-0 text-ink-700">
