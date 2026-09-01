@@ -113,23 +113,6 @@ export function useRemoveRewardPoints() {
   })
 }
 
-/**
- * Delivery charge for an address.
- *
- * Kept out of useCart: the shopper has not given an address yet on the cart
- * page, and a quote for nowhere is not worth a request. The subtotal comes
- * from the server's own copy of the cart, never from anything sent here.
- */
-export function useShippingQuote() {
-  return useMutation({
-    mutationFn: async ({ district, city, cod = false }) => {
-      const { data } = await api.post('/shop/shipping/quote', { district, city, cod })
-
-      return data.data
-    },
-  })
-}
-
 export function useShippingZones() {
   return useQuery({
     queryKey: ['shop', 'shipping-zones'],

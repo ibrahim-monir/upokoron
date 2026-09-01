@@ -10,12 +10,10 @@ import {
   ShoppingBag,
   Tag,
   Trash2,
-  Truck,
   X,
 } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { Button, EmptyState, ErrorState, Input, Spinner, useToast } from '../../components/ui'
-import { DistrictSelect } from '../../components/DistrictSelect'
 import { TrustBadges } from '../../components/TrustBadges'
 import { useAuthStore } from '../../stores/authStore'
 import {
@@ -26,7 +24,6 @@ import {
   useRemoveCartItem,
   useRemoveCoupon,
   useRemoveRewardPoints,
-  useShippingQuote,
   useUpdateCartItem,
 } from './useCart'
 
@@ -312,10 +309,6 @@ function RewardPointsBox({ rewardPoints, balance }) {
 export function CartPage() {
   const toast = useToast()
   const cart = useCart()
-  const quote = useShippingQuote()
-
-  const [district, setDistrict] = useState('')
-  const [city, setCity] = useState('')
 
   const updateItem = useUpdateCartItem()
   const removeItem = useRemoveCartItem()
@@ -363,18 +356,17 @@ export function CartPage() {
     )
   }
 
-  const option = quote.data?.options?.[0]
   const subtotal = Number(data.subtotal)
   const discount = Number(data.discount)
   const coupon = data.coupon
   const couponDiscount = coupon?.is_valid ? Number(coupon.discount) : 0
   const rewardPoints = data.reward_points
   const rewardPointsDiscount = rewardPoints?.is_valid ? Number(rewardPoints.discount) : 0
-  const delivery = option ? Number(option.charge) : null
   // `subtotal` is already net of item-level discounts (that is what "You
-  // save" reports against list price), so only the coupon, redeemed points
-  // and delivery adjust it further here.
-  const total = subtotal - couponDiscount - rewardPointsDiscount + (delivery ?? 0)
+  // save" reports against list price), so only the coupon and redeemed
+  // points adjust it further here. Delivery is quoted and added at
+  // checkout, once there is an address to quote it against.
+  const total = subtotal - couponDiscount - rewardPointsDiscount
 
   return (
     <div className="flex flex-col gap-4">
@@ -475,13 +467,6 @@ export function CartPage() {
                 </div>
               )}
 
-              <div className="flex justify-between border-t border-ink-100 pt-2">
-                <dt className="text-ink-600">Delivery</dt>
-                <dd className="tabular text-ink-900">
-                  {option ? (option.is_free ? 'Free' : money(delivery)) : <span className="text-ink-500">Enter a district</span>}
-                </dd>
-              </div>
-
               <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
                 <dt className="text-ink-900">Total</dt>
                 <dd className="tabular text-brand-800">{money(total)}</dd>
@@ -511,70 +496,9 @@ export function CartPage() {
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
 
-            <p className="mt-2 text-center text-xs text-ink-500">Cash on delivery available.</p>
-          </div>
-
-          {/*
-            Delivery estimate, on the cart page rather than saved for
-            checkout -- "how much is delivery?" is the question that decides
-            whether people carry on at all. The charge is quoted by the
-            server from its own copy of the basket, and feeds the Delivery
-            and Total rows above the moment it comes back.
-          */}
-          <div className="rounded-card border border-ink-200 bg-white p-4">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-              <Truck className="h-4 w-4 text-brand-800" aria-hidden="true" />
-              Delivery charge
-            </h2>
-
-            <form
-              className="mt-3 grid gap-2"
-              onSubmit={(event) => {
-                event.preventDefault()
-
-                if (district.trim()) quote.mutate({ district: district.trim(), city: city.trim() })
-              }}
-            >
-              <DistrictSelect
-                value={district}
-                onChange={(event) => setDistrict(event.target.value)}
-                aria-label="District"
-                className="w-full min-w-0"
-              />
-              <input
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-                placeholder="City (optional)"
-                aria-label="City"
-                className="h-10 w-full min-w-0 rounded-lg border border-ink-200 px-3 text-sm text-ink-900 placeholder:text-ink-400"
-              />
-              <Button type="submit" variant="secondary" className="w-full" loading={quote.isPending} disabled={!district.trim()}>
-                Check delivery charge
-              </Button>
-            </form>
-
-            {quote.isError && (
-              <p className="mt-2 text-sm text-danger-700">{quote.error?.message ?? 'Could not get a quote.'}</p>
-            )}
-
-            {option && (
-              <div className="mt-3 rounded-lg bg-ink-50 p-3 text-sm">
-                <p className="font-medium text-ink-900">{quote.data.zone.name}</p>
-                <p className="mt-0.5 text-ink-600">
-                  {option.name}
-                  {option.estimate ? ` · ${option.estimate}` : ''}
-                </p>
-                <p className="mt-1 font-semibold text-brand-800">
-                  {option.is_free ? 'Free delivery' : money(option.charge)}
-                </p>
-                {!option.is_free && option.free_above_subtotal && (
-                  <p className="mt-1 text-xs text-ink-500">
-                    Free above {money(option.free_above_subtotal)} — add{' '}
-                    {money(Number(option.free_above_subtotal) - subtotal)} more.
-                  </p>
-                )}
-              </div>
-            )}
+            <p className="mt-2 text-center text-xs text-ink-500">
+              Cash on delivery available. Delivery charge is calculated at checkout.
+            </p>
           </div>
         </div>
       </div>
