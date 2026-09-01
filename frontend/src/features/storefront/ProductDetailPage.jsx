@@ -420,60 +420,78 @@ function useGoesWith(slug) {
 }
 
 /**
- * Accessories as full cards, beside the description.
- *
- * Two across, because this sits in half a row next to the description. What
- * happens when there are more than two is the owner's call: slide through
- * them, or show the first two and stop. Off by default -- arrows here
- * compete with the product itself for the same attention.
+ * One row of the related-products sidebar: a small thumbnail beside the
+ * name, rating and price, rather than ProductCard's full vertical card --
+ * that shape is too tall for a scrolling list this narrow.
  */
-function GoesWithCards({ products, title, slide }) {
-  const canSlide = slide && products.length > 2
-  const rail = useRail(canSlide ? products.length : 0)
-
-  const heading = (
-    <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
-      <Sparkles className="h-5 w-5 text-brand-600" aria-hidden="true" />
-      {title}
-    </h2>
-  )
-
-  if (!canSlide) {
-    return (
-      <section>
-        <div className="mb-3">{heading}</div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {products.slice(0, 2).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
-    )
-  }
+function RelatedProductRow({ product }) {
+  const variation = product.default_variation
+  const price = variation?.effective_price ?? variation?.selling_price
+  const wasPrice = variation?.is_on_sale ? variation.selling_price : variation?.compare_at_price
+  const hasDiscount = wasPrice && Number(wasPrice) > Number(price)
+  const rating = Number(product.rating_avg ?? 0)
 
   return (
-    <section>
-      <div className="mb-3">{heading}</div>
+    <Link
+      to={`/products/${product.slug}`}
+      className="flex items-start gap-3 rounded-lg p-1.5 transition-colors hover:bg-ink-50"
+    >
+      <span className="block h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
+        {product.primary_image ? (
+          <img
+            src={product.primary_image}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <span className="grid h-full place-items-center text-ink-300">
+            <ImageOff className="h-5 w-5" aria-hidden="true" />
+          </span>
+        )}
+      </span>
 
-      {/* Positioned parent for the overlaid arrows. */}
-      <div className="relative">
-        <RailArrows rail={rail} label="accessories" />
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-sm font-medium leading-snug text-ink-900">{product.name}</p>
 
-        <div ref={rail.ref} className="rail flex snap-x snap-mandatory gap-3 scroll-smooth pb-1">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              // Two visible, the same as the grid above, so turning sliding
-              // on changes how many there are rather than how big they look.
-              className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start"
-            >
-              <ProductCard product={product} />
-            </div>
-          ))}
+        {product.brand?.name && <p className="mt-0.5 truncate text-xs text-ink-500">{product.brand.name}</p>}
+
+        {rating > 0 && (
+          <div className="mt-0.5 flex items-center gap-1 text-xs text-ink-500">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />
+            <span className="tabular">{rating.toFixed(1)}</span>
+          </div>
+        )}
+
+        <div className="mt-0.5 flex items-baseline gap-1.5">
+          <span className="tabular text-sm font-bold text-brand-800">{money(price)}</span>
+          {hasDiscount && <span className="tabular text-xs text-ink-400 line-through">{money(wasPrice)}</span>}
         </div>
       </div>
-    </section>
+    </Link>
+  )
+}
+
+/**
+ * The paired-product picks, as a sidebar beside the gallery and info --
+ * scrolls internally past a handful of rows rather than pushing the page
+ * height around, and stays in view while the shopper scrolls the tabs
+ * below on a wide screen.
+ */
+function RelatedProductsSidebar({ products, title }) {
+  return (
+    <aside className="rounded-card border border-ink-200 bg-white p-4 lg:sticky lg:top-20 lg:self-start">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-ink-900">
+        <Sparkles className="h-4.5 w-4.5 text-brand-600" aria-hidden="true" />
+        {title}
+      </h2>
+
+      <div className="flex max-h-[34rem] flex-col gap-1 overflow-y-auto">
+        {products.map((product) => (
+          <RelatedProductRow key={product.id} product={product} />
+        ))}
+      </div>
+    </aside>
   )
 }
 
@@ -596,7 +614,7 @@ export function ProductDetailPage() {
         )}
       </nav>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className={cx('grid gap-8', goesWith.length > 0 ? 'lg:grid-cols-[1fr_1fr_18rem]' : 'lg:grid-cols-2')}>
         {/* ------------------------------------------------------- gallery */}
         <div className="flex flex-col gap-3">
           <div className="relative aspect-square overflow-hidden rounded-card border border-ink-200 bg-white">
@@ -879,27 +897,15 @@ export function ProductDetailPage() {
             ))}
           </div>
         </div>
+
+        {/* ---------------------------------------------- related sidebar */}
+        {goesWith.length > 0 && (
+          <RelatedProductsSidebar products={goesWith} title={settings?.product_pairs_title || 'Related Products'} />
+        )}
       </div>
 
-      {/*
-         --------------------------------------------------- tabs
-
-         Accessories take half the row when there are any, and the
-         description takes the other half. With nothing to pair, a
-         half-width description beside an empty column would be worse than
-         the full width it had before -- so the split only exists when
-         there is something to put in it.
-      */}
-      <div className={cx(goesWith.length > 0 && 'grid items-start gap-8 lg:grid-cols-2')}>
-        {goesWith.length > 0 && (
-          <GoesWithCards
-            products={goesWith}
-            title={settings?.product_pairs_title || 'You May Also Like'}
-            slide={settings?.product_pairs_slide === true}
-          />
-        )}
-
-        <div>
+      {/* --------------------------------------------------------- tabs */}
+      <div>
         <div className="flex gap-6 border-b border-ink-200" role="tablist">
           {TABS.map((item) => (
             <button
@@ -963,7 +969,6 @@ export function ProductDetailPage() {
             ))}
 
           {tab === 'review' && <ReviewsPanel product={product} />}
-          </div>
         </div>
       </div>
 
