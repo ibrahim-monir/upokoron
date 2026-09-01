@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 
 import { cx } from '../lib/format'
+import { useTranslation } from '../lib/i18n'
 import { Logo } from '../components/Logo'
 import {
   FacebookIcon,
@@ -23,12 +24,14 @@ import {
  * brand colour carries the identity here -- a generic icon rather than the
  * literal wordmark, since no bKash/Nagad logo artwork is licensed for use
  * in this codebase, but the colour alone reads as "that one" at a glance.
+ * bKash and Nagad are brand names, kept as-is in both languages; the other
+ * two are translated via labelKey.
  */
 const PAYMENT_METHODS = [
-  { label: 'Cash on Delivery', icon: Banknote, bgClass: 'bg-success-600' },
+  { labelKey: 'footer.cashOnDelivery', icon: Banknote, bgClass: 'bg-success-600' },
   { label: 'bKash', icon: Smartphone, bgClass: 'bg-[#E2136E]' },
   { label: 'Nagad', icon: Wallet, bgClass: 'bg-[#F5821F]' },
-  { label: 'Bank Transfer', icon: Landmark, bgClass: 'bg-brand-600' },
+  { labelKey: 'footer.bankTransfer', icon: Landmark, bgClass: 'bg-brand-600' },
 ]
 
 function FooterLink({ to, children }) {
@@ -60,6 +63,7 @@ function FooterColumn({ title, children }) {
 }
 
 export function Footer({ settings }) {
+  const { t } = useTranslation()
   const storeName = settings?.store_name ?? 'Upokoron'
 
   const socials = [
@@ -124,15 +128,14 @@ export function Footer({ settings }) {
               />
 
               <p className="mt-5 max-w-sm text-sm leading-7 text-white/80">
-                {settings?.store_description ??
-                  'Discover quality products at great prices with a simple, secure and convenient online shopping experience.'}
+                {settings?.store_description ?? t('footer.description')}
               </p>
 
               {/* Social icons */}
               {socials.length > 0 && (
                 <div className="mt-6">
                   <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/65">
-                    Follow us
+                    {t('footer.followUs')}
                   </p>
 
                   <div className="flex flex-wrap gap-2.5">
@@ -157,49 +160,49 @@ export function Footer({ settings }) {
             </div>
 
             {/* Quick Links */}
-            <FooterColumn title="Quick Links">
+            <FooterColumn title={t('footer.quickLinks')}>
               <ul className="flex flex-col gap-3">
                 <FooterLink to="/products">
-                  All Products
+                  {t('footer.allProducts')}
                 </FooterLink>
 
                 <FooterLink to="/products?sort=name">
-                  Browse Products
+                  {t('footer.browseProducts')}
                 </FooterLink>
 
                 <FooterLink to="/products?sort=oldest">
-                  New Arrivals
+                  {t('footer.newArrivals')}
                 </FooterLink>
 
                 <FooterLink to="/contact">
-                  Contact Us
+                  {t('footer.contactUs')}
                 </FooterLink>
               </ul>
             </FooterColumn>
 
             {/* Customer Service */}
-            <FooterColumn title="Customer Service">
+            <FooterColumn title={t('footer.customerService')}>
               <ul className="flex flex-col gap-3">
                 <FooterLink to="/about">
-                  About Us
+                  {t('footer.aboutUs')}
                 </FooterLink>
 
                 <FooterLink to="/contact">
-                  Contact Us
+                  {t('footer.contactUs')}
                 </FooterLink>
 
                 <FooterLink to="/privacy">
-                  Privacy Policy
+                  {t('footer.privacyPolicy')}
                 </FooterLink>
 
                 <FooterLink to="/terms">
-                  Terms & Conditions
+                  {t('footer.termsConditions')}
                 </FooterLink>
               </ul>
             </FooterColumn>
 
             {/* Contact */}
-            <FooterColumn title="Contact Information">
+            <FooterColumn title={t('footer.contactInformation')}>
               <address className="flex flex-col gap-4 text-sm not-italic">
                 {settings?.store_address && (
                   <div className="flex items-start gap-3">
@@ -258,19 +261,19 @@ export function Footer({ settings }) {
 
                 <div className="pt-1">
                   <p className="mb-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white/65">
-                    We Accept
+                    {t('footer.weAccept')}
                   </p>
 
                   <div className="flex flex-wrap gap-2">
-                    {PAYMENT_METHODS.map(({ label, icon: Icon, bgClass }) => (
+                    {PAYMENT_METHODS.map(({ label, labelKey, icon: Icon, bgClass }) => (
                       <span
-                        key={label}
+                        key={labelKey ?? label}
                         className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-3 text-xs font-medium text-white/85"
                       >
                         <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-white', bgClass)}>
                           <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                         </span>
-                        {label}
+                        {labelKey ? t(labelKey) : label}
                       </span>
                     ))}
                   </div>
@@ -287,7 +290,7 @@ export function Footer({ settings }) {
       <div className="bg-navy-950 text-white">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p className="font-medium">
-            © {new Date().getFullYear()} {storeName}. All Rights Reserved.
+            © {new Date().getFullYear()} {storeName}. {t('footer.allRightsReserved')}.
           </p>
 
           <nav className="flex flex-wrap items-center gap-3 font-medium">
@@ -295,7 +298,7 @@ export function Footer({ settings }) {
               to="/privacy"
               className="text-white/75 transition-colors hover:text-white"
             >
-              Privacy Policy
+              {t('footer.privacyPolicy')}
             </Link>
 
             <span aria-hidden="true" className="opacity-40">
@@ -306,7 +309,7 @@ export function Footer({ settings }) {
               to="/terms"
               className="text-white/75 transition-colors hover:text-white"
             >
-              Terms & Conditions
+              {t('footer.termsConditions')}
             </Link>
 
             <span aria-hidden="true" className="opacity-40">
@@ -317,7 +320,7 @@ export function Footer({ settings }) {
               to="/contact"
               className="text-white/75 transition-colors hover:text-white"
             >
-              Contact
+              {t('header.contact')}
             </Link>
           </nav>
         </div>

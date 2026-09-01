@@ -25,8 +25,10 @@ import { cx, money } from '../lib/format'
 import { useAnalytics } from '../lib/useAnalytics'
 import { useCustomScripts } from '../lib/useCustomScripts'
 import { useFavicon } from '../lib/useFavicon'
+import { useTranslation } from '../lib/i18n'
 import { useAuthStore } from '../stores/authStore'
 import { Logo } from '../components/Logo'
+import { LanguageToggle } from '../components/LanguageToggle'
 import { useCartCount } from '../features/cart/useCart'
 import { CartDrawer } from '../features/cart/CartDrawer'
 import { useCartDrawer } from '../features/cart/useCartDrawer'
@@ -104,8 +106,12 @@ function fitsAsExample(text) {
  * before sees, in the box itself, the three things this search actually
  * matches. Skips a facet entirely if nothing in the sample has one short
  * enough to show (an unbranded product, a product with no category).
+ *
+ * The facet word itself (product/brand/category) is translated; the
+ * examples in parentheses are not -- they are real catalogue names, in
+ * whichever language the owner entered them.
  */
-function buildSearchPhrases(products) {
+function buildSearchPhrases(products, labels) {
   const names = []
   const brands = []
   const categories = []
@@ -131,10 +137,28 @@ function buildSearchPhrases(products) {
   }
 
   return [
-    names.length > 0 && `product (${names.join(', ')})`,
-    brands.length > 0 && `brand (${brands.join(', ')})`,
-    categories.length > 0 && `category (${categories.join(', ')})`,
+    names.length > 0 && `${labels.product} (${names.join(', ')})`,
+    brands.length > 0 && `${labels.brand} (${brands.join(', ')})`,
+    categories.length > 0 && `${labels.category} (${categories.join(', ')})`,
   ].filter(Boolean)
+}
+
+/**
+ * Grapheme clusters, not UTF-16 code units. A Bangla conjunct like the "ণ্য"
+ * in পণ্য is several code units for one visual character; slicing a plain
+ * string by index can stop mid-conjunct and flash a broken glyph for one
+ * frame. Intl.Segmenter (supported in every browser this app targets) walks
+ * whole characters instead.
+ */
+const graphemeSegmenter =
+  typeof Intl !== 'undefined' && Intl.Segmenter
+    ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    : null
+
+function toGraphemes(text) {
+  if (!graphemeSegmenter) return Array.from(text)
+
+  return Array.from(graphemeSegmenter.segment(text), (entry) => entry.segment)
 }
 
 /**
@@ -163,12 +187,12 @@ function useTypedPlaceholder(prefix, phrases) {
     let timer
 
     const tick = () => {
-      const phrase = phrases[phraseIndex % phrases.length]
+      const graphemes = toGraphemes(phrases[phraseIndex % phrases.length])
 
       if (phase === 'typing') {
         charIndex += 1
-        setSuffix(phrase.slice(0, charIndex))
-        phase = charIndex >= phrase.length ? 'holding' : 'typing'
+        setSuffix(graphemes.slice(0, charIndex).join(''))
+        phase = charIndex >= graphemes.length ? 'holding' : 'typing'
         timer = setTimeout(tick, phase === 'holding' ? HOLD_MS : TYPE_MS)
 
         return
@@ -183,7 +207,7 @@ function useTypedPlaceholder(prefix, phrases) {
 
       if (phase === 'erasing') {
         charIndex -= 1
-        setSuffix(phrase.slice(0, charIndex))
+        setSuffix(graphemes.slice(0, charIndex).join(''))
 
         if (charIndex <= 0) {
           phraseIndex += 1
@@ -232,6 +256,7 @@ function Highlight({ text, query }) {
 }
 
 function SearchBar({ className }) {
+  const { t, locale } = useTranslation()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [term, setTerm] = useState(params.get('search') ?? '')
@@ -262,8 +287,20 @@ function SearchBar({ className }) {
   const total = suggestions.data?.meta?.total ?? 0
 
   const examples = useSearchExamples()
-  const searchPhrases = useMemo(() => buildSearchPhrases(examples.data ?? []), [examples.data])
-  const typedPlaceholder = useTypedPlaceholder('Search by ', searchPhrases)
+  const searchPhrases = useMemo(
+    () =>
+      buildSearchPhrases(examples.data ?? [], {
+        product: t('header.searchFacetProduct'),
+        brand: t('header.searchFacetBrand'),
+        category: t('header.searchFacetCategory'),
+      }),
+    // Rebuilding only needs to react to new data or the language actually
+    // changing -- `t` is a fresh function every render and would otherwise
+    // rebuild (and restart the typing animation) on every keystroke here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [examples.data, locale],
+  )
+  const typedPlaceholder = useTypedPlaceholder(t('header.searchBy'), searchPhrases)
 
   // A click anywhere else means the shopper is done with the panel.
   useEffect(() => {
@@ -338,8 +375,8 @@ function SearchBar({ className }) {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder={searchPhrases.length > 0 ? typedPlaceholder : 'Search product'}
-          aria-label="Search products"
+          placeholder={searchPhrases.length > 0 ? typedPlaceholder : t('header.searchPlaceholder')}
+          aria-label={t('header.searchAriaLabel')}
           role="combobox"
           aria-expanded={showPanel}
           aria-controls={listId}
@@ -350,7 +387,7 @@ function SearchBar({ className }) {
 
         <button
           type="submit"
-          aria-label="Search"
+          aria-label={t('header.searchButton')}
           // The one thing in the header that is pressed, so it gets the
           // colour reserved for exactly that.
           className="absolute right-1 top-1 grid h-9 w-11 place-items-center rounded-md bg-brand-600 text-white transition-colors hover:bg-brand-700"
@@ -371,7 +408,7 @@ function SearchBar({ className }) {
         >
           {results.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-ink-500">
-              {suggestions.isFetching ? 'Searching…' : `Nothing matches “${query}”.`}
+              {suggestions.isFetching ? t('header.searching') : t('header.noMatch', { query })}
             </p>
           ) : (
             <>
@@ -423,7 +460,7 @@ function SearchBar({ className }) {
                           </span>
 
                           {variation && !variation.in_stock && (
-                            <span className="text-[11px] text-danger-700">Out of stock</span>
+                            <span className="text-[11px] text-danger-700">{t('header.outOfStock')}</span>
                           )}
                         </span>
                       </button>
@@ -437,7 +474,7 @@ function SearchBar({ className }) {
                 onClick={() => go(`/products?search=${encodeURIComponent(query)}`)}
                 className="flex w-full items-center justify-center gap-1.5 border-t border-ink-100 bg-ink-50 px-4 py-2.5 text-xs font-semibold text-brand-800 transition-colors hover:bg-brand-50"
               >
-                See all {total} result{total === 1 ? '' : 's'}
+                {t(total === 1 ? 'header.seeAllResult' : 'header.seeAllResults', { count: total })}
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </>
@@ -483,6 +520,7 @@ function IconCounter({ icon: Icon, count = 0, label, to, onClick }) {
  * this from Admin -> Settings any time, so it cannot be allowed to rot.
  */
 function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
+  const { t } = useTranslation()
   const wishlistCount = useWishlistCount()
   const openCart = useCartDrawer((state) => state.show)
 
@@ -495,23 +533,25 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
 
         <nav className="hidden items-center gap-5 lg:flex">
           <NavLink to="/products" className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white">
-            Shop
+            {t('header.shop')}
           </NavLink>
           <NavLink
             to="/products?sort=oldest"
             className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white"
           >
-            Offers
+            {t('header.offers')}
           </NavLink>
           <NavLink to="/contact" className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white">
-            Contact
+            {t('header.contact')}
           </NavLink>
         </nav>
 
         <div className="ml-auto flex items-center gap-3 lg:gap-4">
+          <LanguageToggle />
+
           <div className="hidden items-center gap-4 sm:flex">
-            <IconCounter icon={ShoppingCart} onClick={openCart} label="Cart" count={cartCount} />
-            <IconCounter icon={Heart} to="/wishlist" label="Wishlist" count={wishlistCount} />
+            <IconCounter icon={ShoppingCart} onClick={openCart} label={t('header.cart')} count={cartCount} />
+            <IconCounter icon={Heart} to="/wishlist" label={t('header.wishlist')} count={wishlistCount} />
           </div>
 
           <span className="hidden h-6 w-px bg-white/25 lg:block" />
@@ -519,11 +559,11 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
           {user ? (
             <Link
               to="/account"
-              title={user.name ? `Signed in as ${user.name}` : 'Your account'}
+              title={user.name ? t('header.signedInAs', { name: user.name }) : t('header.yourAccount')}
               className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
             >
               <User className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">My Account</span>
+              <span className="hidden sm:inline">{t('header.myAccount')}</span>
             </Link>
           ) : (
             <Link
@@ -531,14 +571,14 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
               className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
-              Login
+              {t('header.login')}
             </Link>
           )}
 
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={menuOpen ? t('header.closeMenu') : t('header.openMenu')}
             aria-expanded={menuOpen}
             className="rounded-md p-1.5 text-white hover:bg-white/15 lg:hidden"
           >
@@ -555,26 +595,26 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
 
           <nav className="mt-3 flex flex-col gap-2.5">
             <NavLink to="/products" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
-              Shop
+              {t('header.shop')}
             </NavLink>
             <NavLink
               to="/products?sort=oldest"
               className="text-sm font-medium text-white"
               onClick={() => setMenuOpen(false)}
             >
-              Offers
+              {t('header.offers')}
             </NavLink>
             <NavLink to="/contact" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
-              Contact
+              {t('header.contact')}
             </NavLink>
 
             {user ? (
               <NavLink to="/account" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
-                My Account
+                {t('header.myAccount')}
               </NavLink>
             ) : (
               <NavLink to="/register" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
-                Create account
+                {t('header.createAccount')}
               </NavLink>
             )}
           </nav>
@@ -627,6 +667,7 @@ function useRewardsAdvertised() {
 }
 
 function TopBar({ settings }) {
+  const { t } = useTranslation()
   const rewardsOn = useRewardsAdvertised()
 
   return (
@@ -642,13 +683,13 @@ function TopBar({ settings }) {
                 className="flex items-center gap-1.5 font-semibold text-white hover:text-white/80"
               >
                 <Gift className="h-3.5 w-3.5" aria-hidden="true" />
-                Earn rewards
+                {t('header.earnRewards')}
               </Link>
             )}
 
             <Link to="/track" className="flex items-center gap-1.5 text-white/90 hover:text-white">
               <Package className="h-3.5 w-3.5" aria-hidden="true" />
-              Order Track
+              {t('header.orderTrack')}
             </Link>
           </nav>
 
@@ -863,6 +904,7 @@ function CategoryBar() {
 }
 
 function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
+  const { t } = useTranslation()
   const wishlistCount = useWishlistCount()
   const openCart = useCartDrawer((state) => state.show)
 
@@ -886,9 +928,11 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
           </div>
 
           <div className="flex items-center gap-3 lg:gap-4">
+            <LanguageToggle />
+
             <div className="hidden items-center gap-4 sm:flex">
-              <IconCounter icon={ShoppingCart} onClick={openCart} label="Cart" count={cartCount} />
-              <IconCounter icon={Heart} to="/wishlist" label="Wishlist" count={wishlistCount} />
+              <IconCounter icon={ShoppingCart} onClick={openCart} label={t('header.cart')} count={cartCount} />
+              <IconCounter icon={Heart} to="/wishlist" label={t('header.wishlist')} count={wishlistCount} />
             </div>
 
             <span className="hidden h-6 w-px bg-white/25 lg:block" />
@@ -896,11 +940,11 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
             {user ? (
               <Link
                 to="/account"
-                title={user.name ? `Signed in as ${user.name}` : 'Your account'}
+                title={user.name ? t('header.signedInAs', { name: user.name }) : t('header.yourAccount')}
                 className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
               >
                 <User className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">My Account</span>
+                <span className="hidden sm:inline">{t('header.myAccount')}</span>
               </Link>
             ) : (
               <Link
@@ -908,14 +952,14 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
                 className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
               >
                 <LogIn className="h-4 w-4" aria-hidden="true" />
-                Login
+                {t('header.login')}
               </Link>
             )}
 
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={menuOpen ? t('header.closeMenu') : t('header.openMenu')}
               aria-expanded={menuOpen}
               className="rounded-md p-1.5 text-white hover:bg-white/15 lg:hidden"
             >
@@ -943,16 +987,16 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
               ))}
 
               <NavLink to="/track" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
-                Order Track
+                {t('header.orderTrack')}
               </NavLink>
 
               {user ? (
                 <NavLink to="/account" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
-                  My Account
+                  {t('header.myAccount')}
                 </NavLink>
               ) : (
                 <NavLink to="/register" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
-                  Create account
+                  {t('header.createAccount')}
                 </NavLink>
               )}
             </nav>
