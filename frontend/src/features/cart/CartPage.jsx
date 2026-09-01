@@ -526,8 +526,15 @@ export function CartPage() {
             </dl>
 
             <div className="mt-3 flex flex-col gap-2">
-              <CouponBox coupon={coupon} />
-              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
+              <div className="rounded-lg border border-ink-200 p-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">Coupon code</p>
+                <CouponBox coupon={coupon} />
+              </div>
+
+              <div className="rounded-lg border border-ink-200 p-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">Reward points</p>
+                <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
+              </div>
             </div>
 
             {/*
