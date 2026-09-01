@@ -87,6 +87,27 @@ export function useClearCart() {
   })
 }
 
+/**
+ * Check or uncheck one line for the next checkout. Never removes it -- see
+ * the backend's own comment on CartService::setSelected for why.
+ */
+export function useSetItemSelected() {
+  return useCartMutation(async ({ itemId, selected }) => {
+    const { data } = await api.put(`/shop/cart/items/${itemId}/selection`, { selected })
+
+    return data
+  })
+}
+
+/** The "select all" checkbox above the line list. */
+export function useSetAllSelected() {
+  return useCartMutation(async (selected) => {
+    const { data } = await api.put('/shop/cart/selection', { selected })
+
+    return data
+  })
+}
+
 export function useApplyCoupon() {
   return useCartMutation(async (code) => {
     const { data } = await api.post('/shop/cart/coupon', { code })

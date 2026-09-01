@@ -137,6 +137,17 @@ const STRINGS = {
     bn: 'ক্যাশ অন ডেলিভারি সুবিধা আছে। ডেলিভারি চার্জ চেকআউটে হিসাব করা হবে।',
   },
   'cart.genericFailure': { en: 'That did not work.', bn: 'এটি কাজ করেনি।' },
+  'cart.selectAll': { en: 'Select All ({count} Items)', bn: 'সব নির্বাচন করুন ({count} টি পণ্য)' },
+  'cart.selectItem': { en: 'Select {name}', bn: '{name} নির্বাচন করুন' },
+  'cart.removeSelected': { en: 'Remove selected', bn: 'নির্বাচিত পণ্য সরান' },
+  'cart.removeSelectedConfirm': {
+    en: 'Remove the {count} selected item(s) from your cart?',
+    bn: 'নির্বাচিত {count} টি পণ্য কার্ট থেকে সরাতে চান?',
+  },
+  'cart.selectAtLeastOne': {
+    en: 'Select at least one item to check out.',
+    bn: 'চেকআউট করতে অন্তত একটি পণ্য নির্বাচন করুন।',
+  },
 
   // -------------------------------------------------------- coupon box
   'coupon.title': { en: 'Coupon code', bn: 'কুপন কোড' },

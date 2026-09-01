@@ -75,8 +75,14 @@ class CheckoutController extends Controller
 
         return response()->json([
             'data' => [
-                'items' => $summary['lines'],
-                'item_count' => $summary['item_count'],
+                // Only what checkout will actually buy -- a line left
+                // unchecked on the cart page has no business appearing on
+                // the receipt of an order it is not part of.
+                'items' => array_values(array_filter(
+                    $summary['lines'],
+                    static fn (array $line): bool => $line['is_selected'],
+                )),
+                'item_count' => $summary['selected_item_count'],
                 'subtotal' => $subtotal->value(),
                 'discount' => $summary['discount']->value(),
                 'coupon' => $summary['coupon'],

@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\Order;
@@ -49,7 +50,12 @@ class OrderService
     ) {}
 
     /**
-     * Place an order for everything in a cart.
+     * Place an order for the SELECTED lines in a cart.
+     *
+     * Not necessarily every line: a shopper can uncheck items on the cart
+     * page to buy the rest now and come back for those later. Only the
+     * checked lines become order items and lose their stock hold; anything
+     * left unchecked stays in the cart, untouched, for next time.
      */
     public function placeFromCart(
         Cart $cart,
@@ -65,6 +71,10 @@ class OrderService
 
         if ($summary['item_count'] === 0) {
             throw new BusinessRuleException('There is nothing in the cart.', 'empty_cart');
+        }
+
+        if ($summary['selected_item_count'] === 0) {
+            throw new BusinessRuleException('Select at least one item to check out.', 'no_items_selected');
         }
 
         /*
@@ -228,9 +238,27 @@ class OrderService
                 $this->writeItem($order, $line->variation, $line);
             }
 
-            $this->transferReservations($cart, $order);
+            // Only the lines actually bought leave the cart -- an unchecked
+            // line's hold, and the line itself, stay exactly as they were.
+            $selectedItems = $cart->items->where('is_selected', true);
 
-            $cart->forceFill(['status' => 'converted'])->save();
+            $this->transferReservations(
+                $order,
+                $selectedItems->pluck('stock_reservation_id')->filter()->all(),
+            );
+
+            CartItem::whereIn('id', $selectedItems->pluck('id')->all())->delete();
+
+            $remaining = CartItem::where('cart_id', $cart->id)->count();
+
+            if ($remaining === 0) {
+                $cart->forceFill(['status' => 'converted'])->save();
+            } elseif ($rewardPointsUsed > 0) {
+                // Those points are spent -- on this order, not on whatever
+                // is left. Leaving the redemption in place would offer them
+                // again against a subtotal they were never priced against.
+                $this->carts->removeRewardPoints($cart);
+            }
 
             $history = new OrderStatusHistory;
 
@@ -281,15 +309,24 @@ class OrderService
     }
 
     /**
-     * Move the cart's stock holds onto the order.
+     * Move the BOUGHT lines' stock holds onto the order.
      *
      * They stop expiring at that point: a confirmed order's stock is spoken
      * for until it ships or is cancelled, not for the next thirty minutes.
+     * Scoped to specific reservation ids, not the whole cart token -- a line
+     * left unchecked keeps its own hold exactly as it was, unaffected by an
+     * order placed for the lines beside it.
+     *
+     * @param  array<int, int>  $reservationIds
      */
-    private function transferReservations(Cart $cart, Order $order): void
+    private function transferReservations(Order $order, array $reservationIds): void
     {
+        if ($reservationIds === []) {
+            return;
+        }
+
         StockReservation::query()
-            ->where('cart_token', $cart->token)
+            ->whereIn('id', $reservationIds)
             ->where('status', 'active')
             ->update([
                 'order_id' => $order->id,

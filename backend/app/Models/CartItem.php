@@ -19,13 +19,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CartItem extends Model
 {
     protected $fillable = [
-        'cart_id', 'product_variation_id', 'quantity', 'stock_reservation_id',
+        'cart_id', 'product_variation_id', 'quantity', 'stock_reservation_id', 'is_selected',
     ];
 
     protected function casts(): array
     {
         return [
             'quantity' => 'decimal:3',
+            'is_selected' => 'boolean',
         ];
     }
 

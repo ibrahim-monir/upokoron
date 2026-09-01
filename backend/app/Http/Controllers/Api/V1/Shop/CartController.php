@@ -86,6 +86,40 @@ class CartController extends Controller
         return $this->respond($cart->refresh(), $request);
     }
 
+    /**
+     * Check or uncheck one line for the next checkout.
+     */
+    public function selectItem(Request $request, CartItem $item): JsonResponse
+    {
+        $data = $request->validate([
+            'selected' => ['required', 'boolean'],
+        ]);
+
+        $cart = $this->cart($request);
+
+        abort_unless($item->cart_id === $cart->id, 404);
+
+        $this->carts->setSelected($cart, $item, $data['selected']);
+
+        return $this->respond($cart->refresh(), $request);
+    }
+
+    /**
+     * The "select all" checkbox above the line list.
+     */
+    public function selectAll(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'selected' => ['required', 'boolean'],
+        ]);
+
+        $cart = $this->cart($request);
+
+        $this->carts->setAllSelected($cart, $data['selected']);
+
+        return $this->respond($cart->refresh(), $request);
+    }
+
     public function destroy(Request $request, CartItem $item): JsonResponse
     {
         $cart = $this->cart($request);

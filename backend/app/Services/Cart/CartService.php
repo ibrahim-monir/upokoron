@@ -166,7 +166,18 @@ class CartService
      * Prices are worked out here, from the catalogue, every single time. The
      * cart stores no money at all.
      *
-     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, reward_points: array<string, mixed>|null, weight_kg: Quantity, item_count: int, has_unheld: bool}
+     * Every line is returned -- unchecked ones included, each carrying its
+     * own `is_selected` -- so the cart page can still draw and price a line
+     * nobody plans to buy yet. But `priced`, `subtotal`, `discount`,
+     * `coupon`, `reward_points` and `weight_kg` only count SELECTED lines:
+     * those are what checkout is about to become an order from, and a
+     * coupon or a free-shipping threshold has to be judged against what is
+     * actually being bought, not against items sitting unchecked in the
+     * same basket. `has_unheld` follows the same rule -- an unheld line
+     * nobody is buying right now should not block checkout out of lines
+     * that are fine.
+     *
+     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, reward_points: array<string, mixed>|null, weight_kg: Quantity, item_count: int, selected_item_count: int, has_unheld: bool}
      */
     public function summary(Cart $cart, ?Customer $customer = null): array
     {
@@ -179,7 +190,7 @@ class CartService
             'coupon',
         ]);
 
-        $priced = [];
+        $selectedPriced = [];
         $lines = [];
         $hasUnheld = false;
 
@@ -191,12 +202,15 @@ class CartService
             }
 
             $line = $this->pricing->price($variation, $item->quantity(), $customer);
-            $priced[] = $line;
+
+            if ($item->is_selected) {
+                $selectedPriced[] = $line;
+            }
 
             $available = $variation->inventory?->available() ?? Quantity::zero();
             $held = $item->isHeld();
 
-            if (! $held) {
+            if (! $held && $item->is_selected) {
                 $hasUnheld = true;
             }
 
@@ -225,23 +239,46 @@ class CartService
                 'is_held' => $held,
                 'available' => $available->value(),
                 'is_sellable' => $this->isSellable($variation),
+                'is_selected' => $item->is_selected,
             ];
         }
 
-        $subtotal = $this->pricing->subtotal($priced);
+        $subtotal = $this->pricing->subtotal($selectedPriced);
 
         return [
             'cart' => $cart,
             'lines' => $lines,
-            'priced' => $priced,
+            'priced' => $selectedPriced,
             'subtotal' => $subtotal,
-            'discount' => $this->pricing->totalDiscount($priced),
+            'discount' => $this->pricing->totalDiscount($selectedPriced),
             'coupon' => $this->couponSummary($cart, $subtotal, $customer),
             'reward_points' => $this->rewardPointsSummary($cart, $subtotal, $customer),
-            'weight_kg' => $this->pricing->totalWeight($priced),
+            'weight_kg' => $this->pricing->totalWeight($selectedPriced),
             'item_count' => count($lines),
+            'selected_item_count' => count($selectedPriced),
             'has_unheld' => $hasUnheld,
         ];
+    }
+
+    /**
+     * Check or uncheck one line for the next checkout. Never removes it --
+     * unchecking is "not right now", not "take this out of my cart".
+     */
+    public function setSelected(Cart $cart, CartItem $item, bool $selected): void
+    {
+        $item->forceFill(['is_selected' => $selected])->save();
+
+        $this->touchCart($cart);
+    }
+
+    /**
+     * The "select all" checkbox above the line list.
+     */
+    public function setAllSelected(Cart $cart, bool $selected): void
+    {
+        $cart->items()->update(['is_selected' => $selected]);
+
+        $this->touchCart($cart);
     }
 
     /**

@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ArrowRight, ImageOff, Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { cx, money } from '../../lib/format'
@@ -6,7 +7,39 @@ import { EmptyState, ErrorState, Spinner, useToast } from '../../components/ui'
 import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { TrustBadges } from '../../components/TrustBadges'
 import { CouponBox, RewardPointsBox } from './RewardFields'
-import { useCart, useClearCart, useRemoveCartItem, useUpdateCartItem } from './useCart'
+import {
+  useCart,
+  useClearCart,
+  useRemoveCartItem,
+  useSetAllSelected,
+  useSetItemSelected,
+  useUpdateCartItem,
+} from './useCart'
+
+/**
+ * A checkbox that can show "some, but not all" -- the native `indeterminate`
+ * state has no HTML attribute, only a DOM property, so it has to be set
+ * imperatively rather than passed as a prop.
+ */
+function Checkbox({ checked, indeterminate = false, onChange, disabled, 'aria-label': ariaLabel }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate
+  }, [indeterminate])
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="h-4 w-4 shrink-0 rounded border-ink-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50"
+    />
+  )
+}
 
 /**
  * Quantity stepper.
@@ -55,7 +88,7 @@ function QuantityStepper({ value, onChange, disabled }) {
  * a wide screen and stacked back down on a phone, rather than two different
  * markups pretending to be the same component.
  */
-function CartRow({ line, busy, onQuantity, onRemove }) {
+function CartRow({ line, busy, onQuantity, onRemove, onSelect }) {
   const { t } = useTranslation()
 
   // A lapsed hold with nothing left to adjust to -- "change the quantity"
@@ -65,7 +98,19 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
   const outOfStock = !line.is_held && Number(line.available) === 0
 
   return (
-    <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3 p-3 sm:grid-cols-[auto_1fr_6rem_9rem_6rem] sm:items-center sm:gap-4 sm:p-4">
+    <div className="grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 p-3 sm:grid-cols-[auto_auto_1fr_6rem_9rem_6rem] sm:items-center sm:gap-4 sm:p-4">
+      {/*
+        Never disabled by stock status -- unchecking a line that has gone
+        out of stock, so the rest of the cart can still check out, is
+        exactly the case this exists for.
+      */}
+      <Checkbox
+        checked={line.is_selected}
+        onChange={(checked) => onSelect(line.id, checked)}
+        disabled={busy}
+        aria-label={t('cart.selectItem', { name: line.name })}
+      />
+
       <button
         type="button"
         onClick={() => onRemove(line.id)}
@@ -140,7 +185,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
         )}
       </div>
 
-      <div className="col-start-2 row-start-2 sm:col-start-4 sm:row-start-1">
+      <div className="col-start-3 row-start-2 sm:col-start-5 sm:row-start-1">
         <QuantityStepper
           value={line.quantity}
           disabled={busy || outOfStock}
@@ -148,7 +193,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
         />
       </div>
 
-      <div className="tabular col-start-3 row-start-1 self-start text-right text-sm font-semibold text-ink-900 sm:col-start-5 sm:row-start-1 sm:self-center">
+      <div className="tabular col-start-4 row-start-1 self-start text-right text-sm font-semibold text-ink-900 sm:col-start-6 sm:row-start-1 sm:self-center">
         {money(line.line_total)}
       </div>
     </div>
@@ -163,13 +208,34 @@ export function CartPage() {
   const updateItem = useUpdateCartItem()
   const removeItem = useRemoveCartItem()
   const clearCart = useClearCart()
+  const setItemSelected = useSetItemSelected()
+  const setAllSelected = useSetAllSelected()
 
-  const busy = updateItem.isPending || removeItem.isPending || clearCart.isPending
+  const busy =
+    updateItem.isPending ||
+    removeItem.isPending ||
+    clearCart.isPending ||
+    setItemSelected.isPending ||
+    setAllSelected.isPending
 
   const handle = (mutation, variables) =>
     mutation.mutate(variables, {
       onError: (error) => toast.error(error?.message ?? t('cart.genericFailure')),
     })
+
+  // Removing several selected lines one request at a time (rather than a
+  // bulk endpoint) so the same single-item mutation, cache write, and error
+  // handling this page already trusts is what runs for each of them.
+  const removeSelected = async (itemIds) => {
+    for (const itemId of itemIds) {
+      try {
+        await removeItem.mutateAsync(itemId)
+      } catch (error) {
+        toast.error(error?.message ?? t('cart.genericFailure'))
+        return
+      }
+    }
+  }
 
   if (cart.isLoading) {
     return (
@@ -214,7 +280,16 @@ export function CartPage() {
   // still something to adjust to -- a lapsed hold on a fully out-of-stock
   // line gets its own red, non-actionable warning on the row instead (see
   // CartRow), so it does not double up with advice that would not help it.
-  const hasAdjustableUnheld = lines.some((line) => !line.is_held && Number(line.available) > 0)
+  // Scoped to selected lines, same as the backend's own has_unheld_items:
+  // a lapsed hold on a line nobody is buying right now has nothing to warn
+  // about.
+  const hasAdjustableUnheld = lines.some(
+    (line) => line.is_selected && !line.is_held && Number(line.available) > 0,
+  )
+
+  const selectedCount = lines.filter((line) => line.is_selected).length
+  const allSelected = selectedCount === lines.length
+  const noneSelected = selectedCount === 0
 
   const rawQuantity = lines.reduce((sum, line) => sum + Number(line.quantity), 0)
   const totalQuantity = Number.isInteger(rawQuantity) ? rawQuantity : rawQuantity.toFixed(3)
@@ -245,11 +320,39 @@ export function CartPage() {
         </div>
       )}
 
+      <div className="flex items-center justify-between gap-3 rounded-card border border-ink-200 bg-white p-3">
+        <label className="flex items-center gap-2.5 text-sm font-medium text-ink-700">
+          <Checkbox
+            checked={allSelected}
+            indeterminate={!allSelected && !noneSelected}
+            onChange={(checked) => handle(setAllSelected, checked)}
+            disabled={busy}
+            aria-label={t('cart.selectAll', { count: selectedCount })}
+          />
+          {t('cart.selectAll', { count: selectedCount })}
+        </label>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm(t('cart.removeSelectedConfirm', { count: selectedCount }))) {
+              removeSelected(lines.filter((line) => line.is_selected).map((line) => line.id))
+            }
+          }}
+          disabled={busy || noneSelected}
+          className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-danger-700 disabled:opacity-50"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('cart.removeSelected')}
+        </button>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-3">
           <div className="overflow-hidden rounded-card border border-ink-200 bg-white">
             {/* Column headers, shown once the row layout has room for them. */}
-            <div className="hidden grid-cols-[auto_1fr_6rem_9rem_6rem] gap-4 bg-brand-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white sm:grid">
+            <div className="hidden grid-cols-[auto_auto_1fr_6rem_9rem_6rem] gap-4 bg-brand-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white sm:grid">
+              <span aria-hidden="true" />
               <span aria-hidden="true" />
               <span>
                 {t('cart.productHeader')} <span className="normal-case text-white/70">({lines.length})</span>
@@ -269,6 +372,7 @@ export function CartPage() {
                   busy={busy}
                   onQuantity={(itemId, quantity) => handle(updateItem, { itemId, quantity })}
                   onRemove={(itemId) => handle(removeItem, itemId)}
+                  onSelect={(itemId, selected) => handle(setItemSelected, { itemId, selected })}
                 />
               ))}
             </div>
@@ -303,7 +407,7 @@ export function CartPage() {
             <dl className="mt-3 flex flex-col gap-2 border-t border-ink-100 pt-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-ink-600">{t('cart.items')}</dt>
-                <dd className="tabular font-medium text-ink-900">{data.item_count}</dd>
+                <dd className="tabular font-medium text-ink-900">{selectedCount}</dd>
               </div>
 
               <div className="flex justify-between">
@@ -346,13 +450,13 @@ export function CartPage() {
             */}
             <Link
               to="/checkout"
-              aria-disabled={data.has_unheld_items}
+              aria-disabled={data.has_unheld_items || noneSelected}
               onClick={(event) => {
-                if (data.has_unheld_items) event.preventDefault()
+                if (data.has_unheld_items || noneSelected) event.preventDefault()
               }}
               className={cx(
                 'mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors',
-                data.has_unheld_items
+                data.has_unheld_items || noneSelected
                   ? 'pointer-events-none bg-ink-200 text-ink-500'
                   : 'bg-brand-600 text-white shadow-card hover:bg-brand-700',
               )}
@@ -361,7 +465,9 @@ export function CartPage() {
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
 
-            <p className="mt-2 text-center text-xs text-ink-500">{t('cart.codAvailable')}</p>
+            <p className="mt-2 text-center text-xs text-ink-500">
+              {noneSelected ? t('cart.selectAtLeastOne') : t('cart.codAvailable')}
+            </p>
           </div>
         </div>
       </div>

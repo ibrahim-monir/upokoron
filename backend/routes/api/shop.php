@@ -110,6 +110,12 @@ Route::put('cart/items/{item}', [CartController::class, 'update'])->name('cart.i
 Route::delete('cart/items/{item}', [CartController::class, 'destroy'])->name('cart.items.destroy');
 Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
 
+// Which lines the next checkout will actually buy. Never removes a line --
+// see CartService::setSelected -- so this is safe to call as often as a
+// checkbox is clicked.
+Route::put('cart/items/{item}/selection', [CartController::class, 'selectItem'])->name('cart.items.select');
+Route::put('cart/selection', [CartController::class, 'selectAll'])->name('cart.select-all');
+
 Route::post('cart/coupon', [CartController::class, 'applyCoupon'])->name('cart.coupon.apply');
 Route::delete('cart/coupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');
 
