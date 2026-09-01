@@ -19,7 +19,7 @@ import {
   User,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { get } from '../lib/api'
 import { cx, money } from '../lib/format'
 import { useAnalytics } from '../lib/useAnalytics'
@@ -68,6 +68,147 @@ function useDebounced(value, delay = 220) {
   }, [value, delay])
 
   return settled
+}
+
+/**
+ * A handful of real products, to build the search box's example phrases
+ * from. Cached for a while -- these are just for show, so there is no
+ * reason to refetch them as often as an actual product listing would need.
+ */
+function useSearchExamples() {
+  return useQuery({
+    queryKey: ['shop', 'products', 'search-examples'],
+    queryFn: () => get('/shop/products', { params: { per_page: 40 } }),
+    staleTime: 10 * 60 * 1000,
+    select: (response) => response.data ?? [],
+  })
+}
+
+/**
+ * Long enough to fit the search box while it is being typed out, short
+ * enough that a name like "Veroboard Normal Line 14.5×6.5cm Stripboard PCB
+ * Printed Circuit Board For Prototyping..." (a real product name in this
+ * catalogue) does not turn one phrase into a fifteen-second scroll of text.
+ * Names over this are skipped for the example list rather than truncated
+ * mid-word, so what's shown always reads as a complete phrase.
+ */
+const MAX_EXAMPLE_LENGTH = 28
+
+function fitsAsExample(text) {
+  return typeof text === 'string' && text.length > 0 && text.length <= MAX_EXAMPLE_LENGTH
+}
+
+/**
+ * "product (...)", "brand (...)" and "category (...)" phrases, each with a
+ * couple of real examples -- so a shopper who has never searched here
+ * before sees, in the box itself, the three things this search actually
+ * matches. Skips a facet entirely if nothing in the sample has one short
+ * enough to show (an unbranded product, a product with no category).
+ */
+function buildSearchPhrases(products) {
+  const names = []
+  const brands = []
+  const categories = []
+
+  for (const product of products) {
+    if (fitsAsExample(product.name) && names.length < 2 && !names.includes(product.name)) {
+      names.push(product.name)
+    }
+    if (
+      fitsAsExample(product.brand?.name) &&
+      brands.length < 2 &&
+      !brands.includes(product.brand.name)
+    ) {
+      brands.push(product.brand.name)
+    }
+    if (
+      fitsAsExample(product.category?.name) &&
+      categories.length < 2 &&
+      !categories.includes(product.category.name)
+    ) {
+      categories.push(product.category.name)
+    }
+  }
+
+  return [
+    names.length > 0 && `product (${names.join(', ')})`,
+    brands.length > 0 && `brand (${brands.join(', ')})`,
+    categories.length > 0 && `category (${categories.join(', ')})`,
+  ].filter(Boolean)
+}
+
+/**
+ * A placeholder that types itself out after a fixed prefix, pauses, erases
+ * back down to that prefix, and moves on to the next phrase -- the same
+ * rhythm a shopper would see typing a real query, so the box demonstrates
+ * what it can search rather than just naming it.
+ */
+function useTypedPlaceholder(prefix, phrases) {
+  const [suffix, setSuffix] = useState('')
+
+  useEffect(() => {
+    if (phrases.length === 0) {
+      setSuffix('')
+      return undefined
+    }
+
+    const TYPE_MS = 90
+    const ERASE_MS = 55
+    const HOLD_MS = 1200
+    const GAP_MS = 400
+
+    let phraseIndex = 0
+    let charIndex = 0
+    let phase = 'typing'
+    let timer
+
+    const tick = () => {
+      const phrase = phrases[phraseIndex % phrases.length]
+
+      if (phase === 'typing') {
+        charIndex += 1
+        setSuffix(phrase.slice(0, charIndex))
+        phase = charIndex >= phrase.length ? 'holding' : 'typing'
+        timer = setTimeout(tick, phase === 'holding' ? HOLD_MS : TYPE_MS)
+
+        return
+      }
+
+      if (phase === 'holding') {
+        phase = 'erasing'
+        timer = setTimeout(tick, ERASE_MS)
+
+        return
+      }
+
+      if (phase === 'erasing') {
+        charIndex -= 1
+        setSuffix(phrase.slice(0, charIndex))
+
+        if (charIndex <= 0) {
+          phraseIndex += 1
+          phase = 'waiting'
+          timer = setTimeout(tick, GAP_MS)
+        } else {
+          timer = setTimeout(tick, ERASE_MS)
+        }
+
+        return
+      }
+
+      // waiting
+      phase = 'typing'
+      timer = setTimeout(tick, TYPE_MS)
+    }
+
+    timer = setTimeout(tick, TYPE_MS)
+
+    return () => clearTimeout(timer)
+    // phrases is rebuilt with useMemo, so this only restarts when the
+    // example set actually changes, not on every render.
+  }, [prefix, phrases])
+
+  return prefix + suffix
 }
 
 /** Two characters. One matches most of the catalogue and suggests nothing. */
@@ -119,6 +260,10 @@ function SearchBar({ className }) {
 
   const results = enabled ? (suggestions.data?.data ?? []) : []
   const total = suggestions.data?.meta?.total ?? 0
+
+  const examples = useSearchExamples()
+  const searchPhrases = useMemo(() => buildSearchPhrases(examples.data ?? []), [examples.data])
+  const typedPlaceholder = useTypedPlaceholder('Search by ', searchPhrases)
 
   // A click anywhere else means the shopper is done with the panel.
   useEffect(() => {
@@ -193,7 +338,7 @@ function SearchBar({ className }) {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Search product"
+          placeholder={searchPhrases.length > 0 ? typedPlaceholder : 'Search product'}
           aria-label="Search products"
           role="combobox"
           aria-expanded={showPanel}
