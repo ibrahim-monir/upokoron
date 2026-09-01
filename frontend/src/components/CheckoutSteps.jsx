@@ -19,49 +19,55 @@ export function CheckoutSteps({ current }) {
   const currentIndex = STEPS.findIndex((step) => step.key === current)
 
   return (
-    <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-      {STEPS.map((step, index) => {
-        const isCurrent = index === currentIndex
-        const isPast = index < currentIndex
-        const isClickable = isPast && step.to
+    <div className="flex justify-center rounded-card border border-ink-200 bg-ink-50 px-4 py-3 sm:px-6">
+      <ol className="flex flex-wrap items-center justify-center gap-2 text-sm sm:gap-3">
+        {STEPS.map((step, index) => {
+          const isCurrent = index === currentIndex
+          const isPast = index < currentIndex
+          const isClickable = isPast && step.to
 
-        const content = (
-          <span
-            className={cx(
-              'flex items-center gap-1.5 font-medium',
-              isCurrent ? 'text-brand-800' : isPast ? 'text-ink-700' : 'text-ink-400',
-            )}
-          >
+          const content = (
             <span
               className={cx(
-                'grid h-5 w-5 shrink-0 place-items-center rounded-full text-xs font-bold',
-                isCurrent ? 'bg-brand-600 text-white' : isPast ? 'bg-brand-100 text-brand-800' : 'bg-ink-100 text-ink-400',
+                'flex items-center gap-2 font-medium',
+                isCurrent ? 'text-brand-800' : isPast ? 'text-ink-700' : 'text-ink-400',
               )}
             >
-              {isPast ? <Check className="h-3 w-3" aria-hidden="true" /> : index + 1}
-            </span>
-            {step.label}
-          </span>
-        )
-
-        return (
-          <li key={step.key} className="flex items-center gap-1.5">
-            {index > 0 && (
               <span
-                className={cx('h-px w-6 sm:w-10', isPast || isCurrent ? 'bg-brand-300' : 'bg-ink-200')}
-                aria-hidden="true"
-              />
-            )}
-            {isClickable ? (
-              <Link to={step.to} className="hover:opacity-80">
-                {content}
-              </Link>
-            ) : (
-              content
-            )}
-          </li>
-        )
-      })}
-    </ol>
+                className={cx(
+                  'grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold transition-colors',
+                  isCurrent
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : isPast
+                      ? 'bg-brand-100 text-brand-800'
+                      : 'border border-ink-200 bg-white text-ink-400',
+                )}
+              >
+                {isPast ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : index + 1}
+              </span>
+              {step.label}
+            </span>
+          )
+
+          return (
+            <li key={step.key} className="flex items-center gap-2 sm:gap-3">
+              {index > 0 && (
+                <span
+                  className={cx('h-px w-6 sm:w-12', isPast || isCurrent ? 'bg-brand-300' : 'bg-ink-200')}
+                  aria-hidden="true"
+                />
+              )}
+              {isClickable ? (
+                <Link to={step.to} className="hover:opacity-80">
+                  {content}
+                </Link>
+              ) : (
+                content
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
 }
