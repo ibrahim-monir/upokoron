@@ -495,7 +495,12 @@ export function CartPage() {
           <div className="rounded-card border border-ink-200 bg-white p-4">
             <h2 className="text-sm font-semibold text-ink-900">Order summary</h2>
 
-            <dl className="mt-3 flex flex-col gap-2 text-sm">
+            <div className="mt-3 flex flex-col gap-2">
+              <CouponBox coupon={coupon} />
+              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
+            </div>
+
+            <dl className="mt-3 flex flex-col gap-2 border-t border-ink-100 pt-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-ink-600">Items</dt>
                 <dd className="tabular font-medium text-ink-900">{data.item_count}</dd>
@@ -532,11 +537,6 @@ export function CartPage() {
                 <dd className="tabular text-brand-800">{money(total)}</dd>
               </div>
             </dl>
-
-            <div className="mt-3 flex flex-col gap-2">
-              <CouponBox coupon={coupon} />
-              <RewardPointsBox rewardPoints={rewardPoints} balance={Number(data.reward_points_balance ?? 0)} />
-            </div>
 
             {/*
               Disabled while any hold has lapsed: checkout would refuse the
