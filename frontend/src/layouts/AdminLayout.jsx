@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileText,
   Gift,
+  Globe,
   HelpCircle,
   Image as ImageIcon,
   Layers,
@@ -55,6 +56,7 @@ const SECTIONS = [
       // any one of those made it a detour from all the others.
       { to: '/admin/media', icon: ImageIcon, label: 'Media library', can: 'media.view' },
       { to: '/admin/settings', icon: Settings, label: 'Settings', can: 'settings.manage' },
+      { to: '/admin/sitemap', icon: Globe, label: 'Sitemap', can: 'sitemap.manage' },
     ],
   },
   {

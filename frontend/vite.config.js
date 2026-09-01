@@ -31,7 +31,9 @@ export default defineConfig({
         target: 'http://127.0.0.1:8010',
         changeOrigin: false,
       },
-      '/sitemap.xml': {
+      // Regex key: covers both the index (/sitemap.xml) and its batches
+      // (/sitemap-products-2.xml).
+      '^/sitemap': {
         target: 'http://127.0.0.1:8010',
         changeOrigin: false,
       },

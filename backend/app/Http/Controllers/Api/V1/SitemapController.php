@@ -5,50 +5,50 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
-use App\Models\Product;
+use App\Services\Support\SitemapService;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
 
 class SitemapController extends Controller
 {
-    /**
-     * XML sitemap for search engines.
-     *
-     * Built from the same visibility rules the storefront itself uses --
-     * draft/archived products and inactive categories never earn a URL here,
-     * so nothing gets submitted to Search Console that a visitor would 404 on.
-     */
-    public function __invoke(): Response
+    public function __construct(private readonly SitemapService $sitemap)
     {
-        $xml = Cache::remember('sitemap.xml', now()->addHour(), function (): string {
-            $baseUrl = rtrim((string) config('app.frontend_url'), '/');
+    }
 
-            $staticPaths = [
-                ['path' => '/', 'priority' => '1.0', 'changefreq' => 'daily'],
-                ['path' => '/products', 'priority' => '0.8', 'changefreq' => 'daily'],
-                ['path' => '/about', 'priority' => '0.5', 'changefreq' => 'monthly'],
-                ['path' => '/contact', 'priority' => '0.5', 'changefreq' => 'monthly'],
-                ['path' => '/rewards', 'priority' => '0.5', 'changefreq' => 'monthly'],
-                ['path' => '/privacy', 'priority' => '0.3', 'changefreq' => 'yearly'],
-                ['path' => '/terms', 'priority' => '0.3', 'changefreq' => 'yearly'],
-            ];
+    /**
+     * The sitemap index: one <sitemap> entry per non-empty batch, so a
+     * segment with no URLs (posts, until that feature exists) simply does
+     * not appear rather than pointing crawlers at an empty file.
+     */
+    public function index(): Response
+    {
+        $baseUrl = rtrim((string) config('app.frontend_url'), '/');
 
-            $categories = Category::query()
-                ->active()
-                ->get(['slug', 'updated_at']);
+        $refs = [];
 
-            $products = Product::query()
-                ->published()
-                ->get(['slug', 'updated_at']);
+        foreach (array_keys(SitemapService::segments()) as $segment) {
+            foreach (array_keys($this->sitemap->batches($segment)) as $batchIndex) {
+                $refs[] = "{$baseUrl}/sitemap-{$segment}-".($batchIndex + 1).'.xml';
+            }
+        }
 
-            return view('sitemap', [
-                'baseUrl' => $baseUrl,
-                'staticPaths' => $staticPaths,
-                'categories' => $categories,
-                'products' => $products,
-            ])->render();
-        });
+        $xml = view('sitemap-index', ['refs' => $refs])->render();
+
+        return response($xml, 200)->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    /**
+     * One batch of at most SitemapService::BATCH_SIZE URLs for a single
+     * content type, e.g. /sitemap-products-2.xml.
+     */
+    public function show(string $segment, int $batch): Response
+    {
+        abort_unless(array_key_exists($segment, SitemapService::segments()), 404);
+
+        $urls = $this->sitemap->batches($segment)[$batch - 1] ?? null;
+
+        abort_if($urls === null, 404);
+
+        $xml = view('sitemap-urlset', ['urls' => $urls])->render();
 
         return response($xml, 200)->header('Content-Type', 'application/xml; charset=UTF-8');
     }

@@ -322,6 +322,10 @@ export const router = createBrowserRouter([
         element: guarded('settings.manage', lazyAdmin(() => import('../features/admin/SettingsPage'))),
       },
       {
+        path: 'sitemap',
+        element: guarded('sitemap.manage', lazyAdmin(() => import('../features/admin/SitemapPage'))),
+      },
+      {
         path: 'audit-logs',
         element: guarded('audit.view', lazyAdmin(() => import('../features/admin/AuditLogPage'))),
       },

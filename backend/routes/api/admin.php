@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
 use App\Http\Controllers\Api\V1\Admin\ShippingZoneController;
+use App\Http\Controllers\Api\V1\Admin\SitemapController;
 use App\Http\Controllers\Api\V1\Admin\UnitController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
@@ -57,6 +58,12 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     // Settings
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+
+    // The XML sitemap. Content is derived, not stored, so there is nothing
+    // to edit here -- just what is currently in it and a way to force a
+    // rebuild before the hourly cache would otherwise expire.
+    Route::get('sitemap', [SitemapController::class, 'index'])->name('sitemap.index');
+    Route::post('sitemap/regenerate', [SitemapController::class, 'regenerate'])->name('sitemap.regenerate');
 
     // Audit trail
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');

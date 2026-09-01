@@ -26,8 +26,11 @@
     RewriteRule ^up$ api/index.php [L]
 
     # The XML sitemap Search Console expects at the site root, not buried
-    # under /api. Laravel builds it fresh from the product/category tables.
+    # under /api: the index at /sitemap.xml plus its per-type, per-batch
+    # files such as /sitemap-products-2.xml. Laravel builds them from the
+    # product/category tables.
     RewriteRule ^sitemap\.xml$ api/index.php [L]
+    RewriteRule ^sitemap-[a-z0-9-]+\.xml$ api/index.php [L]
 
     # A real file or directory is served as-is.
     RewriteCond %{REQUEST_FILENAME} -f [OR]

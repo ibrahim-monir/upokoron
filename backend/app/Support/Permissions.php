@@ -113,6 +113,7 @@ final class Permissions
                 'shipping.manage' => 'Manage shipping methods and zones',
                 'payments.manage' => 'Manage payment methods',
                 'settings.manage' => 'Manage store settings',
+                'sitemap.manage' => 'View and regenerate the XML sitemap',
                 'users.view' => 'View users',
                 'users.manage' => 'Manage users',
                 'roles.manage' => 'Manage roles and permissions',
