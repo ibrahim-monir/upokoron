@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from '../../lib/i18n'
 import { Button } from '../../components/ui'
 
 /**
@@ -8,15 +9,16 @@ import { Button } from '../../components/ui'
  * forwarded to a family member.
  */
 export function PhoneGate({ number, onSubmit, error }) {
+  const { t } = useTranslation()
   const [phone, setPhone] = useState('')
 
   return (
     <div className="mx-auto max-w-md rounded-card border border-ink-200 bg-white p-5">
-      <h1 className="text-lg font-semibold text-ink-900">Find order {number}</h1>
+      <h1 className="text-lg font-semibold text-ink-900">{t('phoneGate.title', { number })}</h1>
       <p className="mt-1 text-sm text-ink-600">
-        Enter the mobile number the order was placed with, or{' '}
+        {t('phoneGate.bodyPrefix')}{' '}
         <Link to="/login" className="font-medium text-brand-800 hover:underline">
-          sign in
+          {t('phoneGate.signIn')}
         </Link>
         .
       </p>
@@ -33,11 +35,11 @@ export function PhoneGate({ number, onSubmit, error }) {
           onChange={(event) => setPhone(event.target.value)}
           placeholder="01XXXXXXXXX"
           inputMode="tel"
-          aria-label="Mobile number"
+          aria-label={t('phoneGate.mobileAriaLabel')}
           className="h-10 rounded-lg border border-ink-200 px-3 text-sm text-ink-900 placeholder:text-ink-400"
         />
         <Button type="submit" disabled={!phone.trim()}>
-          Show my order
+          {t('phoneGate.showOrder')}
         </Button>
       </form>
 

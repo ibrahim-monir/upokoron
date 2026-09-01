@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, ImageOff, Truck } from 'lucide-react'
 import { dateTime, money } from '../../lib/format'
+import { useTranslation } from '../../lib/i18n'
 import { Badge, ErrorState, Spinner } from '../../components/ui'
 import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { TrustBadges } from '../../components/TrustBadges'
@@ -19,6 +20,7 @@ import { useOrder } from './useCheckout'
  * receipt, here is where to track it from now on.
  */
 export function OrderCompletePage() {
+  const { t } = useTranslation()
   const { number } = useParams()
   const [params, setParams] = useSearchParams()
 
@@ -37,7 +39,7 @@ export function OrderCompletePage() {
     return (
       <PhoneGate
         number={number}
-        error={phone ? 'That number does not match this order.' : null}
+        error={phone ? t('order.phoneMismatch') : null}
         onSubmit={(value) => setParams({ phone: value }, { replace: true })}
       />
     )
@@ -59,24 +61,24 @@ export function OrderCompletePage() {
         <span className="grid h-14 w-14 place-items-center rounded-full bg-success-50 text-success-700">
           <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
         </span>
-        <h1 className="text-xl font-semibold text-ink-900">Thank you — your order is placed.</h1>
+        <h1 className="text-xl font-semibold text-ink-900">{t('order.thankYou')}</h1>
         <p className="max-w-md text-sm text-ink-600">
-          We will call you on {data.shipping.phone} to confirm before sending it out.
-          {data.payment_method?.is_cod && ' Pay the courier when it arrives.'}
+          {t('order.willCall', { phone: data.shipping.phone })}
+          {data.payment_method?.is_cod && ` ${t('order.payCourier')}`}
         </p>
       </div>
 
       <div className="grid gap-3 rounded-card border border-brand-100 bg-brand-50 p-4 text-center sm:grid-cols-3 sm:items-center">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">Order ID</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">{t('order.orderId')}</p>
           <p className="mt-0.5 font-semibold text-ink-900">{data.number}</p>
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">Payment method</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">{t('order.paymentMethod')}</p>
           <p className="mt-0.5 font-medium text-ink-900">{data.payment_method?.name ?? '—'}</p>
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">Status</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-800">{t('order.status')}</p>
           <div className="mt-0.5 flex items-center justify-center gap-1.5">
             <Badge tone={statusTone(data.status)}>{data.status_label}</Badge>
             <Badge tone={data.payment_status === 'paid' ? 'success' : 'neutral'}>
@@ -88,9 +90,9 @@ export function OrderCompletePage() {
 
       <div className="overflow-hidden rounded-card border border-ink-200 bg-white">
         <div className="hidden grid-cols-[1fr_6rem_6rem] gap-4 bg-brand-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white sm:grid">
-          <span>Product</span>
-          <span>Quantity</span>
-          <span className="text-right">Subtotal</span>
+          <span>{t('order.product')}</span>
+          <span>{t('order.quantity')}</span>
+          <span className="text-right">{t('order.subtotal')}</span>
         </div>
 
         <ul className="divide-y divide-ink-100">
@@ -130,37 +132,41 @@ export function OrderCompletePage() {
 
         <dl className="flex flex-col gap-2 border-t border-ink-200 p-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ink-600">Subtotal</dt>
+            <dt className="text-ink-600">{t('order.subtotal')}</dt>
             <dd className="tabular text-ink-900">{money(data.subtotal)}</dd>
           </div>
 
           {Number(data.discount_total) > 0 && (
             <div className="flex justify-between">
-              <dt className="text-ink-600">Discount</dt>
+              <dt className="text-ink-600">{t('order.discount')}</dt>
               <dd className="tabular text-accent-600">− {money(data.discount_total)}</dd>
             </div>
           )}
 
           {couponDiscount > 0 && (
             <div className="flex justify-between">
-              <dt className="text-ink-600">Coupon {data.coupon_code && `(${data.coupon_code})`}</dt>
+              <dt className="text-ink-600">
+                {t('order.coupon')} {data.coupon_code && `(${data.coupon_code})`}
+              </dt>
               <dd className="tabular text-accent-600">− {money(couponDiscount)}</dd>
             </div>
           )}
 
           <div className="flex justify-between">
-            <dt className="text-ink-600">Delivery {data.shipping.method && `(${data.shipping.method})`}</dt>
+            <dt className="text-ink-600">
+              {t('order.delivery')} {data.shipping.method && `(${data.shipping.method})`}
+            </dt>
             <dd className="tabular text-ink-900">{money(data.shipping_charge)}</dd>
           </div>
 
           <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
-            <dt className="text-ink-900">Total</dt>
+            <dt className="text-ink-900">{t('order.total')}</dt>
             <dd className="tabular text-brand-800">{money(data.total)}</dd>
           </div>
 
           {Number(data.due_total) > 0 && (
             <div className="flex justify-between text-sm">
-              <dt className="text-ink-600">Still to pay</dt>
+              <dt className="text-ink-600">{t('order.stillToPay')}</dt>
               <dd className="tabular font-semibold text-ink-900">{money(data.due_total)}</dd>
             </div>
           )}
@@ -171,7 +177,7 @@ export function OrderCompletePage() {
         <div className="rounded-card border border-ink-200 bg-white p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
             <Truck className="h-4 w-4 text-brand-800" aria-hidden="true" />
-            Delivering to
+            {t('order.deliveringTo')}
           </h2>
           <p className="mt-2 text-sm text-ink-800">{data.shipping.name}</p>
           <p className="mt-1 text-sm text-ink-600">
@@ -186,12 +192,14 @@ export function OrderCompletePage() {
               .join(', ')}
           </p>
           {data.shipping.estimate && (
-            <p className="mt-1 text-xs text-ink-500">Estimated delivery: {data.shipping.estimate}</p>
+            <p className="mt-1 text-xs text-ink-500">
+              {t('order.estimatedDelivery', { estimate: data.shipping.estimate })}
+            </p>
           )}
         </div>
 
         <div className="rounded-card border border-ink-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-ink-900">Placed</h2>
+          <h2 className="text-sm font-semibold text-ink-900">{t('order.placed')}</h2>
           <p className="mt-2 text-sm text-ink-800">{dateTime(data.placed_at)}</p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -199,13 +207,13 @@ export function OrderCompletePage() {
               to={`/orders/${data.number}${phone ? `?phone=${encodeURIComponent(phone)}` : ''}`}
               className="rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm font-medium text-ink-700 hover:border-ink-300"
             >
-              Track this order
+              {t('order.trackThisOrder')}
             </Link>
             <Link
               to="/products"
               className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
             >
-              Continue shopping
+              {t('order.continueShopping')}
             </Link>
           </div>
         </div>

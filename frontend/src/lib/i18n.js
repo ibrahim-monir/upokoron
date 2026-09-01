@@ -243,6 +243,41 @@ const STRINGS = {
     bn: 'এই পয়েন্ট ব্যবহার আর প্রযোজ্য নয়। কার্ট থেকে সরিয়ে আবার চেষ্টা করুন।',
   },
   'checkout.placeOrderFailed': { en: 'Could not place the order.', bn: 'অর্ডারটি করা যায়নি।' },
+
+  // ------------------------------------------------- order complete page
+  'order.phoneMismatch': { en: 'That number does not match this order.', bn: 'এই নম্বরটি এই অর্ডারের সাথে মেলেনি।' },
+  'order.thankYou': { en: 'Thank you — your order is placed.', bn: 'ধন্যবাদ — আপনার অর্ডারটি সম্পন্ন হয়েছে।' },
+  'order.willCall': {
+    en: 'We will call you on {phone} to confirm before sending it out.',
+    bn: 'পাঠানোর আগে নিশ্চিত করতে আমরা {phone} নম্বরে কল করব।',
+  },
+  'order.payCourier': { en: 'Pay the courier when it arrives.', bn: 'পৌঁছালে ডেলিভারিম্যানকে পরিশোধ করুন।' },
+  'order.orderId': { en: 'Order ID', bn: 'অর্ডার আইডি' },
+  'order.paymentMethod': { en: 'Payment method', bn: 'পেমেন্ট পদ্ধতি' },
+  'order.status': { en: 'Status', bn: 'অবস্থা' },
+  'order.product': { en: 'Product', bn: 'পণ্য' },
+  'order.quantity': { en: 'Quantity', bn: 'পরিমাণ' },
+  'order.subtotal': { en: 'Subtotal', bn: 'সাবটোটাল' },
+  'order.discount': { en: 'Discount', bn: 'ছাড়' },
+  'order.coupon': { en: 'Coupon', bn: 'কুপন' },
+  'order.delivery': { en: 'Delivery', bn: 'ডেলিভারি' },
+  'order.total': { en: 'Total', bn: 'সর্বমোট' },
+  'order.stillToPay': { en: 'Still to pay', bn: 'এখনো বাকি' },
+  'order.deliveringTo': { en: 'Delivering to', bn: 'যেখানে পাঠানো হবে' },
+  'order.estimatedDelivery': { en: 'Estimated delivery: {estimate}', bn: 'আনুমানিক ডেলিভারি: {estimate}' },
+  'order.placed': { en: 'Placed', bn: 'অর্ডারের সময়' },
+  'order.trackThisOrder': { en: 'Track this order', bn: 'এই অর্ডার ট্র্যাক করুন' },
+  'order.continueShopping': { en: 'Continue shopping', bn: 'কেনাকাটা চালিয়ে যান' },
+
+  // -------------------------------------------------------- phone gate
+  'phoneGate.title': { en: 'Find order {number}', bn: '{number} অর্ডারটি খুঁজুন' },
+  'phoneGate.bodyPrefix': {
+    en: 'Enter the mobile number the order was placed with, or',
+    bn: 'যে মোবাইল নম্বর দিয়ে অর্ডার করা হয়েছিল সেটি লিখুন, অথবা',
+  },
+  'phoneGate.signIn': { en: 'sign in', bn: 'সাইন ইন করুন' },
+  'phoneGate.mobileAriaLabel': { en: 'Mobile number', bn: 'মোবাইল নম্বর' },
+  'phoneGate.showOrder': { en: 'Show my order', bn: 'আমার অর্ডার দেখান' },
 }
 
 /**
