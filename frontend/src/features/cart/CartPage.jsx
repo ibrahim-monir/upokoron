@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ArrowRight, ImageOff, Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { cx, money } from '../../lib/format'
+import { useTranslation } from '../../lib/i18n'
 import { EmptyState, ErrorState, Spinner, useToast } from '../../components/ui'
 import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { TrustBadges } from '../../components/TrustBadges'
@@ -16,6 +17,7 @@ import { useCart, useClearCart, useRemoveCartItem, useUpdateCartItem } from './u
  * teaches shoppers not to trust the number.
  */
 function QuantityStepper({ value, onChange, disabled }) {
+  const { t } = useTranslation()
   const quantity = Number(value)
 
   return (
@@ -24,7 +26,7 @@ function QuantityStepper({ value, onChange, disabled }) {
         type="button"
         onClick={() => onChange(quantity - 1)}
         disabled={disabled || quantity <= 1}
-        aria-label="Reduce quantity"
+        aria-label={t('cart.reduceQuantity')}
         className="grid h-9 w-9 place-items-center rounded-l-lg text-ink-600 transition-colors enabled:hover:bg-ink-50 disabled:opacity-40"
       >
         <Minus className="h-4 w-4" aria-hidden="true" />
@@ -38,7 +40,7 @@ function QuantityStepper({ value, onChange, disabled }) {
         type="button"
         onClick={() => onChange(quantity + 1)}
         disabled={disabled}
-        aria-label="Increase quantity"
+        aria-label={t('cart.increaseQuantity')}
         className="grid h-9 w-9 place-items-center rounded-r-lg text-ink-600 transition-colors enabled:hover:bg-ink-50 disabled:opacity-40"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
@@ -54,13 +56,15 @@ function QuantityStepper({ value, onChange, disabled }) {
  * markups pretending to be the same component.
  */
 function CartRow({ line, busy, onQuantity, onRemove }) {
+  const { t } = useTranslation()
+
   return (
     <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3 p-3 sm:grid-cols-[auto_1fr_6rem_9rem_6rem] sm:items-center sm:gap-4 sm:p-4">
       <button
         type="button"
         onClick={() => onRemove(line.id)}
         disabled={busy}
-        aria-label={`Remove ${line.name}`}
+        aria-label={t('cart.removeItem', { name: line.name })}
         className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-danger-50 hover:text-danger-700 disabled:opacity-50"
       >
         <X className="h-4 w-4" aria-hidden="true" />
@@ -89,7 +93,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
           </Link>
 
           {line.variation && <p className="mt-0.5 text-xs text-ink-500">{line.variation}</p>}
-          {line.sku && <p className="mt-0.5 text-xs text-ink-400">SKU: {line.sku}</p>}
+          {line.sku && <p className="mt-0.5 text-xs text-ink-400">{t('cart.skuLabel', { sku: line.sku })}</p>}
 
           {/* Prices under the name on mobile, where the Price column is hidden. */}
           <div className="mt-1 flex items-baseline gap-2 sm:hidden">
@@ -108,10 +112,10 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
             <p className="mt-1 flex items-start gap-1.5 text-xs font-medium text-warning-700">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>
-                No longer reserved for you
+                {t('cart.noLongerReserved')}{' '}
                 {Number(line.available) > 0
-                  ? ` — ${Number(line.available)} left in stock`
-                  : ' — out of stock'}
+                  ? t('cart.leftInStock', { count: Number(line.available) })
+                  : t('cart.outOfStockSuffix')}
               </span>
             </p>
           )}
@@ -141,6 +145,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
 }
 
 export function CartPage() {
+  const { t } = useTranslation()
   const toast = useToast()
   const cart = useCart()
 
@@ -152,7 +157,7 @@ export function CartPage() {
 
   const handle = (mutation, variables) =>
     mutation.mutate(variables, {
-      onError: (error) => toast.error(error?.message ?? 'That did not work.'),
+      onError: (error) => toast.error(error?.message ?? t('cart.genericFailure')),
     })
 
   if (cart.isLoading) {
@@ -178,14 +183,14 @@ export function CartPage() {
         <div className="rounded-card border border-ink-200 bg-white">
           <EmptyState
             icon={ShoppingBag}
-            title="Your cart is empty"
-            description="Nothing here yet. Browse the shop and add something you like."
+            title={t('cart.empty')}
+            description={t('cart.emptyBody')}
             action={
               <Link
                 to="/products"
                 className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
               >
-                Start shopping
+                {t('cart.startShopping')}
               </Link>
             }
           />
@@ -213,16 +218,13 @@ export function CartPage() {
       <CheckoutSteps current="cart" />
 
       <h1 className="text-xl font-semibold text-ink-900">
-        Your cart <span className="text-ink-400">({lines.length})</span>
+        {t('cart.title')} <span className="text-ink-400">({lines.length})</span>
       </h1>
 
       {data.has_unheld_items && (
         <div className="flex items-start gap-2 rounded-card border border-warning-500/40 bg-warning-50 p-3 text-sm text-warning-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <p>
-            Some items are no longer reserved for you. Carts hold stock for a limited time so it
-            does not sit unavailable for everyone else. Adjust the quantity to take them again.
-          </p>
+          <p>{t('cart.unheldWarning')}</p>
         </div>
       )}
 
@@ -233,13 +235,13 @@ export function CartPage() {
             <div className="hidden grid-cols-[auto_1fr_6rem_9rem_6rem] gap-4 bg-brand-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white sm:grid">
               <span aria-hidden="true" />
               <span>
-                Product <span className="normal-case text-white/70">({lines.length})</span>
+                {t('cart.productHeader')} <span className="normal-case text-white/70">({lines.length})</span>
               </span>
-              <span>Price</span>
+              <span>{t('cart.priceHeader')}</span>
               <span>
-                Quantity <span className="normal-case text-white/70">({totalQuantity})</span>
+                {t('cart.quantityHeader')} <span className="normal-case text-white/70">({totalQuantity})</span>
               </span>
-              <span className="text-right">Subtotal</span>
+              <span className="text-right">{t('cart.subtotalHeader')}</span>
             </div>
 
             <div className="divide-y divide-ink-100">
@@ -259,13 +261,13 @@ export function CartPage() {
             <button
               type="button"
               onClick={() => {
-                if (window.confirm('Remove everything from your cart?')) handle(clearCart)
+                if (window.confirm(t('cart.clearConfirm'))) handle(clearCart)
               }}
               disabled={busy}
               className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-danger-700 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Clear shopping cart
+              {t('cart.clearCart')}
             </button>
           </div>
 
@@ -274,7 +276,7 @@ export function CartPage() {
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
           <div className="rounded-card border border-ink-200 bg-white p-4">
-            <h2 className="text-sm font-semibold text-ink-900">Order summary</h2>
+            <h2 className="text-sm font-semibold text-ink-900">{t('cart.orderSummary')}</h2>
 
             <div className="mt-3 flex flex-col gap-2">
               <CouponBox coupon={coupon} />
@@ -283,38 +285,38 @@ export function CartPage() {
 
             <dl className="mt-3 flex flex-col gap-2 border-t border-ink-100 pt-3 text-sm">
               <div className="flex justify-between">
-                <dt className="text-ink-600">Items</dt>
+                <dt className="text-ink-600">{t('cart.items')}</dt>
                 <dd className="tabular font-medium text-ink-900">{data.item_count}</dd>
               </div>
 
               <div className="flex justify-between">
-                <dt className="text-ink-600">Subtotal</dt>
+                <dt className="text-ink-600">{t('cart.subtotalHeader')}</dt>
                 <dd className="tabular font-medium text-ink-900">{money(subtotal)}</dd>
               </div>
 
               {discount > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-ink-600">You save</dt>
+                  <dt className="text-ink-600">{t('cart.youSave')}</dt>
                   <dd className="tabular font-medium text-accent-600">− {money(discount)}</dd>
                 </div>
               )}
 
               {couponDiscount > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-ink-600">Coupon ({coupon.code})</dt>
+                  <dt className="text-ink-600">{t('cart.couponLabel', { code: coupon.code })}</dt>
                   <dd className="tabular font-medium text-accent-600">− {money(couponDiscount)}</dd>
                 </div>
               )}
 
               {rewardPointsDiscount > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-ink-600">Points ({rewardPoints.points})</dt>
+                  <dt className="text-ink-600">{t('cart.pointsLabel', { points: rewardPoints.points })}</dt>
                   <dd className="tabular font-medium text-accent-600">− {money(rewardPointsDiscount)}</dd>
                 </div>
               )}
 
               <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
-                <dt className="text-ink-900">Total</dt>
+                <dt className="text-ink-900">{t('cart.total')}</dt>
                 <dd className="tabular text-brand-800">{money(total)}</dd>
               </div>
             </dl>
@@ -338,13 +340,11 @@ export function CartPage() {
                   : 'bg-brand-600 text-white shadow-card hover:bg-brand-700',
               )}
             >
-              Proceed to checkout
+              {t('cart.proceedToCheckout')}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
 
-            <p className="mt-2 text-center text-xs text-ink-500">
-              Cash on delivery available. Delivery charge is calculated at checkout.
-            </p>
+            <p className="mt-2 text-center text-xs text-ink-500">{t('cart.codAvailable')}</p>
           </div>
         </div>
       </div>

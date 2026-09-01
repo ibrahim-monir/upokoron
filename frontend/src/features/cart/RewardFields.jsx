@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Gift, Tag } from 'lucide-react'
 import { cx, money } from '../../lib/format'
+import { useTranslation } from '../../lib/i18n'
 import { Button, Input, useToast } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
 import {
@@ -18,6 +19,7 @@ import {
  * server-side cart, just from different angles.
  */
 export function CouponBox({ coupon }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const [code, setCode] = useState('')
 
@@ -28,7 +30,7 @@ export function CouponBox({ coupon }) {
     <div className="rounded-lg border border-ink-200 p-3">
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
         <Tag className="h-3.5 w-3.5" aria-hidden="true" />
-        Coupon code
+        {t('coupon.title')}
       </p>
 
       {coupon ? (
@@ -39,15 +41,9 @@ export function CouponBox({ coupon }) {
           )}
         >
           <span className="font-medium">
-            {coupon.is_valid ? (
-              <>
-                “{coupon.code}” applied — you save {money(coupon.discount)}
-              </>
-            ) : (
-              <>
-                “{coupon.code}”: {coupon.message ?? 'no longer applies'}
-              </>
-            )}
+            {coupon.is_valid
+              ? t('coupon.applied', { code: coupon.code, amount: money(coupon.discount) })
+              : t('coupon.invalid', { code: coupon.code, message: coupon.message ?? t('coupon.noLongerApplies') })}
           </span>
           <button
             type="button"
@@ -55,7 +51,7 @@ export function CouponBox({ coupon }) {
             disabled={remove.isPending}
             className="font-medium underline underline-offset-2 disabled:opacity-50"
           >
-            Remove
+            {t('coupon.remove')}
           </button>
         </div>
       ) : (
@@ -68,19 +64,19 @@ export function CouponBox({ coupon }) {
 
             apply.mutate(code.trim(), {
               onSuccess: () => setCode(''),
-              onError: (error) => toast.error(error?.message ?? 'That coupon could not be applied.'),
+              onError: (error) => toast.error(error?.message ?? t('coupon.applyFailed')),
             })
           }}
         >
           <Input
             value={code}
             onChange={(event) => setCode(event.target.value.toUpperCase())}
-            placeholder="Enter code"
-            aria-label="Coupon code"
+            placeholder={t('coupon.enterCode')}
+            aria-label={t('coupon.title')}
             className="w-full uppercase placeholder:normal-case"
           />
           <Button type="submit" variant="soft" className="w-full" loading={apply.isPending} disabled={!code.trim()}>
-            Apply coupon
+            {t('coupon.apply')}
           </Button>
         </form>
       )}
@@ -98,6 +94,7 @@ export function CouponBox({ coupon }) {
  * Redeeming still requires an account; the server enforces that too.
  */
 export function RewardPointsBox({ rewardPoints, balance }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const [points, setPoints] = useState('')
@@ -111,7 +108,7 @@ export function RewardPointsBox({ rewardPoints, balance }) {
     <div className="rounded-lg border border-ink-200 p-3">
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
         <Gift className="h-3.5 w-3.5" aria-hidden="true" />
-        Reward points
+        {t('reward.title')}
       </p>
 
       {!isAuthenticated ? (
@@ -124,7 +121,7 @@ export function RewardPointsBox({ rewardPoints, balance }) {
               if (!phone.trim()) return
 
               check.mutate(phone.trim(), {
-                onError: (error) => toast.error(error?.message ?? 'Could not check that number.'),
+                onError: (error) => toast.error(error?.message ?? t('reward.checkFailed')),
               })
             }}
           >
@@ -132,12 +129,12 @@ export function RewardPointsBox({ rewardPoints, balance }) {
               type="tel"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
-              placeholder="Your phone number"
-              aria-label="Phone number"
+              placeholder={t('reward.phonePlaceholder')}
+              aria-label={t('reward.phoneAriaLabel')}
               className="w-full"
             />
             <Button type="submit" variant="soft" className="w-full" loading={check.isPending} disabled={!phone.trim()}>
-              Check balance
+              {t('reward.checkBalance')}
             </Button>
           </form>
 
@@ -150,14 +147,15 @@ export function RewardPointsBox({ rewardPoints, balance }) {
             >
               {check.data.balance > 0 ? (
                 <>
-                  <span className="font-semibold">{check.data.balance} points</span> on this number.{' '}
+                  <span className="font-semibold">{check.data.balance}</span>{' '}
+                  {t('reward.pointsOnNumberSuffix')}{' '}
                   <Link to="/login" className="font-medium underline underline-offset-2">
-                    Log in
+                    {t('reward.logIn')}
                   </Link>{' '}
-                  to redeem them.
+                  {t('reward.toRedeemThem')}
                 </>
               ) : (
-                'No reward points found for this number.'
+                t('reward.noneFound')
               )}
             </div>
           )}
@@ -170,13 +168,12 @@ export function RewardPointsBox({ rewardPoints, balance }) {
           )}
         >
           <span className="font-medium">
-            {rewardPoints.is_valid ? (
-              <>
-                {rewardPoints.points} points applied — you save {money(rewardPoints.discount)}
-              </>
-            ) : (
-              <>{rewardPoints.points} points: {rewardPoints.message ?? 'no longer applies'}</>
-            )}
+            {rewardPoints.is_valid
+              ? t('reward.appliedPoints', { points: rewardPoints.points, amount: money(rewardPoints.discount) })
+              : t('reward.invalidPoints', {
+                  points: rewardPoints.points,
+                  message: rewardPoints.message ?? t('coupon.noLongerApplies'),
+                })}
           </span>
           <button
             type="button"
@@ -184,7 +181,7 @@ export function RewardPointsBox({ rewardPoints, balance }) {
             disabled={remove.isPending}
             className="font-medium underline underline-offset-2 disabled:opacity-50"
           >
-            Remove
+            {t('coupon.remove')}
           </button>
         </div>
       ) : balance > 0 ? (
@@ -198,12 +195,13 @@ export function RewardPointsBox({ rewardPoints, balance }) {
 
             redeem.mutate(requested, {
               onSuccess: () => setPoints(''),
-              onError: (error) => toast.error(error?.message ?? 'Those points could not be redeemed.'),
+              onError: (error) => toast.error(error?.message ?? t('reward.redeemFailed')),
             })
           }}
         >
           <p className="text-sm text-ink-600">
-            You have <span className="font-semibold text-ink-900">{balance} points</span> available.
+            {t('reward.youHave')} <span className="font-semibold text-ink-900">{balance}</span>{' '}
+            {t('reward.pointsAvailableSuffix')}
           </p>
           <Input
             type="number"
@@ -211,16 +209,16 @@ export function RewardPointsBox({ rewardPoints, balance }) {
             max={balance}
             value={points}
             onChange={(event) => setPoints(event.target.value)}
-            placeholder="Points to redeem"
-            aria-label="Reward points to redeem"
+            placeholder={t('reward.pointsToRedeemPlaceholder')}
+            aria-label={t('reward.pointsToRedeemAriaLabel')}
             className="w-full"
           />
           <Button type="submit" variant="soft" className="w-full" loading={redeem.isPending} disabled={!points}>
-            Redeem
+            {t('reward.redeem')}
           </Button>
         </form>
       ) : (
-        <p className="text-sm text-ink-500">You don't have any reward points yet.</p>
+        <p className="text-sm text-ink-500">{t('reward.none')}</p>
       )}
     </div>
   )
