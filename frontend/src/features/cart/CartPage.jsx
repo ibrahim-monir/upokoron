@@ -110,6 +110,7 @@ function CartRow({ line, busy, onQuantity, onRemove }) {
           </Link>
 
           {line.variation && <p className="mt-0.5 text-xs text-ink-500">{line.variation}</p>}
+          {line.sku && <p className="mt-0.5 text-xs text-ink-400">SKU: {line.sku}</p>}
 
           {/* Prices under the name on mobile, where the Price column is hidden. */}
           <div className="mt-1 flex items-baseline gap-2 sm:hidden">
