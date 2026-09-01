@@ -334,107 +334,109 @@ export function CheckoutPage() {
             )}
           </Section>
 
-          <Section step="2" title="Delivery option">
-            {!district ? (
-              <p className="text-sm text-ink-500">Enter a district above to see delivery options.</p>
-            ) : shippingOptions.isPending ? (
-              <div className="flex items-center gap-2 text-sm text-ink-500">
-                <Spinner className="h-4 w-4" /> Checking delivery to {district}…
-              </div>
-            ) : options.length === 0 ? (
-              <p className="text-sm text-danger-700">
-                No delivery option covers that address with this payment method.
-              </p>
-            ) : (
-              <div className="grid gap-2">
-                {options.map((option) => (
-                  <Choice key={option.id} selected={option.id === rateId} onSelect={() => setRateId(option.id)}>
-                    <div className="flex items-baseline justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-ink-900">
-                          {option.name}
-                          {shippingOptions.data?.zone?.name && (
-                            <span className="ml-2 text-xs text-ink-500">
-                              {shippingOptions.data.zone.name}
-                            </span>
-                          )}
-                        </p>
-                        {option.estimate && <p className="text-xs text-ink-500">{option.estimate}</p>}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Section step="2" title="Delivery option">
+              {!district ? (
+                <p className="text-sm text-ink-500">Enter a district above to see delivery options.</p>
+              ) : shippingOptions.isPending ? (
+                <div className="flex items-center gap-2 text-sm text-ink-500">
+                  <Spinner className="h-4 w-4" /> Checking delivery to {district}…
+                </div>
+              ) : options.length === 0 ? (
+                <p className="text-sm text-danger-700">
+                  No delivery option covers that address with this payment method.
+                </p>
+              ) : (
+                <div className="grid gap-2">
+                  {options.map((option) => (
+                    <Choice key={option.id} selected={option.id === rateId} onSelect={() => setRateId(option.id)}>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-ink-900">
+                            {option.name}
+                            {shippingOptions.data?.zone?.name && (
+                              <span className="ml-2 text-xs text-ink-500">
+                                {shippingOptions.data.zone.name}
+                              </span>
+                            )}
+                          </p>
+                          {option.estimate && <p className="text-xs text-ink-500">{option.estimate}</p>}
+                        </div>
+                        <span className="tabular text-sm font-semibold text-brand-800">
+                          {option.is_free ? 'Free' : money(option.charge)}
+                        </span>
                       </div>
-                      <span className="tabular text-sm font-semibold text-brand-800">
-                        {option.is_free ? 'Free' : money(option.charge)}
-                      </span>
+                    </Choice>
+                  ))}
+                </div>
+              )}
+            </Section>
+
+            <Section step="3" title="Payment">
+              <div className="grid gap-2">
+                {methods.map((paymentMethod) => (
+                  <Choice
+                    key={paymentMethod.id}
+                    selected={paymentMethod.id === methodId}
+                    onSelect={() => setMethodId(paymentMethod.id)}
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="text-sm font-medium text-ink-900">{paymentMethod.name}</p>
+                      {Number(paymentMethod.extra_charge) > 0 && (
+                        <span className="tabular text-xs text-ink-500">
+                          + {money(paymentMethod.extra_charge)}
+                        </span>
+                      )}
                     </div>
+                    {paymentMethod.id === methodId && paymentMethod.receive_number && (
+                      <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
+                        <span className="text-sm text-ink-600">Send payment to</span>
+                        <span className="tabular text-sm font-semibold text-brand-800">
+                          {paymentMethod.receive_number}
+                        </span>
+                        {/*
+                          A <span>, not a <button> -- Choice above is itself a
+                          button, and a button cannot contain another one
+                          without the browser silently breaking the nesting.
+                          role="button" + a key handler keep it as reachable
+                          and operable as a real button would be.
+                        */}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            copyReceiveNumber(paymentMethod.receive_number)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== 'Enter' && event.key !== ' ') return
+                            event.preventDefault()
+                            event.stopPropagation()
+                            copyReceiveNumber(paymentMethod.receive_number)
+                          }}
+                          aria-label="Copy the receive number"
+                          className="ml-auto grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded text-brand-700 hover:bg-brand-100"
+                        >
+                          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                        </span>
+                      </div>
+                    )}
+
+                    {paymentMethod.id === methodId && paymentMethod.instructions && (
+                      <p className="mt-1.5 text-sm text-ink-600">{paymentMethod.instructions}</p>
+                    )}
                   </Choice>
                 ))}
               </div>
-            )}
-          </Section>
 
-          <Section step="3" title="Payment">
-            <div className="grid gap-2">
-              {methods.map((paymentMethod) => (
-                <Choice
-                  key={paymentMethod.id}
-                  selected={paymentMethod.id === methodId}
-                  onSelect={() => setMethodId(paymentMethod.id)}
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-sm font-medium text-ink-900">{paymentMethod.name}</p>
-                    {Number(paymentMethod.extra_charge) > 0 && (
-                      <span className="tabular text-xs text-ink-500">
-                        + {money(paymentMethod.extra_charge)}
-                      </span>
-                    )}
-                  </div>
-                  {paymentMethod.id === methodId && paymentMethod.receive_number && (
-                    <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
-                      <span className="text-sm text-ink-600">Send payment to</span>
-                      <span className="tabular text-sm font-semibold text-brand-800">
-                        {paymentMethod.receive_number}
-                      </span>
-                      {/*
-                        A <span>, not a <button> -- Choice above is itself a
-                        button, and a button cannot contain another one
-                        without the browser silently breaking the nesting.
-                        role="button" + a key handler keep it as reachable
-                        and operable as a real button would be.
-                      */}
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          copyReceiveNumber(paymentMethod.receive_number)
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key !== 'Enter' && event.key !== ' ') return
-                          event.preventDefault()
-                          event.stopPropagation()
-                          copyReceiveNumber(paymentMethod.receive_number)
-                        }}
-                        aria-label="Copy the receive number"
-                        className="ml-auto grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded text-brand-700 hover:bg-brand-100"
-                      >
-                        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                      </span>
-                    </div>
-                  )}
-
-                  {paymentMethod.id === methodId && paymentMethod.instructions && (
-                    <p className="mt-1.5 text-sm text-ink-600">{paymentMethod.instructions}</p>
-                  )}
-                </Choice>
-              ))}
-            </div>
-
-            <Field
-              className="mt-3"
-              label="Note for us (optional)"
-              placeholder="Any delivery instructions"
-              {...form.register('customer_note')}
-            />
-          </Section>
+              <Field
+                className="mt-3"
+                label="Note for us (optional)"
+                placeholder="Any delivery instructions"
+                {...form.register('customer_note')}
+              />
+            </Section>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
