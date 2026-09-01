@@ -24,6 +24,7 @@ import {
   useRemoveCartItem,
   useRemoveCoupon,
   useRemoveRewardPoints,
+  useRewardBalanceByPhone,
   useUpdateCartItem,
 } from './useCart'
 
@@ -229,16 +230,72 @@ function CouponBox({ coupon }) {
   )
 }
 
-/** Spend loyalty points for a discount, the same one-code-in-one-click-out shape as the coupon box beside it. */
+/**
+ * Spend loyalty points for a discount, the same one-code-in-one-click-out
+ * shape as the coupon box above it.
+ *
+ * Signed out, there is no cart-linked balance to spend, so this shows a
+ * phone-number balance lookup instead -- no login, no code sent to prove
+ * the number is theirs, just a number to answer "is logging in worth it".
+ * Redeeming still requires an account; the server enforces that too.
+ */
 function RewardPointsBox({ rewardPoints, balance }) {
   const toast = useToast()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const [points, setPoints] = useState('')
+  const [phone, setPhone] = useState('')
 
   const redeem = useRedeemRewardPoints()
   const remove = useRemoveRewardPoints()
+  const check = useRewardBalanceByPhone()
 
-  if (!isAuthenticated) return null
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col gap-2">
+        <form
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+
+            if (!phone.trim()) return
+
+            check.mutate(phone.trim(), {
+              onError: (error) => toast.error(error?.message ?? 'Could not check that number.'),
+            })
+          }}
+        >
+          <Input
+            type="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="Phone number to check reward points"
+            aria-label="Phone number"
+            className="min-w-0 flex-1"
+          />
+          <Button type="submit" variant="secondary" loading={check.isPending} disabled={!phone.trim()}>
+            <Gift className="h-4 w-4" aria-hidden="true" />
+            Check balance
+          </Button>
+        </form>
+
+        {check.isSuccess && (
+          <p className="text-sm text-ink-600">
+            {check.data.balance > 0 ? (
+              <>
+                This number has <strong className="text-ink-900">{check.data.balance} points</strong>.{' '}
+                <Link to="/login" className="font-medium text-brand-700 underline">
+                  Log in
+                </Link>{' '}
+                to redeem them.
+              </>
+            ) : (
+              'No reward points found for this number.'
+            )}
+          </p>
+        )}
+      </div>
+    )
+  }
 
   if (rewardPoints) {
     return (

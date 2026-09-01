@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Shop\CheckoutController;
 use App\Http\Controllers\Api\V1\Shop\CustomerPaymentMethodController;
 use App\Http\Controllers\Api\V1\Shop\ProductController;
 use App\Http\Controllers\Api\V1\Shop\RewardController;
+use App\Http\Controllers\Api\V1\Shop\RewardInfoController;
 use App\Http\Controllers\Api\V1\Shop\ReviewController;
 use App\Http\Controllers\Api\V1\Shop\ShippingController;
 use Illuminate\Support\Facades\Route;
@@ -26,8 +27,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('settings', [SettingController::class, 'publicSettings'])
     ->name('settings');
 
-Route::get('rewards', [\App\Http\Controllers\Api\V1\Shop\RewardInfoController::class, 'show'])
+Route::get('rewards', [RewardInfoController::class, 'show'])
     ->name('rewards');
+
+// Balance only, by phone, with no login -- so it is rate limited the same
+// as contact: open to anyone, and a plausible target for enumeration.
+Route::post('rewards/balance', [RewardInfoController::class, 'balanceByPhone'])
+    ->middleware('throttle:rewards-balance')
+    ->name('rewards.balance');
 
 Route::get('faqs', [\App\Http\Controllers\Api\V1\Shop\FaqController::class, 'index'])
     ->name('faqs');

@@ -82,6 +82,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('contact', fn (Request $request) => Limit::perMinute(5)
             ->by($request->ip()));
 
+        // Reward balance by phone number, with no login and no code sent to
+        // confirm the number is really the caller's. The tight limit is what
+        // keeps it from being a way to enumerate customers by phone.
+        RateLimiter::for('rewards-balance', fn (Request $request) => Limit::perMinute(5)
+            ->by($request->ip()));
+
         RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)
             ->by($request->user()?->id ?: $request->ip()));
     }

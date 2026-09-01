@@ -113,6 +113,23 @@ export function useRemoveRewardPoints() {
   })
 }
 
+/**
+ * Reward points balance for a phone number, no account needed.
+ *
+ * Kept out of useCart: this never touches the cart itself, only answers
+ * "how many points does this number have" for a guest deciding whether
+ * logging in is worth it.
+ */
+export function useRewardBalanceByPhone() {
+  return useMutation({
+    mutationFn: async (phone) => {
+      const { data } = await api.post('/shop/rewards/balance', { phone })
+
+      return data.data
+    },
+  })
+}
+
 export function useShippingZones() {
   return useQuery({
     queryKey: ['shop', 'shipping-zones'],

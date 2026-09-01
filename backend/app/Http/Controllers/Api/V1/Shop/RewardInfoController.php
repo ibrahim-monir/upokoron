@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Services\Rewards\RewardPointsService;
 use App\Services\Support\SettingsService;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class RewardInfoController extends Controller
 {
@@ -55,6 +57,35 @@ class RewardInfoController extends Controller
                 'max_percent' => (int) $this->settings->get('max_redeem_percent_of_order', 0),
 
                 'expiry_days' => (int) $this->settings->get('expiry_days', 0),
+            ],
+        ]);
+    }
+
+    /**
+     * A points balance for a phone number, with no login and nothing to
+     * prove the caller owns the number -- so it answers with a balance
+     * only, never a name or anything else that would make it useful for
+     * confirming who a number belongs to.
+     *
+     * `customers.phone` is not unique (walk-in orders can share a number
+     * with an old guest checkout), so more than one row can match; the
+     * most recently created account under that number is the one
+     * answered for.
+     */
+    public function balanceByPhone(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],
+        ]);
+
+        $customer = Customer::query()
+            ->where('phone', $validated['phone'])
+            ->orderByDesc('id')
+            ->first();
+
+        return response()->json([
+            'data' => [
+                'balance' => $customer ? (int) $customer->reward_points_balance : 0,
             ],
         ]);
     }
