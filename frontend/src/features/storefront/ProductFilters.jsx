@@ -1,13 +1,27 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { SlidersHorizontal, Star, X } from 'lucide-react'
 
 import { get } from '../../lib/api'
-import { money } from '../../lib/format'
+import { cx, money } from '../../lib/format'
 
-/** Filter keys this sidebar owns, so the page can clear them as a set. */
-export const FILTER_KEYS = ['brand', 'min_price', 'max_price', 'in_stock']
+/**
+ * Keys the sidebar narrows a listing by, so the page can clear them as a
+ * set. `sort` is not among them: it is an ordering, not a filter, and
+ * "clear filters" should not quietly put the list back into newest-first.
+ */
+export const FILTER_KEYS = ['min_price', 'max_price', 'min_rating']
+
+/** Only what the API implements. Offering a sort the backend ignores looks like a bug. */
+export const SORTS = [
+  { value: '', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'price', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
+  { value: 'name', label: 'Name A-Z' },
+  { value: 'name_desc', label: 'Name Z-A' },
+]
 
 /**
  * What the filters can offer here.
@@ -39,16 +53,16 @@ function Block({ title, children }) {
   )
 }
 
-function Choice({ checked, onChange, label, count, type = 'checkbox' }) {
+function Choice({ checked, onChange, children, count }) {
   return (
     <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-700 hover:text-brand-800">
       <input
-        type={type}
+        type="radio"
         checked={checked}
         onChange={onChange}
         className="h-3.5 w-3.5 shrink-0 accent-brand-600"
       />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className="min-w-0 flex-1">{children}</span>
       {count != null && <span className="shrink-0 text-xs tabular-nums text-ink-400">{count}</span>}
     </label>
   )
@@ -113,38 +127,19 @@ function PriceBlock({ range, min, max, onApply }) {
   )
 }
 
-function BrandBlock({ brands, active, onToggle, limit }) {
-  const [expanded, setExpanded] = useState(false)
-  const shown = expanded ? brands : brands.slice(0, limit)
-
+function Stars({ count }) {
   return (
-    <>
-      <div className="flex flex-col">
-        {shown.map((brand) => (
-          <Choice
-            key={brand.id}
-            type="radio"
-            checked={active === brand.slug}
-            // The API takes one brand, so these behave as radios -- and a
-            // control that unticks the one beside it should look like it
-            // will. Clicking the chosen one again clears it.
-            onChange={() => onToggle(active === brand.slug ? '' : brand.slug)}
-            label={brand.name}
-            count={brand.product_count}
-          />
-        ))}
-      </div>
-
-      {brands.length > limit && (
-        <button
-          type="button"
-          onClick={() => setExpanded((open) => !open)}
-          className="mt-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
-        >
-          {expanded ? 'Show fewer' : `Show all ${brands.length}`}
-        </button>
-      )}
-    </>
+    <span className="flex items-center gap-0.5" aria-hidden="true">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Star
+          key={index}
+          className={cx(
+            'h-3.5 w-3.5',
+            index < count ? 'fill-warning-500 text-warning-500' : 'text-ink-300',
+          )}
+        />
+      ))}
+    </span>
   )
 }
 
@@ -161,17 +156,15 @@ function BrandBlock({ brands, active, onToggle, limit }) {
  * the page where someone came to see them. From lg up it is a plain panel
  * that cannot be collapsed by accident.
  */
-export function ProductFilters({ settings, categories, category, search, params, onChange }) {
+export function ProductFilters({ settings, categories, category, search, sort, params, onChange }) {
   const options = useFilterOptions({ category, search })
 
-  const brands = options.data?.brands ?? []
   const range = options.data?.price ?? null
-  const inStockCount = options.data?.in_stock ?? 0
+  const ratings = (options.data?.ratings ?? []).filter((step) => step.product_count > 0)
 
-  const activeBrand = params.get('brand') ?? ''
   const minPrice = params.get('min_price') ?? ''
   const maxPrice = params.get('max_price') ?? ''
-  const inStock = params.get('in_stock') === '1'
+  const minRating = params.get('min_rating') ?? ''
 
   // Sub-categories of where we are; failing that, the top level. Both are a
   // way further into the catalogue, which is what the block is for.
@@ -179,14 +172,13 @@ export function ProductFilters({ settings, categories, category, search, params,
   const siblings = here?.children?.length ? here.children : categories
 
   const showCategories = settings?.show_category_filter !== false && siblings.length > 1
-  const showBrands = settings?.show_brand_filter !== false && brands.length > 1
+  const showSort = settings?.show_sort_filter !== false
   const showPrice = settings?.show_price_filter !== false && range !== null && range.min < range.max
-  const showStock = settings?.show_stock_filter !== false && inStockCount > 0
+  const showRating = settings?.show_rating_filter !== false && ratings.length > 0
 
-  const limit = Math.max(1, Number(settings?.brand_filter_limit ?? 8))
-  const activeCount = [activeBrand, minPrice, maxPrice, inStock ? '1' : ''].filter(Boolean).length
+  const activeCount = [minPrice, maxPrice, minRating].filter(Boolean).length
 
-  if (!showCategories && !showBrands && !showPrice && !showStock) return null
+  if (!showCategories && !showSort && !showPrice && !showRating) return null
 
   const clear = () => onChange(Object.fromEntries(FILTER_KEYS.map((key) => [key, ''])))
 
@@ -216,13 +208,17 @@ export function ProductFilters({ settings, categories, category, search, params,
       )}
 
       {showCategories && (
-        <Block title={here ? `In ${here.name}` : 'Categories'}>
+        <Block title="Shop by category">
           <ul className="flex flex-col">
             {siblings.map((one) => (
               <li key={one.id}>
                 <Link
                   to={`/category/${one.slug}`}
-                  className="flex items-center justify-between gap-2 py-1 text-sm text-ink-700 hover:text-brand-800"
+                  aria-current={one.slug === category ? 'page' : undefined}
+                  className={cx(
+                    'flex items-center justify-between gap-2 py-1 text-sm hover:text-brand-800',
+                    one.slug === category ? 'font-semibold text-brand-800' : 'text-ink-700',
+                  )}
                 >
                   <span className="min-w-0 truncate">{one.name}</span>
                   {one.product_count > 0 && (
@@ -237,31 +233,51 @@ export function ProductFilters({ settings, categories, category, search, params,
         </Block>
       )}
 
-      {showBrands && (
-        <Block title="Brand">
-          <BrandBlock
-            brands={brands}
-            active={activeBrand}
-            limit={limit}
-            onToggle={(slug) => onChange({ brand: slug })}
-          />
+      {showSort && (
+        <Block title="Sort">
+          <div className="flex flex-col">
+            {SORTS.map((option) => (
+              <Choice
+                key={option.value || 'default'}
+                checked={sort === option.value}
+                onChange={() => onChange({ sort: option.value })}
+              >
+                {option.label}
+              </Choice>
+            ))}
+          </div>
         </Block>
       )}
 
       {showPrice && (
-        <Block title={`Price · ${money(range.min, { decimals: 0 })} – ${money(range.max, { decimals: 0 })}`}>
+        <Block
+          title={`Price range · ${money(range.min, { decimals: 0 })} – ${money(range.max, { decimals: 0 })}`}
+        >
           <PriceBlock range={range} min={minPrice} max={maxPrice} onApply={onChange} />
         </Block>
       )}
 
-      {showStock && (
-        <Block title="Availability">
-          <Choice
-            checked={inStock}
-            onChange={(event) => onChange({ in_stock: event.target.checked ? '1' : '' })}
-            label="In stock only"
-            count={inStockCount}
-          />
+      {showRating && (
+        <Block title="Rating">
+          <div className="flex flex-col">
+            {ratings.map((step) => (
+              <Choice
+                key={step.value}
+                checked={minRating === String(step.value)}
+                // Clicking the chosen one again clears it: a radio group with
+                // no way out traps someone in a filter they only meant to try.
+                onChange={() =>
+                  onChange({ min_rating: minRating === String(step.value) ? '' : step.value })
+                }
+                count={step.product_count}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Stars count={step.value} />
+                  <span className="text-xs text-ink-500">&amp; up</span>
+                </span>
+              </Choice>
+            ))}
+          </div>
         </Block>
       )}
     </div>

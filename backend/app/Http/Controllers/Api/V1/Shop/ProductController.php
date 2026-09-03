@@ -8,7 +8,6 @@ use App\Enums\OrderStatus;
 use App\Enums\ProductStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
-use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariation;
@@ -26,13 +25,10 @@ class ProductController extends Controller
      * What the sidebar filters can offer for this category or search.
      *
      * Scoped by category and search only, deliberately not by the filters
-     * themselves. Recomputing the brand list from the already-filtered
-     * results makes every brand you tick remove the others from the list,
-     * so unticking one is the only way to see what else there was -- the
-     * filters end up fighting the person using them.
-     *
-     * Brands with nothing published behind them are left out: a filter that
-     * can only ever return nothing is not a choice.
+     * themselves. Recomputing the options from the already-filtered results
+     * makes every choice you make remove the others, so undoing it is the
+     * only way to see what else there was -- the filters end up fighting the
+     * person using them.
      */
     public function filters(Request $request): JsonResponse
     {
@@ -48,43 +44,36 @@ class ProductController extends Controller
                 $category !== null ? $query->inCategory($category) : $query->whereRaw('1 = 0');
             });
 
-        $brands = (clone $base())
-            ->whereNotNull('brand_id')
-            ->selectRaw('brand_id, COUNT(*) as total')
-            ->groupBy('brand_id')
-            ->pluck('total', 'brand_id');
-
-        $names = Brand::query()
-            ->whereIn('id', $brands->keys())
-            ->active()
-            ->orderBy('name')
-            ->get(['id', 'name', 'slug']);
-
         $prices = ProductVariation::query()
             ->where('is_default', true)
             ->whereIn('product_id', (clone $base())->select('products.id'))
             ->selectRaw('MIN(selling_price) as low, MAX(selling_price) as high')
             ->first();
 
+        // One count per "and up" step. A step nothing reaches is dropped by
+        // the frontend rather than offered as a choice that returns nothing.
+        $ratings = [];
+
+        foreach ([4, 3, 2, 1] as $floor) {
+            $ratings[] = [
+                'value' => $floor,
+                'product_count' => (clone $base())
+                    ->where('rating_count', '>', 0)
+                    ->where('rating_avg', '>=', $floor)
+                    ->count(),
+            ];
+        }
+
         return response()->json([
             'data' => [
-                'brands' => $names->map(fn (Brand $brand): array => [
-                    'id' => $brand->id,
-                    'name' => $brand->name,
-                    'slug' => $brand->slug,
-                    'product_count' => (int) ($brands[$brand->id] ?? 0),
-                ])->values(),
-
                 // Null when there is nothing to price, so the frontend can
-                // leave the block out rather than draw an empty slider.
+                // leave the block out rather than draw an empty range.
                 'price' => $prices?->low === null ? null : [
                     'min' => (int) floor((float) $prices->low),
                     'max' => (int) ceil((float) $prices->high),
                 ],
 
-                'in_stock' => (clone $base())
-                    ->whereHas('defaultVariation.inventory', fn ($i) => $i->whereRaw('quantity - reserved_quantity > 0'))
-                    ->count(),
+                'ratings' => $ratings,
             ],
         ]);
     }
@@ -135,11 +124,6 @@ class ProductController extends Controller
                 }
             })
 
-            // Filter by brand slug.
-            ->when($request->filled('brand'), function ($query) use ($request): void {
-                $query->whereHas('brand', fn ($b) => $b->where('slug', $request->string('brand')->trim()));
-            })
-
             // Price range, read off the variation the listing actually shows
             // a price for. Filtering on any variation would put a product in
             // a "under 500" list because one size of it is cheap while the
@@ -153,14 +137,14 @@ class ProductController extends Controller
                 $query->whereHas('defaultVariation', fn ($v) => $v->where('selling_price', '<=', $max));
             })
 
-            // In stock: what is free to sell, not what is on the shelf.
-            // Reserved units belong to orders already placed, and a shopper
-            // who filters for "in stock" and reaches a sold-out page has been
-            // told something false.
-            ->when($request->boolean('in_stock'), function ($query): void {
-                $query->whereHas('defaultVariation.inventory', function ($inventory): void {
-                    $inventory->whereRaw('quantity - reserved_quantity > 0');
-                });
+            // Rating, as a floor rather than an exact number: nobody looks
+            // for "exactly three stars". A product nobody has reviewed has a
+            // rating of 0 and is excluded by any floor, which is the honest
+            // answer -- unrated is not the same as badly rated, but it is
+            // certainly not "4 stars and up".
+            ->when($request->filled('min_rating'), function ($query) use ($request): void {
+                $query->where('rating_avg', '>=', (float) $request->input('min_rating'))
+                    ->where('rating_count', '>', 0);
             })
 
             // The default variation's price, for sorting. A subquery rather

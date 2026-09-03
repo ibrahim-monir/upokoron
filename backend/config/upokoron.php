@@ -272,13 +272,9 @@ return [
          */
         'filters' => [
             'show_category_filter' => true,
-            'show_brand_filter' => true,
+            'show_sort_filter' => true,
             'show_price_filter' => true,
-            'show_stock_filter' => true,
-
-            // Brands beyond this sit behind a "Show all" toggle. A list long
-            // enough to scroll past pushes every other filter off the screen.
-            'brand_filter_limit' => 8,
+            'show_rating_filter' => true,
         ],
 
         'sales' => [
