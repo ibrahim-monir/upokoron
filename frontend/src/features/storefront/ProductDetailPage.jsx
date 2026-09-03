@@ -6,19 +6,25 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowRight,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Gift,
   Heart,
   ImageOff,
   Layers,
+  MessageCircleQuestion,
+  MessagesSquare,
   Minus,
   PackageOpen,
   Plus,
+  Send,
   ShieldCheck,
   ShoppingCart,
   Sparkles,
   Star,
+  Store,
   Truck,
 } from 'lucide-react'
 import { ApiError, get } from '../../lib/api'
@@ -325,7 +331,6 @@ function ReviewsPanel({ product }) {
     </div>
   )
 }
-
 const questionSchema = z.object({
   asker_name: z.string().max(120).optional().or(z.literal('')),
   asker_email: z.string().email('That does not look like an email address.').optional().or(z.literal('')),
@@ -335,8 +340,14 @@ const questionSchema = z.object({
     .max(1000, 'Keep the question under 1000 characters.'),
 })
 
-/** Ask a question about this product. No account needed -- that is the point. */
-function QuestionForm({ slug }) {
+/**
+ * Ask a question about this product. No account needed -- that is the point.
+ *
+ * Closes itself on success and hands the confirmation back to the panel,
+ * because the question does not appear in the list until the shop answers
+ * it: a form that simply emptied itself would read as having done nothing.
+ */
+function QuestionForm({ slug, onSent, onCancel }) {
   const toast = useToast()
   const ask = useAskQuestion(slug)
   const user = useAuthStore((state) => state.user)
@@ -344,7 +355,6 @@ function QuestionForm({ slug }) {
   const {
     register,
     handleSubmit,
-    reset,
     setError,
     formState: { errors },
   } = useForm({
@@ -355,8 +365,7 @@ function QuestionForm({ slug }) {
   const onSubmit = async (values) => {
     try {
       const result = await ask.mutateAsync(values)
-      toast.success(result?.message ?? 'Thanks for asking.')
-      reset({ asker_name: '', asker_email: '', question: '' })
+      onSent?.(result?.message ?? 'Thanks for asking.')
     } catch (error) {
       if (error instanceof ApiError) {
         applyServerErrors(error, setError, toast)
@@ -369,23 +378,16 @@ function QuestionForm({ slug }) {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-3 rounded-card border border-ink-200 p-4"
+      className="flex flex-col gap-4 rounded-card border border-ink-200 bg-white p-4 shadow-card sm:p-5"
       noValidate
     >
-      <div>
-        <p className="text-sm font-medium text-ink-900">Ask about this product</p>
-        <p className="mt-0.5 text-xs text-ink-500">
-          No account needed. We publish the question here once we have answered it.
-        </p>
-      </div>
-
       {/*
          Only for guests. A signed-in shopper's name and email are already on
          their account, and the server fills both in -- asking again would be
          a form field that exists only to be ignored.
       */}
       {!user && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="question-name" className="text-sm font-medium text-ink-800">
               Your name
@@ -393,7 +395,7 @@ function QuestionForm({ slug }) {
             </label>
             <input
               id="question-name"
-              className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 hover:border-ink-400"
+              className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 transition-colors hover:border-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
               placeholder="Rahim Uddin"
               {...register('asker_name')}
             />
@@ -402,12 +404,12 @@ function QuestionForm({ slug }) {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="question-email" className="text-sm font-medium text-ink-800">
-              Email <span className="text-ink-400">(optional)</span>
+              Email <span className="font-normal text-ink-400">(optional)</span>
             </label>
             <input
               id="question-email"
               type="email"
-              className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 hover:border-ink-400"
+              className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 transition-colors hover:border-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
               placeholder="So we can tell you when we answer"
               {...register('asker_email')}
             />
@@ -423,6 +425,7 @@ function QuestionForm({ slug }) {
         </label>
         <Textarea
           id="question-body"
+          rows={3}
           placeholder="Does this work with a 12V adapter?"
           invalid={Boolean(errors.question)}
           {...register('question')}
@@ -430,68 +433,165 @@ function QuestionForm({ slug }) {
         {errors.question?.message && <p className="text-xs text-danger-700">{errors.question.message}</p>}
       </div>
 
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" loading={ask.isPending}>
+          <Send className="h-4 w-4" aria-hidden="true" />
           Send question
         </Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <p className="w-full text-xs text-ink-400 sm:w-auto sm:flex-1 sm:text-right">
+          We publish it here with our answer.
+        </p>
       </div>
     </form>
   )
 }
 
-function QuestionItem({ item }) {
+/**
+ * One exchange: what a shopper asked, and what the shop said back.
+ *
+ * Laid out as a conversation rather than a list row -- the answer is indented
+ * under the question it belongs to and carries the shop's name, so on a page
+ * where every other block is the shop talking, it is obvious which of these
+ * two voices is a customer's.
+ */
+function QuestionItem({ item, shopName }) {
+  const asked = item.created_at ? new Date(item.created_at).toLocaleDateString() : null
+  const answered = item.answered_at ? new Date(item.answered_at).toLocaleDateString() : null
+
   return (
-    <div className="flex flex-col gap-2 border-b border-ink-100 py-4 last:border-0">
-      <div className="flex flex-wrap items-baseline gap-2">
-        <Badge tone="neutral">Q</Badge>
-        <p className="min-w-0 flex-1 font-medium text-ink-900">{item.question}</p>
+    <article className="rounded-card border border-ink-200 bg-white p-4 shadow-card sm:p-5">
+      <div className="flex gap-3">
+        <span
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-600 text-[11px] font-bold text-white"
+          aria-hidden="true"
+        >
+          Q
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium leading-relaxed text-ink-900">{item.question}</p>
+          <p className="mt-1 text-xs text-ink-400">
+            {item.asker_name || 'Customer'}
+            {asked ? ` · ${asked}` : ''}
+          </p>
+        </div>
       </div>
 
-      <p className="text-xs text-ink-400">
-        {item.asker_name || 'Customer'}
-        {item.created_at ? ` · ${new Date(item.created_at).toLocaleDateString()}` : ''}
-      </p>
-
       {item.answer ? (
-        <div className="mt-1 flex flex-wrap items-baseline gap-2 rounded-card bg-ink-50 p-3">
-          <Badge tone="success">A</Badge>
+        <div className="mt-3 flex gap-3 rounded-card bg-ink-50 p-3 sm:ml-10">
+          <span
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-success-600 text-[11px] font-bold text-white"
+            aria-hidden="true"
+          >
+            A
+          </span>
           <div className="min-w-0 flex-1">
             <p className="whitespace-pre-line text-sm leading-relaxed text-ink-700">{item.answer}</p>
-            <p className="mt-1 text-xs text-ink-400">
-              Answered by the shop
-              {item.answered_at ? ` · ${new Date(item.answered_at).toLocaleDateString()}` : ''}
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-ink-400">
+              <Store className="h-3 w-3" aria-hidden="true" />
+              <span className="font-medium text-ink-500">{shopName}</span>
+              {answered ? `· ${answered}` : ''}
             </p>
           </div>
         </div>
       ) : (
-        <p className="text-xs text-ink-400">Waiting for an answer from the shop.</p>
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-warning-50 px-2.5 py-1 text-xs font-medium text-warning-800 sm:ml-10">
+          <Clock className="h-3 w-3" aria-hidden="true" />
+          Waiting for the shop to answer
+        </p>
       )}
-    </div>
+    </article>
   )
 }
 
-/** The Q&A tab: what other shoppers asked, what the shop said, and a form to add one. */
-function QuestionsPanel({ product }) {
+/**
+ * The Q&A tab.
+ *
+ * Answers first, form behind a button. Someone opening this tab is far more
+ * often checking whether their question has already been asked than typing a
+ * new one, and a form standing across the top pushes the answers they came
+ * for below the fold.
+ */
+function QuestionsPanel({ product, shopName }) {
   const slug = product.slug
   const [page, setPage] = useState(1)
+  const [asking, setAsking] = useState(false)
+  const [sent, setSent] = useState(null)
+
   const query = useProductQuestions(slug, { page })
 
   const questions = query.data?.data ?? []
+  const total = query.data?.meta?.total ?? 0
+
+  const openForm = () => {
+    setSent(null)
+    setAsking(true)
+  }
+
+  const handleSent = (message) => {
+    setAsking(false)
+    setSent(message)
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      <QuestionForm slug={slug} />
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-ink-900">Questions &amp; Answers</h2>
+          <p className="mt-0.5 text-sm text-ink-500">
+            {total === 0
+              ? 'Ask us anything about this product.'
+              : `${total} question${total === 1 ? '' : 's'} answered about this product.`}
+          </p>
+        </div>
+
+        {!asking && (
+          <Button type="button" variant="secondary" onClick={openForm}>
+            <MessageCircleQuestion className="h-4 w-4" aria-hidden="true" />
+            Ask a question
+          </Button>
+        )}
+      </div>
+
+      {/*
+         The question is Pending until staff act on it, so it will not turn up
+         in the list below. Said in place rather than only as a toast, which
+         is gone by the time the shopper looks for what they just wrote.
+      */}
+      {sent && (
+        <div className="flex items-start gap-2 rounded-card border border-success-200 bg-success-50 p-3 text-sm text-success-800">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <p>{sent}</p>
+        </div>
+      )}
+
+      {asking && <QuestionForm slug={slug} onSent={handleSent} onCancel={() => setAsking(false)} />}
 
       {query.isLoading ? (
-        <Spinner />
+        <div className="grid place-items-center py-10">
+          <Spinner />
+        </div>
       ) : questions.length === 0 ? (
-        <p className="text-sm text-ink-500">
-          No questions about this product yet. Ask the first one.
-        </p>
+        <div className="rounded-card border border-dashed border-ink-300 px-4 py-10 text-center">
+          <MessagesSquare className="mx-auto h-8 w-8 text-ink-300" aria-hidden="true" />
+          <p className="mt-3 font-medium text-ink-800">No questions yet</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
+            Be the first to ask. You do not need an account, and we answer here so the next shopper
+            can read it too.
+          </p>
+          {!asking && (
+            <Button type="button" className="mt-4" onClick={openForm}>
+              <MessageCircleQuestion className="h-4 w-4" aria-hidden="true" />
+              Ask a question
+            </Button>
+          )}
+        </div>
       ) : (
-        <div>
+        <div className="flex flex-col gap-3">
           {questions.map((item) => (
-            <QuestionItem key={item.id} item={item} />
+            <QuestionItem key={item.id} item={item} shopName={shopName} />
           ))}
           <Pagination meta={query.data?.meta} onPage={setPage} />
         </div>
@@ -1159,7 +1259,9 @@ export function ProductDetailPage() {
 
           {tab === 'review' && <ReviewsPanel product={product} />}
 
-          {tab === 'questions' && <QuestionsPanel product={product} />}
+          {tab === 'questions' && (
+            <QuestionsPanel product={product} shopName={settings?.store_name || 'the shop'} />
+          )}
         </div>
       </div>
 
