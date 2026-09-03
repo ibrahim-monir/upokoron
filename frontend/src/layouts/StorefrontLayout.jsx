@@ -2,7 +2,6 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowRight,
-  ChevronDown,
   ImageOff,
   Loader2,
   Gift,
@@ -19,7 +18,7 @@ import {
   User,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { get } from '../lib/api'
 import { cx, money } from '../lib/format'
 import { useAnalytics } from '../lib/useAnalytics'
@@ -709,196 +708,141 @@ function TopBar({ settings }) {
 }
 
 /**
- * Hover intent.
+ * Which primary category the visitor is inside.
  *
- * Closing the panel the instant the pointer leaves the trigger makes it
- * unreachable: the natural path to a menu item is diagonal, and it clips the
- * gap between trigger and panel on the way. A short grace period is the
- * difference between a menu that feels considered and one that fights back.
+ * Reads the slug out of the URL and matches it against a root or any root's
+ * child, so landing on a sub-category lights up its parent in the top row
+ * rather than nothing at all.
  */
-function useHoverIntent(delay = 140) {
-  const [openId, setOpenId] = useState(null)
-  const timer = useRef(null)
+function useActiveCategory(list) {
+  const { pathname } = useLocation()
+  const match = pathname.match(/^\/category\/([^/]+)/)
+  const slug = match ? decodeURIComponent(match[1]) : null
 
-  useEffect(() => () => clearTimeout(timer.current), [])
+  if (slug === null) return { root: null, slug: null }
 
-  // Stable identities: these end up in an effect's dependency list, and a
-  // fresh function every render would re-subscribe the key handler forever.
-  const open = useCallback((id) => {
-    clearTimeout(timer.current)
-    setOpenId(id)
-  }, [])
+  const root =
+    list.find((category) => category.slug === slug) ??
+    list.find((category) => (category.children ?? []).some((child) => child.slug === slug)) ??
+    null
 
-  const close = useCallback(() => {
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => setOpenId(null), delay)
-  }, [delay])
-
-  const closeNow = useCallback(() => {
-    clearTimeout(timer.current)
-    setOpenId(null)
-  }, [])
-
-  return { openId, open, close, closeNow }
+  return { root, slug }
 }
 
-/** Every top-level category along the bottom, its children in a hover mega menu. Desktop only -- the mobile sheet lists categories flatly instead. */
+/**
+ * The two-row category menu.
+ *
+ * Top row: the primary categories. Bottom row: the sub-categories of
+ * whichever one the visitor is inside. Both come from the category tree the
+ * owner already manages -- there is no second list to keep in step with the
+ * catalogue, which is the way these menus usually go wrong.
+ *
+ * The bottom row follows the page, not the mouse. Swapping it on hover
+ * would read better right up until a primary with no children came under
+ * the cursor and the whole header changed height; a strip that says "you
+ * are here, these are the sections" has to hold still.
+ */
 function CategoryBar() {
   const categories = useStoreCategories()
-  const { openId, open, close, closeNow } = useHoverIntent()
-  const { pathname } = useLocation()
 
-  const list = categories.data ?? []
+  // A category with nothing behind it and nothing under it is a dead end,
+  // and a menu item that opens an empty page is worse than no menu item.
+  const list = (categories.data ?? []).filter(
+    (category) => category.product_count > 0 || (category.children ?? []).length > 0,
+  )
 
-  // Escape closes it, the same as every other overlay on the page.
-  useEffect(() => {
-    if (openId === null) return undefined
+  const { root, slug } = useActiveCategory(list)
+  const subs = root?.children ?? []
 
-    const onKey = (event) => {
-      if (event.key === 'Escape') closeNow()
-    }
-
-    window.addEventListener('keydown', onKey)
-
-    return () => window.removeEventListener('keydown', onKey)
-  }, [openId, closeNow])
-
-  // The home page already leads with its own "Shop by category" section --
-  // repeating the same list as a menu bar right above it is redundant.
-  // Every other page has no such section of its own, so the bar is how a
-  // visitor gets back to browsing by category from there.
-  if (categories.isLoading || list.length === 0 || pathname === '/') return null
+  if (categories.isLoading || list.length === 0) return null
 
   return (
     <nav aria-label="Categories" className="hidden border-b border-ink-200 bg-white lg:block">
-      <div className="mx-auto flex max-w-[1400px] items-stretch gap-1 px-3 sm:px-4">
-        {list.map((category) => {
-          const children = category.children ?? []
-          const hasChildren = children.length > 0
-          const isOpen = openId === category.id
-          const isActive = pathname === `/category/${category.slug}`
+      <div className="mx-auto max-w-[1400px] px-3 sm:px-4">
+        <ul className="rail flex items-stretch gap-1">
+          {list.map((category) => {
+            const isActive = root?.id === category.id
 
-          return (
-            <div
-              key={category.id}
-              className="relative"
-              onMouseEnter={() => open(category.id)}
-              onMouseLeave={close}
-              onFocus={() => open(category.id)}
-            >
-              <Link
-                to={`/category/${category.slug}`}
-                aria-expanded={hasChildren ? isOpen : undefined}
-                aria-current={isActive ? 'page' : undefined}
-                className={cx(
-                  'relative flex items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-semibold uppercase transition-colors duration-150',
-                  isActive || isOpen ? 'text-brand-800' : 'text-ink-700 hover:text-brand-800',
-                )}
-              >
-                {category.name}
-
-                {hasChildren && (
-                  <ChevronDown
-                    className={cx(
-                      'h-3.5 w-3.5 transition-transform duration-200',
-                      isOpen && 'rotate-180',
-                    )}
-                    aria-hidden="true"
-                  />
-                )}
-
-                {/*
-                   The active mark is a rule that grows out of the centre
-                   rather than a block of fill behind the text. Orange,
-                   because this is exactly the "active state" the palette
-                   reserves it for, and on a white bar it should be the one
-                   thing that pulls the eye.
-                */}
-                <span
-                  aria-hidden="true"
+            return (
+              <li key={category.id}>
+                <Link
+                  to={`/category/${category.slug}`}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cx(
-                    'pointer-events-none absolute inset-x-3 bottom-0 h-0.5 origin-center rounded-full bg-brand-600 transition-transform duration-200 ease-out',
-                    isActive || isOpen ? 'scale-x-100' : 'scale-x-0',
-                  )}
-                />
-              </Link>
-
-              {hasChildren && isOpen && (
-                <div
-                  onMouseEnter={() => open(category.id)}
-                  onMouseLeave={close}
-                  className={cx(
-                    'absolute left-0 top-full z-40 overflow-hidden rounded-b-xl border border-t-0 border-ink-200 bg-white shadow-raised',
-                    children.length > 4 ? 'w-[26rem]' : 'w-64',
+                    'relative flex items-center whitespace-nowrap px-3 py-3 text-sm font-semibold uppercase transition-colors duration-150',
+                    isActive ? 'text-brand-800' : 'text-ink-700 hover:text-brand-800',
                   )}
                 >
-                  <div className="flex items-center justify-between gap-3 border-b border-ink-100 bg-ink-50 px-4 py-3">
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      {category.image ? (
-                        <img src={category.image} alt="" className="h-6 w-6 shrink-0 rounded object-cover" />
-                      ) : (
-                        <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-brand-50 text-[11px] font-bold text-brand-800">
-                          {category.name.charAt(0)}
-                        </span>
-                      )}
+                  {category.name}
 
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-ink-900">
-                          {category.name}
-                        </span>
-
-                        {category.product_count > 0 && (
-                          <span className="block text-[11px] text-ink-500">
-                            {category.product_count} product
-                            {category.product_count === 1 ? '' : 's'}
-                          </span>
-                        )}
-                      </span>
-                    </span>
-
-                    <Link
-                      to={`/category/${category.slug}`}
-                      onClick={closeNow}
-                      className="group/all flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-brand-800 hover:text-brand-900"
-                    >
-                      View all
-                      <ArrowRight
-                        className="h-3.5 w-3.5 transition-transform duration-150 group-hover/all:translate-x-0.5"
-                        aria-hidden="true"
-                      />
-                    </Link>
-                  </div>
-
-                  <ul
+                  {/*
+                     The active mark is a rule that grows out of the centre
+                     rather than a block of fill behind the text -- on a white
+                     bar it should be the one thing that pulls the eye.
+                  */}
+                  <span
+                    aria-hidden="true"
                     className={cx(
-                      'grid gap-0.5 p-2',
-                      children.length > 4 ? 'grid-cols-2' : 'grid-cols-1',
+                      'pointer-events-none absolute inset-x-3 bottom-0 h-0.5 origin-center rounded-full bg-brand-600 transition-transform duration-200 ease-out',
+                      isActive ? 'scale-x-100' : 'scale-x-0',
                     )}
-                  >
-                    {children.map((child) => (
-                      <li key={child.id}>
-                        <Link
-                          to={`/category/${child.slug}`}
-                          onClick={closeNow}
-                          className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
-                        >
-                          <span className="truncate">{child.name}</span>
-
-                          {child.product_count > 0 && (
-                            <span className="shrink-0 text-[11px] tabular-nums text-ink-400">
-                              {child.product_count}
-                            </span>
-                          )}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )
-        })}
+                  />
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
       </div>
+
+      {subs.length > 0 && (
+        <div className="border-t border-ink-100 bg-ink-50">
+          <div className="mx-auto max-w-[1400px] px-3 sm:px-4">
+            <ul className="rail flex items-center gap-1">
+              {/*
+                 The parent leads its own row. Without it there is no way back
+                 to the whole category once a sub-category has been picked,
+                 short of the top row -- which by then no longer looks like
+                 the thing you are already inside.
+              */}
+              <li>
+                <Link
+                  to={`/category/${root.slug}`}
+                  aria-current={slug === root.slug ? 'page' : undefined}
+                  className={cx(
+                    'block whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
+                    slug === root.slug
+                      ? 'font-semibold text-brand-800'
+                      : 'text-ink-600 hover:text-brand-800',
+                  )}
+                >
+                  All {root.name}
+                </Link>
+              </li>
+
+              {subs.map((child) => {
+                const isHere = slug === child.slug
+
+                return (
+                  <li key={child.id}>
+                    <Link
+                      to={`/category/${child.slug}`}
+                      aria-current={isHere ? 'page' : undefined}
+                      className={cx(
+                        'block whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
+                        isHere
+                          ? 'font-semibold text-brand-800'
+                          : 'text-ink-600 hover:text-brand-800',
+                      )}
+                    >
+                      {child.name}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }
