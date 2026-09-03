@@ -1080,18 +1080,19 @@ export function ProductDetailPage() {
             </div>
 
             {/*
-             * Both buy buttons carry the shop's own colour: solid for Buy Now,
-             * the tinted fill for Add To Cart. They were a grey outline and a
-             * fixed green, which read as "cancel" and "unrelated" next to a
-             * crimson storefront -- and the green did not move when the owner
-             * changed their colour in Settings.
+             * Both buy buttons carry the shop's own colour, at the same
+             * weight. They were a grey outline and a fixed green, which read
+             * as "cancel" and "unrelated" next to a crimson storefront -- and
+             * the green did not move when the owner changed their colour in
+             * Settings.
              *
-             * The pair still reads in a definite order. Buy Now is the only
-             * solid fill on the row, so the weaker one cannot be mistaken for
-             * the checkout button.
+             * They are deliberately equals rather than a strong and a weak
+             * one: these are two ways of buying the same thing, not a choice
+             * with a recommended answer, and the words on them are what say
+             * which is which.
              */}
             <Button
-              variant="soft"
+              variant="primary"
               size="lg"
               onClick={() => addItem(() => toast.success('Added to cart.'))}
               disabled={!canBuy}
