@@ -1966,65 +1966,237 @@ export default function ProductFormPage() {
                   )}
                 </Field>
 
-                <Field
-                  label="Short description"
-                  hint={
-                    (shortDescriptionStyle || 'paragraph') === 'list'
-                      ? 'One point per line -- each line becomes a bullet.'
-                      : 'A short summary shown near the product title.'
-                  }
-                  error={
-                    errors.short_description
-                      ?.message
-                  }
-                >
-                  {({
-                    id: fieldId,
-                    invalid,
-                  }) => (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-ink-500">Display as</span>
-                        {[
-                          { value: 'paragraph', label: 'Paragraph' },
-                          { value: 'list', label: 'Bullet list' },
-                        ].map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() =>
-                              setValue('short_description_style', option.value, { shouldDirty: true })
-                            }
-                            className={cx(
-                              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                              (shortDescriptionStyle || 'paragraph') === option.value
-                                ? 'border-brand-500 bg-brand-50 text-brand-700'
-                                : 'border-ink-200 text-ink-600 hover:border-ink-300',
-                            )}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
+                {/*
+                   The short summary and the spec pairs share a row: both
+                   are the small print under the title on the storefront,
+                   and both are short enough that a full width each left
+                   most of the line empty.
+                */}
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Field
+                    label="Short description"
+                    hint={
+                      (shortDescriptionStyle || 'paragraph') === 'list'
+                        ? 'One point per line -- each line becomes a bullet.'
+                        : 'A short summary shown near the product title.'
+                    }
+                    error={
+                      errors.short_description
+                        ?.message
+                    }
+                  >
+                    {({
+                      id: fieldId,
+                      invalid,
+                    }) => (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-ink-500">Display as</span>
+                          {[
+                            { value: 'paragraph', label: 'Paragraph' },
+                            { value: 'list', label: 'Bullet list' },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                setValue('short_description_style', option.value, { shouldDirty: true })
+                              }
+                              className={cx(
+                                'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                                (shortDescriptionStyle || 'paragraph') === option.value
+                                  ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                  : 'border-ink-200 text-ink-600 hover:border-ink-300',
+                              )}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
 
-                      <Textarea
-                        id={fieldId}
-                        invalid={invalid}
-                        rows={
-                          (shortDescriptionStyle || 'paragraph') === 'list' ? 5 : 3
-                        }
-                        placeholder={
-                          (shortDescriptionStyle || 'paragraph') === 'list'
-                            ? 'Lightweight design\nLong battery life\nWorks with all standard chargers'
-                            : 'A short summary shown near the product title.'
-                        }
-                        {...register(
-                          'short_description',
+                        <Textarea
+                          id={fieldId}
+                          invalid={invalid}
+                          rows={
+                            (shortDescriptionStyle || 'paragraph') === 'list' ? 5 : 3
+                          }
+                          placeholder={
+                            (shortDescriptionStyle || 'paragraph') === 'list'
+                              ? 'Lightweight design\nLong battery life\nWorks with all standard chargers'
+                              : 'A short summary shown near the product title.'
+                          }
+                          {...register(
+                            'short_description',
+                          )}
+                        />
+                      </div>
+                    )}
+                  </Field>
+
+                  <div>
+                    <p className="text-sm font-medium text-ink-800">
+                      Additional information
+                    </p>
+
+                    <p className="mb-3 mt-0.5 text-xs text-ink-500">
+                      Extra feature and value pairs shown on the storefront.
+                    </p>
+
+
+                    {additionalInfo.length ===
+                    0 ? (
+                      <div className="rounded-xl border border-dashed border-ink-300 bg-ink-50/50 px-5 py-7 text-center">
+
+                        <Info className="mx-auto h-6 w-6 text-ink-400" />
+
+                        <p className="mt-2 text-sm font-medium text-ink-700">
+                          No additional information
+                        </p>
+
+                        <p className="mt-1 text-xs text-ink-500">
+                          Example: Material → Leather
+                        </p>
+
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+
+                        {additionalInfo.map(
+                          (
+                            row,
+                            index,
+                          ) => (
+                            <div
+                              key={
+                                row.id ??
+                                `info-${index}`
+                              }
+                              className="grid gap-2 rounded-xl border border-ink-200 bg-ink-50/40 p-2 sm:grid-cols-[220px_minmax(0,1fr)_40px]"
+                            >
+
+                              <Input
+                                value={
+                                  row.feature ??
+                                  ''
+                                }
+                                placeholder="Feature"
+                                onChange={(
+                                  event,
+                                ) =>
+                                  setAdditionalInfo(
+                                    (
+                                      rows,
+                                    ) =>
+                                      rows.map(
+                                        (
+                                          item,
+                                          i,
+                                        ) =>
+                                          i ===
+                                          index
+                                            ? {
+                                                ...item,
+                                                feature:
+                                                  event
+                                                    .target
+                                                    .value,
+                                              }
+                                            : item,
+                                      ),
+                                  )
+                                }
+                              />
+
+                              <Input
+                                value={
+                                  row.description ??
+                                  ''
+                                }
+                                placeholder="Description / value"
+                                onChange={(
+                                  event,
+                                ) =>
+                                  setAdditionalInfo(
+                                    (
+                                      rows,
+                                    ) =>
+                                      rows.map(
+                                        (
+                                          item,
+                                          i,
+                                        ) =>
+                                          i ===
+                                          index
+                                            ? {
+                                                ...item,
+                                                description:
+                                                  event
+                                                    .target
+                                                    .value,
+                                              }
+                                            : item,
+                                      ),
+                                  )
+                                }
+                              />
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  setAdditionalInfo(
+                                    (
+                                      rows,
+                                    ) =>
+                                      rows.filter(
+                                        (
+                                          _,
+                                          i,
+                                        ) =>
+                                          i !==
+                                          index,
+                                      ),
+                                  )
+                                }
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+
+                            </div>
+                          ),
                         )}
-                      />
-                    </div>
-                  )}
-                </Field>
+
+                      </div>
+                    )}
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() =>
+                        setAdditionalInfo(
+                          (rows) => [
+                            ...rows,
+                            {
+                              id:
+                                crypto.randomUUID(),
+                              feature:
+                                '',
+                              description:
+                                '',
+                            },
+                          ],
+                        )
+                      }
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add information
+                    </Button>
+
+                  </div>
+                </div>
 
                 {/*
                    Accessories, picked per product. "Related products" already
@@ -2625,172 +2797,6 @@ export default function ProductFormPage() {
 
             </FoldableSection>
 
-            {/* ===============================================================
-               08 ADDITIONAL INFORMATION
-               =============================================================== */}
-
-            <FoldableSection
-              icon={Info}
-              title="Additional information"
-              description="Extra feature and value pairs displayed on the storefront."
-              bodyClass="p-5"
-              defaultOpen={false}
-              forceOpen={sectionHasError(['additional_info'])}
-            >
-
-                {additionalInfo.length ===
-                0 ? (
-                  <div className="rounded-xl border border-dashed border-ink-300 bg-ink-50/50 px-5 py-7 text-center">
-
-                    <Info className="mx-auto h-6 w-6 text-ink-400" />
-
-                    <p className="mt-2 text-sm font-medium text-ink-700">
-                      No additional information
-                    </p>
-
-                    <p className="mt-1 text-xs text-ink-500">
-                      Example: Material → Leather
-                    </p>
-
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-
-                    {additionalInfo.map(
-                      (
-                        row,
-                        index,
-                      ) => (
-                        <div
-                          key={
-                            row.id ??
-                            `info-${index}`
-                          }
-                          className="grid gap-2 rounded-xl border border-ink-200 bg-ink-50/40 p-2 sm:grid-cols-[220px_minmax(0,1fr)_40px]"
-                        >
-
-                          <Input
-                            value={
-                              row.feature ??
-                              ''
-                            }
-                            placeholder="Feature"
-                            onChange={(
-                              event,
-                            ) =>
-                              setAdditionalInfo(
-                                (
-                                  rows,
-                                ) =>
-                                  rows.map(
-                                    (
-                                      item,
-                                      i,
-                                    ) =>
-                                      i ===
-                                      index
-                                        ? {
-                                            ...item,
-                                            feature:
-                                              event
-                                                .target
-                                                .value,
-                                          }
-                                        : item,
-                                  ),
-                              )
-                            }
-                          />
-
-                          <Input
-                            value={
-                              row.description ??
-                              ''
-                            }
-                            placeholder="Description / value"
-                            onChange={(
-                              event,
-                            ) =>
-                              setAdditionalInfo(
-                                (
-                                  rows,
-                                ) =>
-                                  rows.map(
-                                    (
-                                      item,
-                                      i,
-                                    ) =>
-                                      i ===
-                                      index
-                                        ? {
-                                            ...item,
-                                            description:
-                                              event
-                                                .target
-                                                .value,
-                                          }
-                                        : item,
-                                  ),
-                              )
-                            }
-                          />
-
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              setAdditionalInfo(
-                                (
-                                  rows,
-                                ) =>
-                                  rows.filter(
-                                    (
-                                      _,
-                                      i,
-                                    ) =>
-                                      i !==
-                                      index,
-                                  ),
-                              )
-                            }
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-
-                        </div>
-                      ),
-                    )}
-
-                  </div>
-                )}
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() =>
-                    setAdditionalInfo(
-                      (rows) => [
-                        ...rows,
-                        {
-                          id:
-                            crypto.randomUUID(),
-                          feature:
-                            '',
-                          description:
-                            '',
-                        },
-                      ],
-                    )
-                  }
-                >
-                  <Plus className="h-4 w-4" />
-                  Add information
-                </Button>
-
-            </FoldableSection>
 
             {/* ===============================================================
                09 SEO
