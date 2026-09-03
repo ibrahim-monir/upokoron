@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Download, FileSpreadsheet, Link2, Upload } from 'lucide-react'
 import { post } from '../../lib/api'
 import { useList } from './useResource'
+import { useAuthStore } from '../../stores/authStore'
 import {
   Badge,
   Button,
@@ -78,15 +79,37 @@ export default function ProductImportPage() {
    One product page
    ------------------------------------------------------------------------- */
 
+/*
+ * What a freshly imported product starts with on the shelf.
+ *
+ * Ten, rather than nothing: a product created at zero stock is invisible to
+ * every stock filter and cannot be added to a cart, so the shop owner finds
+ * out it exists only when they go looking for why it is not selling. It is
+ * an editable box, not a constant, for the case where the real number is
+ * already known.
+ */
+const DEFAULT_OPENING_STOCK = '10'
+
 function ImportFromUrl() {
   const navigate = useNavigate()
   const toast = useToast()
+  const can = useAuthStore((state) => state.can)
 
   const [url, setUrl] = useState('')
   const [draft, setDraft] = useState(null)
   const [categoryId, setCategoryId] = useState('')
   const [brandId, setBrandId] = useState('')
   const [keep, setKeep] = useState([])
+
+  /*
+   * Prices are the one thing on this screen that must not be taken on trust,
+   * so they are inputs rather than a summary. The price on someone else's
+   * page is their REGULAR price -- what the item normally costs -- so that is
+   * where it lands here. Whatever this shop chooses to sell it for goes in
+   * the discount box, and leaving that empty simply means "no discount, sell
+   * at the regular price".
+   */
+  const [pricing, setPricing] = useState({ regular: '', discount: '', stock: DEFAULT_OPENING_STOCK })
 
   const categories = useList('admin.categories', '/admin/categories', { per_page: 200 })
   const brands = useList('admin.brands', '/admin/brands', { per_page: 200 })
@@ -99,6 +122,14 @@ function ImportFromUrl() {
     onSuccess({ product, message }) {
       setDraft(product)
       setKeep(product.images ?? [])
+
+      // A page that advertises a discount gives us both numbers, and they
+      // keep their meanings. A page with one price gives us the regular one.
+      setPricing({
+        regular: product.compare_at_price ?? product.selling_price ?? '',
+        discount: product.compare_at_price ? (product.selling_price ?? '') : '',
+        stock: DEFAULT_OPENING_STOCK,
+      })
 
       // The shop's own brand list is the authority; the page only suggested
       // a name, and creating a brand behind the admin's back is not this
@@ -115,6 +146,11 @@ function ImportFromUrl() {
 
   const create = useMutation({
     mutationFn: async () => {
+      // No discount typed means the item sells at its regular price, and a
+      // compare-at equal to the selling price would be a struck-through
+      // number identical to the one beside it -- so it is left off entirely.
+      const discounted = pricing.discount !== '' && Number(pricing.discount) > 0
+
       const { product } = await post('/admin/products', {
         name: draft.name,
         category_id: Number(categoryId),
@@ -122,13 +158,46 @@ function ImportFromUrl() {
         type: 'simple',
         status: 'draft',
         sku: draft.sku || null,
-        selling_price: draft.selling_price ?? '0',
-        compare_at_price: draft.compare_at_price ?? null,
+        selling_price: discounted ? pricing.discount : pricing.regular,
+        compare_at_price: discounted ? pricing.regular : null,
         short_description: draft.short_description || null,
         description: draft.description || null,
         additional_info: draft.additional_info ?? [],
         canonical_url: null,
       })
+
+      /*
+       * Opening stock, as its own step, because it is a different kind of
+       * fact: a product is catalogue data, stock is a movement in the
+       * inventory ledger with a date and a reason on it.
+       *
+       * It is skipped rather than failed for an account without
+       * inventory.opening -- a manager can create products but is not
+       * trusted to open a stock balance, and refusing the whole import over
+       * that would be absurd when the product itself saved fine.
+       */
+      const opening = Number(pricing.stock)
+      let stocked = false
+
+      if (opening > 0 && can('inventory.opening')) {
+        const variation = product.variations?.[0] ?? product.default_variation
+
+        if (variation) {
+          try {
+            await post('/admin/inventory/adjust', {
+              product_variation_id: variation.id,
+              quantity: opening,
+              type: 'opening',
+              unit_cost: 0,
+              note: `Opening stock set when this product was imported from ${draft.source ?? 'a web page'}.`,
+            })
+            stocked = true
+          } catch {
+            // Reported in the toast below. The product is already saved and
+            // correct; it simply has no stock on it yet.
+          }
+        }
+      }
 
       // One at a time, and never fatally: each is a download from someone
       // else's server, and a photo that will not come is not a reason to
@@ -144,16 +213,32 @@ function ImportFromUrl() {
         }
       }
 
-      return { product, imported, attempted: keep.length }
+      return { product, imported, attempted: keep.length, stocked, opening }
     },
-    onSuccess({ product, imported, attempted }) {
+    onSuccess({ product, imported, attempted, stocked, opening }) {
       toast.success(
-        `Draft created${attempted > 0 ? `, ${imported} of ${attempted} picture(s) copied` : ''}. Check every field before publishing.`,
+        [
+          'Draft created',
+          attempted > 0 ? `${imported} of ${attempted} picture(s) copied` : null,
+          stocked ? `opening stock ${opening}` : null,
+        ]
+          .filter(Boolean)
+          .join(', ') + '. Check every field before publishing.',
       )
       navigate(`/admin/products/${product.id}/edit`)
     },
     onError: (error) => toast.error(error?.message ?? 'Could not create the draft.'),
   })
+
+  const setPrice = (key, value) => setPricing((current) => ({ ...current, [key]: value }))
+
+  // The same rule the API enforces, said before the request rather than
+  // after it: a struck-through price that is not higher than the one beside
+  // it advertises a price rise as a saving.
+  const priceError =
+    pricing.discount !== '' && Number(pricing.discount) >= Number(pricing.regular)
+      ? 'The discount price has to be lower than the regular price.'
+      : null
 
   return (
     <div className="flex flex-col gap-4">
@@ -214,12 +299,6 @@ function ImportFromUrl() {
           <div className="grid gap-4 p-4 lg:grid-cols-[1fr_1.2fr]">
             <div className="flex flex-col gap-3">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <Detail label="Price">
-                  {draft.selling_price ? `৳${draft.selling_price}` : <Missing />}
-                </Detail>
-                <Detail label="Was">
-                  {draft.compare_at_price ? `৳${draft.compare_at_price}` : <Missing />}
-                </Detail>
                 <Detail label="SKU">{draft.sku || <Missing />}</Detail>
                 <Detail label="Brand on the page">{draft.brand || <Missing />}</Detail>
                 <Detail label="Availability">{draft.availability || <Missing />}</Detail>
@@ -227,6 +306,60 @@ function ImportFromUrl() {
                   {draft.additional_info?.length ? `${draft.additional_info.length} row(s)` : <Missing />}
                 </Detail>
               </dl>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field
+                  label="Regular price"
+                  required
+                  hint="What the page asked for."
+                >
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={pricing.regular}
+                      onChange={(event) => setPrice('regular', event.target.value)}
+                      className="w-full"
+                    />
+                  )}
+                </Field>
+
+                <Field label="Discount price" hint="Blank = sell at the regular price.">
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={pricing.discount}
+                      onChange={(event) => setPrice('discount', event.target.value)}
+                      className="w-full"
+                    />
+                  )}
+                </Field>
+
+                <Field
+                  label="Opening stock"
+                  hint={can('inventory.opening') ? 'Recorded at cost 0.' : 'Needs the opening-stock permission.'}
+                >
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      type="number"
+                      step="1"
+                      min="0"
+                      disabled={!can('inventory.opening')}
+                      value={pricing.stock}
+                      onChange={(event) => setPrice('stock', event.target.value)}
+                      className="w-full"
+                    />
+                  )}
+                </Field>
+              </div>
+
+              {priceError && <p className="text-xs text-danger-700">{priceError}</p>}
 
               {draft.short_description && (
                 <p className="rounded-lg bg-ink-50 p-3 text-sm text-ink-700">{draft.short_description}</p>
@@ -310,7 +443,11 @@ function ImportFromUrl() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-ink-200 p-4">
-            <Button onClick={() => create.mutate()} loading={create.isPending} disabled={!categoryId}>
+            <Button
+              onClick={() => create.mutate()}
+              loading={create.isPending}
+              disabled={!categoryId || !Number(pricing.regular) || Boolean(priceError)}
+            >
               Create draft product
             </Button>
 
