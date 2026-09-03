@@ -11,11 +11,23 @@ import { useWishlistStore } from '../../stores/wishlistStore'
  * Declared once because it had drifted: five listings each wrote their own
  * columns, and they had fallen out of step -- related products stopped at
  * four across, the loading skeleton used a different gap from the grid it
- * was standing in for. Five once there is room for them at xl, four on a
- * laptop, stepping down from there.
+ * was standing in for.
+ *
+ * The base runs up to four on a laptop, stepping down from there; the
+ * full-width version picks up a fifth once there is room for it at xl.
  */
-export const PRODUCT_GRID =
-  'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5'
+const PRODUCT_GRID_BASE = 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4'
+
+export const PRODUCT_GRID = `${PRODUCT_GRID_BASE} xl:grid-cols-5`
+
+/**
+ * The same grid for listings that stand beside the filter sidebar.
+ *
+ * It stops at four across instead of picking up a fifth column at xl: the
+ * sidebar takes 16rem off the row, so the fifth card was squeezing all five
+ * narrower than the four the home page shows at the same window width.
+ */
+export const PRODUCT_GRID_WITH_SIDEBAR = PRODUCT_GRID_BASE
 
 /**
  * The saving, in taka rather than a percentage.
