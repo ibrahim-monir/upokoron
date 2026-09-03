@@ -125,6 +125,17 @@
   --shadow-raised: 0 4px 12px -2px rgb(18 22 21 / 0.10), 0 2px 6px -2px rgb(18 22 21 / 0.06);
 }
 
+/*
+ * The logo sits on the header bar, whose colour the shop chooses. One piece
+ * of artwork has to work on both a navy bar and a pale pink one, so what
+ * changes is the knockout, not the file: lib/theme.js rewrites this along
+ * with the header's ink whenever the bar colour is saved. The default bar is
+ * pale, so the wordmark is left as drawn.
+ */
+:root {
+  --header-logo-filter: none;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;

@@ -24,9 +24,16 @@ const CANDIDATES = ['/logo.png', '/logo.svg', '/logo.webp', '/logo.jpg']
  * a lettered tile stands in if none load -- a broken-image icon in the header
  * is worse than a plain initial.
  *
- * `variant="light"` is for dark surfaces. The wordmark is near-black and
- * disappears on the navy footer, so it is knocked out to solid white. That
- * loses the blue in the plug mark, which is the accepted trade for legibility.
+ * `variant="light"` is for surfaces that are always dark -- the navy footer.
+ * The wordmark is near-black and disappears there, so it is knocked out to
+ * solid white. That loses the blue in the plug mark, which is the accepted
+ * trade for legibility.
+ *
+ * `variant="header"` is for the one surface whose colour the shop picks. It
+ * cannot commit to either treatment, so it follows the same brightness test
+ * the header's ink does (lib/theme.js): knocked out on a dark bar, left as
+ * drawn on a pale one. Hard-coding the white knockout here is what made the
+ * logo vanish the day the bar turned pink.
  */
 export function Logo({ settings, variant = 'natural', className, to = '/', showName = true }) {
   const configured = settings?.store_logo
@@ -59,7 +66,9 @@ export function Logo({ settings, variant = 'natural', className, to = '/', showN
               'grid shrink-0 place-items-center rounded-lg font-bold',
               variant === 'light'
                 ? 'h-11 w-11 bg-white/15 text-lg text-white ring-1 ring-white/25'
-                : 'h-10 w-10 bg-brand-600 text-lg text-white',
+                : variant === 'header'
+                  ? 'h-11 w-11 bg-header-line text-lg text-header-ink ring-1 ring-header-line'
+                  : 'h-10 w-10 bg-brand-600 text-lg text-white',
             )}
           >
             {storeName.charAt(0).toUpperCase()}
@@ -69,7 +78,9 @@ export function Logo({ settings, variant = 'natural', className, to = '/', showN
             <span
               className={cx(
                 'text-xl font-bold tracking-tight',
-                variant === 'light' ? 'text-white' : 'text-ink-900',
+                variant === 'light' && 'text-white',
+                variant === 'header' && 'text-header-ink',
+                variant === 'natural' && 'text-ink-900',
               )}
             >
               {storeName}
@@ -81,7 +92,11 @@ export function Logo({ settings, variant = 'natural', className, to = '/', showN
           src={sources[index]}
           alt={storeName}
           onError={() => setIndex((current) => current + 1)}
-          className={cx('h-10 w-auto object-contain', variant === 'light' && 'brightness-0 invert')}
+          className={cx(
+            'h-10 w-auto object-contain',
+            variant === 'light' && 'brightness-0 invert',
+            variant === 'header' && '[filter:var(--header-logo-filter)]',
+          )}
         />
       )}
     </Link>

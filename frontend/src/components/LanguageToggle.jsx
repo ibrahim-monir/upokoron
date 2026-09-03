@@ -8,6 +8,12 @@ import { useLocaleStore } from '../stores/localeStore'
  * Both options sit in view rather than one button that silently flips --
  * a shopper glancing at it can tell which language is active without
  * having to click first and see what changes.
+ *
+ * Every colour here comes from the header tokens, which are derived from the
+ * bar's own brightness (lib/theme.js). The active pill is the ink itself with
+ * the bar colour as its text, so the pair is guaranteed to read whatever the
+ * shop paints the header -- the white-on-white it used to be only worked
+ * while that bar was navy.
  */
 export function LanguageToggle({ className }) {
   const locale = useLocaleStore((state) => state.locale)
@@ -19,7 +25,7 @@ export function LanguageToggle({ className }) {
       role="group"
       aria-label={t('header.language')}
       className={cx(
-        'flex items-center gap-0.5 rounded-full border border-white/25 bg-white/10 p-0.5 text-xs font-bold',
+        'flex items-center gap-0.5 rounded-full border border-header-line bg-header-line p-0.5 text-xs font-bold',
         className,
       )}
     >
@@ -30,7 +36,7 @@ export function LanguageToggle({ className }) {
         title={t('header.switchToBangla')}
         className={cx(
           'rounded-full px-2 py-1 transition-colors',
-          locale === 'bn' ? 'bg-white text-brand-800' : 'text-white/80 hover:text-white',
+          locale === 'bn' ? 'bg-header-ink text-header' : 'text-header-muted hover:text-header-ink',
         )}
       >
         বাং
@@ -42,7 +48,7 @@ export function LanguageToggle({ className }) {
         title={t('header.switchToEnglish')}
         className={cx(
           'rounded-full px-2 py-1 transition-colors',
-          locale === 'en' ? 'bg-white text-brand-800' : 'text-white/80 hover:text-white',
+          locale === 'en' ? 'bg-header-ink text-header' : 'text-header-muted hover:text-header-ink',
         )}
       >
         EN

@@ -170,6 +170,25 @@ function readableInk(bar, towards, softest) {
 }
 
 /**
+ * Whether the bar needs light text on it.
+ *
+ * Whichever of black and white actually reads on the bar, not whichever the
+ * brightness suggests. A mid-tone blue looks dark enough for white text and
+ * gives it only 3.76:1, while black on the same blue clears 5.8.
+ *
+ * The logo asks the same question -- the artwork is knocked out to white on
+ * a dark bar and left alone on a pale one -- so it is one function, not two
+ * places that can disagree about the same colour.
+ */
+export function headerIsDark(header) {
+  const bar = parseHex(header)
+
+  if (bar === null) return false
+
+  return contrast(bar, WHITE) > contrast(bar, BLACK)
+}
+
+/**
  * The logo bar, and text that stays readable on it.
  *
  * The ink is chosen from the bar's own brightness rather than fixed, so a
@@ -183,11 +202,8 @@ export function headerRamp(header) {
 
   if (bar === null) return {}
 
-  // Whichever of black and white actually reads on this bar, not whichever
-  // the brightness suggests. A mid-tone blue looks dark enough for white
-  // text and gives it only 3.76:1, while black on the same blue clears 5.8.
-  const towards = contrast(bar, BLACK) >= contrast(bar, WHITE) ? BLACK : WHITE
-  const light = towards === BLACK
+  const light = !headerIsDark(header)
+  const towards = light ? BLACK : WHITE
 
   return {
     '': toHex(bar),
@@ -228,6 +244,12 @@ export function themeCss(settings) {
   // step is the bare token rather than a numbered one.
   for (const [step, hex] of Object.entries(headerRamp(header))) {
     declarations.push(step === '' ? `--color-header:${hex}` : `--color-header-${step}:${hex}`)
+  }
+
+  // The logo is one image for both cases, so it is the filter that changes:
+  // knocked out to white on a dark bar, left as drawn on a pale one.
+  if (parseHex(header)) {
+    declarations.push(`--header-logo-filter:${headerIsDark(header) ? 'brightness(0) invert(1)' : 'none'}`)
   }
 
   return declarations.length > 0 ? `:root{${declarations.join(';')}}` : ''

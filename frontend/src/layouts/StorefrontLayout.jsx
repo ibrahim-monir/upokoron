@@ -495,16 +495,17 @@ function IconCounter({ icon: Icon, count = 0, label, to, onClick }) {
   const Wrapper = onClick ? 'button' : Link
 
   return (
-    // White on the navy bar, with the count in a white pill. The count uses
-    // brand-800 rather than brand-600: at 10px on white the brighter orange
-    // does not carry enough contrast to be read.
+    // The bar's own ink, not white: the header colour is the shop's to choose,
+    // and a hard-coded white icon disappeared the moment it was set to a pale
+    // pink. The count keeps a colour of its own -- brand on white -- because a
+    // badge that matches the icon beside it stops reading as a count.
     <Wrapper
       {...(onClick ? { type: 'button', onClick } : { to })}
-      className="relative flex items-center gap-1.5 text-white/95 hover:text-white"
+      className="relative flex items-center gap-1.5 text-header-muted hover:text-header-ink"
     >
       <span className="relative">
         <Icon className="h-5 w-5" aria-hidden="true" />
-        <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-white px-1 text-[10px] font-bold text-brand-800">
+        <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
           {count}
         </span>
       </span>
@@ -526,7 +527,7 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
   return (
     <header className="sticky top-0 z-30 bg-header text-header-ink shadow-sm">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-3 sm:px-4 lg:gap-5">
-        <Logo settings={settings} variant="light" />
+        <Logo settings={settings} variant="header" />
 
         <SearchBar className="hidden max-w-sm flex-1 md:block lg:max-w-md" />
 
@@ -853,7 +854,7 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
 
       <header className="sticky top-0 z-30 bg-header text-header-ink shadow-sm">
         <div className="mx-auto grid h-16 max-w-[1400px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 sm:px-4 lg:gap-5">
-          <Logo settings={settings} variant="light" />
+          <Logo settings={settings} variant="header" />
 
           {/* The middle grid column, not a flex sibling -- flex-1 grew to
               fill leftover space but stayed pinned to the logo's edge inside
