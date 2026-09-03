@@ -2379,7 +2379,22 @@ export default function ProductFormPage() {
 
                     {/* Track stock */}
 
-                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-ink-200 bg-ink-50/50 p-4">
+                  {/*
+                     One box, not two. The switch is the panel's own header,
+                     so turning tracking on opens the fields inside the frame
+                     that was already round the switch rather than adding a
+                     second frame under it.
+                  */}
+                  <div
+                    className={cx(
+                      'overflow-hidden rounded-2xl border',
+                      isStockTracked ? 'border-emerald-200' : 'border-ink-200',
+                    )}
+                  >
+                  <label className={cx(
+                    'flex cursor-pointer items-start gap-3 px-4 py-3',
+                    isStockTracked && 'border-b border-emerald-200 bg-emerald-50/40',
+                  )}>
 
                       <input
                         type="checkbox"
@@ -2427,29 +2442,14 @@ export default function ProductFormPage() {
 
                     {isStockTracked &&
                       type === 'simple' && (
-                      <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/30">
+                    <>
 
-                        <div className="border-b border-emerald-200 px-4 py-3">
 
-                          <div className="flex items-center gap-2">
-
-                            <Package className="h-4 w-4 text-emerald-700" />
-
-                            <div>
-                              <p className="text-sm font-semibold text-emerald-900">
-                                Stock quantity
-                              </p>
-
-                              <p className="text-[11px] text-emerald-700/70">
-                                {isEdit
-                                  ? `Inventory currently holds ${stockOnRecord}.`
-                                  : 'Posted to Inventory as opening stock.'}
-                              </p>
-                            </div>
-
-                          </div>
-
-                        </div>
+                      <p className="px-4 pt-3 text-[11px] text-emerald-700/80">
+                        {isEdit
+                          ? `Inventory currently holds ${stockOnRecord}.`
+                          : 'Posted to Inventory as opening stock.'}
+                      </p>
 
                         <div className="grid gap-4 p-4 md:grid-cols-2">
 
@@ -2552,8 +2552,9 @@ export default function ProductFormPage() {
                           </div>
                         )}
 
-                      </div>
+                    </>
                     )}
+                  </div>
 
                   </div>
                 </div>
