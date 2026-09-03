@@ -758,8 +758,14 @@ function CategoryBar() {
 
   return (
     <nav aria-label="Categories" className="hidden border-b border-ink-200 bg-white lg:block">
-      <div className="mx-auto max-w-[1400px] px-3 sm:px-4">
-        <ul className="rail flex items-stretch gap-1">
+      <div className="rail mx-auto max-w-[1400px] px-3 sm:px-4">
+        {/*
+           w-max + mx-auto, not justify-center: a centred flex row that
+           overflows pushes its first items off the left edge and they cannot
+           be scrolled back to. Sized to its content, the row centres while it
+           fits and scrolls from the left once it does not.
+        */}
+        <ul className="mx-auto flex w-max items-stretch gap-1">
           {list.map((category) => {
             const isActive = root?.id === category.id
 
@@ -796,8 +802,8 @@ function CategoryBar() {
 
       {subs.length > 0 && (
         <div className="border-t border-ink-100 bg-ink-50">
-          <div className="mx-auto max-w-[1400px] px-3 sm:px-4">
-            <ul className="rail flex items-center gap-1">
+          <div className="rail mx-auto max-w-[1400px] px-3 sm:px-4">
+            <ul className="mx-auto flex w-max items-center gap-1">
               {/*
                  The parent leads its own row. Without it there is no way back
                  to the whole category once a sub-category has been picked,
@@ -993,7 +999,7 @@ export function StorefrontLayout() {
             a chat button that opens an empty conversation is worse than none. */}
         {settings?.store_whatsapp && (
           <a
-            href={`https://wa.me/${settings.store_whatsapp.replace(/\D/g, '')}`}
+            href={`https://wa.me/${settings.store_whatsapp.replace(/\\D/g, '')}`}
             target="_blank"
             rel="noreferrer noopener"
             aria-label="Chat on WhatsApp"
