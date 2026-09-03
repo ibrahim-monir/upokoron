@@ -4,6 +4,7 @@ import { Image as ImageIcon } from 'lucide-react'
 import { useList, useWrite } from './useResource'
 import { useAuthStore } from '../../stores/authStore'
 import { AuditLog } from './AuditLogPage'
+import { SitemapPanel } from './SitemapPage'
 import { useThemePreview } from '../../lib/useTheme'
 import { parseHex } from '../../lib/theme'
 import { MediaPicker } from './media/MediaLibrary'
@@ -24,6 +25,7 @@ const GROUP_LABELS = {
   home: 'Home page',
   product: 'Product page',
   marketing: 'Analytics & search console',
+  sitemap: 'Sitemap',
   audit: 'Audit log',
 }
 
@@ -34,6 +36,10 @@ const GROUP_LABELS = {
  * submitted with the settings.
  */
 const AUDIT_TAB = 'audit'
+
+// Neither of these is a settings group -- they read rather than save, so
+// they are appended to the tab strip and skip the form body entirely.
+const SITEMAP_TAB = 'sitemap'
 
 /*
  * Four colours, and everything else is derived from them (see lib/theme.js).
@@ -203,10 +209,16 @@ export default function SettingsPage() {
   // opens onto an empty panel.
   const visibleGroups = groups.filter((group) => keysFor(group).length > 0)
 
-  const tabs = can('audit.view') ? [...visibleGroups, AUDIT_TAB] : visibleGroups
+  const tabs = [
+    ...visibleGroups,
+    ...(can('sitemap.manage') ? [SITEMAP_TAB] : []),
+    ...(can('audit.view') ? [AUDIT_TAB] : []),
+  ]
   const currentGroup = tabs.includes(activeGroup) ? activeGroup : tabs[0]
   const showingAudit = currentGroup === AUDIT_TAB
-  const keys = showingAudit ? [] : keysFor(currentGroup ?? '')
+  const showingSitemap = currentGroup === SITEMAP_TAB
+  const readOnly = showingAudit || showingSitemap
+  const keys = readOnly ? [] : keysFor(currentGroup ?? '')
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
@@ -226,8 +238,8 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* Nothing to save on the audit tab; it only reads. */}
-        {!showingAudit && (
+        {/* Nothing to save on the audit or sitemap tabs; both only read. */}
+        {!readOnly && (
           <Button type="submit" loading={write.isPending}>
             Save changes
           </Button>
@@ -261,7 +273,13 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className={cx('gap-4 p-4 sm:grid-cols-2', showingAudit ? 'hidden' : 'grid')}>
+        {showingSitemap && (
+          <div className="p-4">
+            <SitemapPanel />
+          </div>
+        )}
+
+        <div className={cx('gap-4 p-4 sm:grid-cols-2', readOnly ? 'hidden' : 'grid')}>
           {keys.map((key) => {
             const value = values[key]
 

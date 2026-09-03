@@ -3,7 +3,14 @@ import { ExternalLink, RefreshCw } from 'lucide-react'
 import { useRecord, useWrite } from './useResource'
 import { Badge, Button, Card, ErrorState, Spinner } from '../../components/ui'
 
-export default function SitemapPage() {
+/**
+ * The sitemap, as a panel rather than a page.
+ *
+ * It lives inside Settings now -- it is something you check on and
+ * occasionally rebuild, not somewhere work happens -- so it carries no
+ * heading of its own: the tab it sits behind already names it.
+ */
+export function SitemapPanel() {
   const query = useRecord('admin.sitemap', '/admin/sitemap')
   const write = useWrite('admin.sitemap')
 
@@ -22,22 +29,19 @@ export default function SitemapPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-ink-900">Sitemap</h1>
-          <p className="mt-0.5 max-w-2xl text-sm text-ink-500">
-            Submitted to Search Console at{' '}
-            <a
-              href={data.index_url}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-brand-700 underline"
-            >
-              {data.index_url}
-            </a>
-            . Split by type into batches of {data.batch_size} URLs each, and rebuilt from the
-            catalogue automatically once an hour.
-          </p>
-        </div>
+        <p className="max-w-2xl text-sm text-ink-500">
+          Submitted to Search Console at{' '}
+          <a
+            href={data.index_url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-brand-700 underline"
+          >
+            {data.index_url}
+          </a>
+          . Split by type into batches of {data.batch_size} URLs each, and rebuilt from the
+          catalogue automatically once an hour.
+        </p>
 
         <Button
           variant="secondary"
@@ -81,6 +85,26 @@ export default function SitemapPage() {
           </Card>
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * The old standalone route still resolves, so a bookmark or a mailed link to
+ * /admin/sitemap does not 404 -- it just renders the panel with the heading
+ * the page used to have.
+ */
+export default function SitemapPage() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-xl font-semibold text-ink-900">Sitemap</h1>
+        <p className="mt-0.5 text-sm text-ink-500">
+          Also available under Settings, as the Sitemap tab.
+        </p>
+      </div>
+
+      <SitemapPanel />
     </div>
   )
 }

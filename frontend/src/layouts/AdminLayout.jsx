@@ -9,7 +9,6 @@ import {
   CreditCard,
   FileText,
   Gift,
-  Globe,
   HelpCircle,
   Image as ImageIcon,
   Layers,
@@ -45,6 +44,10 @@ const SECTIONS = [
     label: null,
     items: [
       { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard', can: 'dashboard.view' },
+      // Top level rather than inside a group: images are picked from
+      // products, banners, categories and settings alike, so filing it under
+      // any one of those made it a detour from all the others.
+      { to: '/admin/media', icon: ImageIcon, label: 'Media library', can: 'media.view' },
       {
         to: '/admin/orders',
         icon: ReceiptText,
@@ -54,19 +57,14 @@ const SECTIONS = [
         badgeNoun: 'orders pending',
         prominent: true,
       },
-      // Top level rather than inside a group: images are picked from
-      // products, banners, categories and settings alike, so filing it under
-      // any one of those made it a detour from all the others.
-      { to: '/admin/media', icon: ImageIcon, label: 'Media library', can: 'media.view' },
-      { to: '/admin/settings', icon: Settings, label: 'Settings', can: 'settings.manage' },
-      { to: '/admin/sitemap', icon: Globe, label: 'Sitemap', can: 'sitemap.manage' },
     ],
   },
   {
-    // Named for the stock rather than the catalogue: /admin/inventory is
-    // only a redirect to this list now, because what you sell and what is
-    // on the shelf are the same screen.
-    label: 'Inventory',
+    // Named for the catalogue, because that is what the shop owner comes
+    // here to work on. Stock is not a separate section: /admin/inventory is
+    // only a redirect to this same list, since what you sell and what is on
+    // the shelf are one screen.
+    label: 'Product',
     icon: Boxes,
     items: [
       {
@@ -131,6 +129,18 @@ const SECTIONS = [
       { to: '/admin/users/new', icon: UserPlus, label: 'Add new user', can: 'users.manage' },
       { to: '/admin/roles', icon: ShieldCheck, label: 'Role manage', can: 'roles.manage' },
     ],
+  },
+  {
+    /*
+     * Last, and deliberately on its own. Settings is where you go once to
+     * set the shop up and then rarely again -- sitting near the top it was
+     * in the way of the screens that get opened every day.
+     *
+     * Sitemap used to be its own entry beside it and is a tab inside it
+     * now: it is something you check on, not somewhere you work.
+     */
+    label: null,
+    items: [{ to: '/admin/settings', icon: Settings, label: 'Settings', can: 'settings.manage' }],
   },
 ]
 
