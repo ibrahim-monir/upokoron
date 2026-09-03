@@ -34,7 +34,6 @@ function useStoreSettingsForHero() {
 function HeroCarousel() {
   const { t } = useTranslation()
   const [index, setIndex] = useState(0)
-  const settings = useStoreSettingsForHero()
 
   const banners = useQuery({
     queryKey: ['shop', 'banners'],
@@ -42,24 +41,16 @@ function HeroCarousel() {
     select: (response) => response.data,
   })
 
-  // No banners configured yet: a plain welcome slide from the store's own
-  // name and tagline, rather than either a blank gap at the top of the page
-  // or a promotion that is not real.
-  const slides =
-    banners.data && banners.data.length > 0
-      ? banners.data
-      : [
-          {
-            id: 'welcome',
-            eyebrow: null,
-            title: settings.data?.store_name ?? 'Welcome',
-            body: settings.data?.store_tagline ?? null,
-            cta_label: t('home.shopNow'),
-            link: '/products',
-            theme: 'brand',
-            image: null,
-          },
-        ]
+  /*
+   * A slide is a picture and a link, and nothing else. There is no headline
+   * to write in the admin panel any more: the artwork is made somewhere it
+   * can carry its own words, laid out where the picture has room for them,
+   * rather than having a second headline dropped on top of it here.
+   *
+   * Which is also why a banner with no picture is skipped rather than shown
+   * empty -- with the overlay gone there would be nothing on it at all.
+   */
+  const slides = (banners.data ?? []).filter((banner) => Boolean(banner.image))
 
   useEffect(() => {
     // Respect a reduced-motion preference: no auto-advance for anyone who
@@ -79,6 +70,21 @@ function HeroCarousel() {
     )
   }
 
+  // Nothing configured yet. A plain panel holds the row's height so the
+  // category list beside it does not jump up the page on a new install.
+  if (slides.length === 0) {
+    return (
+      <div
+        aria-hidden="true"
+        className={cx(
+          'min-h-64 rounded-lg bg-gradient-to-br sm:min-h-[25rem] lg:h-[25rem]',
+          THEMES.brand.from,
+          THEMES.brand.to,
+        )}
+      />
+    )
+  }
+
   // The list can shrink (a banner deleted, or one just expired) while a
   // stale index from a longer list is still selected.
   const slide = slides[index] ?? slides[0]
@@ -89,49 +95,38 @@ function HeroCarousel() {
       aria-roledescription="carousel"
       aria-label={t('home.promotions')}
       className={cx(
-        'relative flex min-h-64 flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br p-6 text-white sm:min-h-[25rem] sm:p-10 lg:h-[25rem]',
+        'relative min-h-64 overflow-hidden rounded-lg bg-gradient-to-br sm:min-h-[25rem] lg:h-[25rem]',
         theme.from,
         theme.to,
       )}
     >
-      {slide.image && (
+      {/*
+        The whole slide is the link. With no button left on it, anything
+        smaller would be a picture that looks clickable everywhere and only
+        works in one place.
+      */}
+      <Link
+        to={slide.link ?? '/products'}
+        aria-label={t('home.viewPromotion')}
+        // Absolute, not h-full: the section's height comes from min-h plus a
+        // fixed height at lg, and a percentage height inside a box that is
+        // only min-height on phones resolves to auto -- which is a link the
+        // size of nothing.
+        className="absolute inset-0"
+      >
         <img
           src={slide.image}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-40"
+          className="h-full w-full object-cover"
+          /* The first slide is the page's largest image and sits at the very
+             top, so it is the one measurement that decides how quickly the
+             home page looks loaded. */
+          loading={index === 0 ? 'eager' : 'lazy'}
         />
-      )}
-
-      {/* Dot grid, echoing the sample's banner texture. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.13]"
-        style={{
-          backgroundImage: 'radial-gradient(currentColor 1.5px, transparent 1.5px)',
-          backgroundSize: '22px 22px',
-        }}
-      />
-
-      <div className="relative max-w-lg">
-        {slide.eyebrow && (
-          <p className="text-sm font-semibold uppercase tracking-wider text-white/75">{slide.eyebrow}</p>
-        )}
-        <h1 className="mt-2 whitespace-pre-line text-3xl font-bold leading-tight sm:text-4xl">
-          {slide.title}
-        </h1>
-        {slide.body && <p className="mt-3 text-white/85">{slide.body}</p>}
-
-        <Link
-          to={slide.link ?? '/products'}
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 transition-colors hover:bg-brand-50"
-        >
-          {slide.cta_label ?? t('home.shopNow')}
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
-      </div>
+      </Link>
 
       {slides.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
+        <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
           {slides.map((item, i) => (
             <button
               key={item.id}
@@ -140,8 +135,8 @@ function HeroCarousel() {
               aria-label={t('home.showSlide', { n: i + 1 })}
               aria-current={i === index}
               className={cx(
-                'h-1.5 rounded-full transition-all',
-                i === index ? 'w-7 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/75',
+                'h-1.5 rounded-full shadow-card transition-all',
+                i === index ? 'w-7 bg-white' : 'w-1.5 bg-white/60 hover:bg-white/85',
               )}
             />
           ))}

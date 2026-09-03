@@ -104,7 +104,7 @@ const STRINGS = {
   // ----------------------------------------------------------- homepage
   'home.promotions': { en: 'Promotions', bn: 'প্রোমোশন' },
   'home.showSlide': { en: 'Show slide {n}', bn: '{n} নম্বর স্লাইড দেখান' },
-  'home.shopNow': { en: 'Shop now', bn: 'কেনাকাটা করুন' },
+  'home.viewPromotion': { en: 'View this promotion', bn: 'এই অফারটি দেখুন' },
   'home.noCategoriesYet': { en: 'No categories yet.', bn: 'এখনো কোনো ক্যাটাগরি নেই।' },
   'home.itemsCount': { en: '{count} items', bn: '{count} টি পণ্য' },
   'home.seeMore': { en: 'See More', bn: 'আরও দেখুন' },

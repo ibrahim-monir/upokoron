@@ -15,7 +15,6 @@ import {
   ErrorState,
   Field,
   Spinner,
-  Textarea,
 } from '../../components/ui'
 
 /** Must match BannerController::THEMES on the backend. */
@@ -25,7 +24,7 @@ const THEMES = [
   { value: 'contrast', label: 'High contrast', swatch: 'from-navy-800 to-brand-800' },
 ]
 
-const emptyForm = { eyebrow: '', title: '', body: '', cta_label: 'Shop now', link: '/products', theme: 'brand', image: '', starts_at: '', ends_at: '', is_active: true }
+const emptyForm = { link: '/products', theme: 'brand', image: '', starts_at: '', ends_at: '', is_active: true }
 
 function BannerForm({ form, setForm, onClose }) {
   const write = useWrite('admin.banners', { onSuccess: onClose })
@@ -36,10 +35,6 @@ function BannerForm({ form, setForm, onClose }) {
 
     const data = new FormData(event.currentTarget)
     const body = {
-      eyebrow: data.get('eyebrow') || null,
-      title: data.get('title'),
-      body: data.get('body') || null,
-      cta_label: data.get('cta_label') || 'Shop now',
       link: data.get('link') || '/products',
       theme: form.theme,
       image: form.image || null,
@@ -71,39 +66,21 @@ function BannerForm({ form, setForm, onClose }) {
       <CardHeader title={form.id ? 'Edit banner' : 'New banner'} />
 
       <form onSubmit={submit} className="grid gap-4 p-4 sm:grid-cols-2">
+        {/*
+          A banner is artwork and a destination. The headline, sub-heading and
+          button label that used to be typed here are gone: a slide's words
+          belong in the picture, positioned where the picture has room for
+          them, not dropped on top of it by a layout that cannot see it.
+        */}
         <Field
-          label="Eyebrow"
-          name="eyebrow"
-          defaultValue={form.eyebrow}
-          placeholder="Shopping fest"
-          hint="Small label above the title."
-        />
-
-        <Field label="Title" name="title" required defaultValue={form.title} placeholder="Electronics for everyone" />
-
-        <Field label="Body" className="sm:col-span-2">
-          {({ id }) => (
-            <Textarea
-              id={id}
-              name="body"
-              rows={2}
-              defaultValue={form.body}
-              placeholder="Audio, charging, and computer accessories stocked in Dhaka."
-            />
-          )}
-        </Field>
-
-        <Field label="Button text" name="cta_label" defaultValue={form.cta_label} />
-
-        <Field
-          label="Button link"
+          label="Slide links to"
           name="link"
           defaultValue={form.link}
           placeholder="/category/audio"
-          hint="A path within this shop, starting with /."
+          hint="A path within this shop, starting with /. The whole slide is clickable."
         />
 
-        <Field label="Colour theme">
+        <Field label="Colour behind the image" hint="Seen while the picture loads, and on any edge it does not cover.">
           {() => (
             <div className="flex gap-2">
               {THEMES.map((theme) => (
@@ -122,7 +99,7 @@ function BannerForm({ form, setForm, onClose }) {
           )}
         </Field>
 
-        <Field label="Background image" hint="Optional. Shown under the gradient overlay.">
+        <Field label="Slide image" required hint="This is the slide. Landscape artwork, roughly 1600×600, with any wording already on it — the sides are cropped on a phone, so keep the words near the middle.">
           {() => (
             <div className="flex items-center gap-3">
               <span className="grid h-14 w-24 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-ink-50">
@@ -226,7 +203,8 @@ export default function BannersPage() {
         <div>
           <h1 className="text-xl font-semibold text-ink-900">Home page banners</h1>
           <p className="mt-0.5 text-sm text-ink-500">
-            The slides at the top of the shop. Shown in this order, only while active and inside their schedule.
+            The pictures at the top of the shop. Shown in this order, only while active and inside their
+            schedule. Each one is a single image that links wherever you point it.
           </p>
         </div>
 
@@ -244,7 +222,7 @@ export default function BannersPage() {
         <EmptyState
           icon={Megaphone}
           title="No banners yet"
-          description="Without one, the home page shows a plain welcome banner instead."
+          description="Until there is one, the top of the home page is a plain coloured panel."
         />
       ) : (
         <div className="flex flex-col gap-2">
@@ -253,17 +231,23 @@ export default function BannersPage() {
 
             return (
               <Card key={banner.id} className="flex items-center gap-3 p-3">
-                <span className={`h-12 w-20 shrink-0 rounded-lg bg-gradient-to-br ${theme.swatch}`} />
+                {/* The artwork itself, not a colour chip -- with no title on
+                    the row it is the only way to tell one slide from another. */}
+                <span className={`grid h-12 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br ${theme.swatch}`}>
+                  {banner.image ? (
+                    <img src={banner.image} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4 text-white/70" aria-hidden="true" />
+                  )}
+                </span>
 
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 font-medium text-ink-900">
-                    {banner.title}
+                    Slide {index + 1}
                     {!banner.is_active && <Badge tone="neutral">Off</Badge>}
+                    {!banner.image && <Badge tone="warning">No image - not shown</Badge>}
                   </p>
-                  <p className="truncate text-sm text-ink-500">
-                    {banner.eyebrow ? `${banner.eyebrow} · ` : ''}
-                    {banner.link}
-                  </p>
+                  <p className="truncate text-sm text-ink-500">{banner.link}</p>
                 </div>
 
                 {editable && (
@@ -297,7 +281,7 @@ export default function BannersPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm(`Delete “${banner.title}”?`)) {
+                        if (window.confirm(`Delete slide ${index + 1}?`)) {
                           write.mutate({ method: 'delete', url: `/admin/banners/${banner.id}` })
                         }
                       }}

@@ -81,13 +81,11 @@ class BannerController extends Controller
     private function validated(Request $request): array
     {
         $data = $request->validate([
-            'eyebrow' => ['nullable', 'string', 'max:60'],
-            'title' => ['required', 'string', 'max:120'],
-            'body' => ['nullable', 'string', 'max:200'],
-            'cta_label' => ['sometimes', 'string', 'max:40'],
             'link' => ['sometimes', 'string', 'max:255', 'starts_with:/'],
             'theme' => ['sometimes', Rule::in(self::THEMES)],
-            'image' => ['nullable', 'string', 'max:255'],
+            // Required, because the artwork IS the banner now -- there is no
+            // headline left to carry a slide that has no picture.
+            'image' => ['required', 'string', 'max:255'],
             // 'date' validates the raw wall-clock string the admin typed;
             // the before/after comparison below runs on that same string,
             // so it stays correct however it is later converted to UTC.

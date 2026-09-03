@@ -15,7 +15,7 @@ class BannerController extends Controller
         $banners = Banner::published()
             ->orderBy('position')
             ->orderBy('id')
-            ->get(['id', 'eyebrow', 'title', 'body', 'cta_label', 'link', 'theme', 'image']);
+            ->get(['id', 'link', 'theme', 'image']);
 
         return response()->json(['data' => $banners]);
     }

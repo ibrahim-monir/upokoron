@@ -14,7 +14,7 @@ class Banner extends Model
     use Auditable, HasFactory;
 
     protected $fillable = [
-        'eyebrow', 'title', 'body', 'cta_label', 'link', 'theme', 'image',
+        'link', 'theme', 'image',
         'starts_at', 'ends_at', 'position', 'is_active',
     ];
 
