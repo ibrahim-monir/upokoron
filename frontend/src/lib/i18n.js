@@ -46,6 +46,40 @@ const STRINGS = {
   'header.yourAccount': { en: 'Your account', bn: 'আপনার একাউন্ট' },
   'header.allCategories': { en: 'All Categories', bn: 'সব ক্যাটাগরি' },
 
+  // -------------------------------------------------------------- about
+  'about.chip': { en: 'Established 2026', bn: 'প্রতিষ্ঠা ২০২৬' },
+  'about.heading': { en: 'About us', bn: 'আমাদের সম্পর্কে' },
+  'about.noticeTitle': { en: 'A note on ownership', bn: 'মালিকানা সম্পর্কে জরুরি বিজ্ঞপ্তি' },
+  'about.story': { en: 'Our story', bn: 'আমাদের কথা' },
+  'about.how': { en: 'How we work', bn: 'আমরা যেভাবে কাজ করি' },
+  'about.cta': { en: 'Start shopping', bn: 'কেনাকাটা শুরু করুন' },
+  'about.ctaAside': { en: 'Something to ask first?', bn: 'আগে কিছু জানার আছে?' },
+  'about.ctaLink': { en: 'Talk to us', bn: 'আমাদের সাথে কথা বলুন' },
+  'about.missing': {
+    en: 'This has not been written yet. The owner adds it under Admin > Settings > Pages.',
+    bn: 'এটি এখনো লেখা হয়নি। Admin > Settings > Pages থেকে যোগ করা যাবে।',
+  },
+  'about.stockTitle': { en: 'Real stock counts', bn: 'সত্যিকারের স্টক' },
+  'about.stockBody': {
+    en: 'What the page says is in stock is what the shelf holds. We do not take orders for what we do not have.',
+    bn: 'পেজে যা স্টকে দেখাচ্ছে, তাকেই বোঝায় আমাদের কাছে আছে। যা নেই, তার অর্ডার আমরা নিই না।',
+  },
+  'about.payTitle': { en: 'Pay when it arrives', bn: 'পণ্য হাতে পেয়ে দাম' },
+  'about.payBody': {
+    en: 'Cash on delivery, or bKash and Nagad if you would rather pay up front. The price you saw is the price you pay.',
+    bn: 'ক্যাশ অন ডেলিভারি, অথবা চাইলে আগেই বিকাশ ও নগদে। যে দাম দেখেছেন, সেটাই দেবেন।',
+  },
+  'about.pointsTitle': { en: 'Points on every order', bn: 'প্রতি অর্ডারে পয়েন্ট' },
+  'about.pointsBody': {
+    en: 'Delivered orders earn reward points that come straight off a later bill.',
+    bn: 'ডেলিভারি হওয়া অর্ডারে রিওয়ার্ড পয়েন্ট জমা হয়, যা পরের বিল থেকে সরাসরি কমে যায়।',
+  },
+  'about.trackTitle': { en: 'Track it yourself', bn: 'নিজেই ট্র্যাক করুন' },
+  'about.trackBody': {
+    en: 'Every order has a number you can follow from confirmation to your door, without calling anyone.',
+    bn: 'প্রতিটি অর্ডারের একটি নম্বর থাকে — কনফার্ম থেকে দরজা পর্যন্ত কাউকে ফোন না করেই দেখে নিতে পারবেন।',
+  },
+
   // ------------------------------------------------------------- footer
   'footer.description': {
     en: 'Discover quality products at great prices with a simple, secure and convenient online shopping experience.',
