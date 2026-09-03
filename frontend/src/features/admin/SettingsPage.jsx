@@ -83,6 +83,14 @@ const HINTS = {
     'Same as header scripts, but placed at the end of the page instead -- for anything documented to go right before </body>.',
   store_ticker_text:
     'One message per line, scrolling in the header top bar. Leave blank to show nothing there.',
+  store_whatsapp:
+    'Turns on the WhatsApp chat button in the corner of the storefront. Write it however you like -- 01712345678 or +880 1712-345678 -- it is converted to the international form WhatsApp needs. Leave blank for no chat button.',
+  store_whatsapp_label:
+    'The wording beside the chat button, e.g. "Chat with us". Blank shows the icon on its own.',
+  store_whatsapp_welcome:
+    'The first bubble in the chat panel, as if you had said it. Blank shows the panel without it.',
+  store_whatsapp_greeting:
+    "The draft already typed in the customer's message box when the panel opens, so a shopper with nothing particular to say can still send something. The page they were on is added underneath it when they send.",
   product_pairs_title:
     'Heading above the accessories picked for a product, shown in the sidebar beside its gallery and price.',
 }

@@ -102,6 +102,24 @@ return [
             'store_phone' => '',
             'store_phone_alt' => '',
             'store_whatsapp' => '',
+
+            /*
+             * WhatsApp as the shop's chat support.
+             *
+             * The number above is the switch: leave it blank and no chat
+             * button renders at all, because a support button that opens an
+             * empty conversation with nobody is worse than no button. Written
+             * however the owner has it -- 01712345678, +880 1712-345678 --
+             * and normalised to the international form WhatsApp needs.
+             *
+             * The greeting is what the customer's message box is already
+             * filled with when the chat opens; the page they were on is
+             * appended to it, so support does not have to open with "which
+             * product?".
+             */
+            'store_whatsapp_label' => 'Chat with us',
+            'store_whatsapp_welcome' => 'Hi! Ask us anything -- we usually reply within a few minutes.',
+            'store_whatsapp_greeting' => 'Hello! I have a question.',
             'store_address' => '',
 
             // Shown next to store_phone in the header top bar. Free text

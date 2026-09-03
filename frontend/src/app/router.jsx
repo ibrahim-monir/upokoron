@@ -259,6 +259,10 @@ export const router = createBrowserRouter([
         element: guarded('faqs.manage', lazyAdmin(() => import('../features/admin/FaqPage'))),
       },
       {
+        path: 'chat',
+        element: guarded('chat.view', lazyAdmin(() => import('../features/admin/ChatPage'))),
+      },
+      {
         path: 'contact-messages',
         element: guarded(
           'contact.view',

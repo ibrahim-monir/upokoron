@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\Webhooks\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,6 +23,18 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function (): void {
     Route::prefix('shop')->name('shop.')->group(base_path('routes/api/shop.php'));
     Route::prefix('admin')->name('admin.')->group(base_path('routes/api/admin.php'));
+
+    /*
+    | Webhooks.
+    |
+    | Neither shop nor admin: Meta's servers hold no session and no token of
+    | ours, so these authenticate themselves by signature instead. See
+    | WhatsAppWebhookController.
+    */
+    Route::prefix('webhooks')->name('webhooks.')->group(function (): void {
+        Route::get('whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.verify');
+        Route::post('whatsapp', [WhatsAppWebhookController::class, 'receive'])->name('whatsapp.receive');
+    });
 
     Route::get('/health', fn () => response()->json([
         'success' => true,

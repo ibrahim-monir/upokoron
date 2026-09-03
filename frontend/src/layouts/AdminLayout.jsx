@@ -18,6 +18,7 @@ import {
   Mail,
   Megaphone,
   Menu,
+  MessageCircle,
   MessagesSquare,
   Package,
   ReceiptText,
@@ -50,6 +51,7 @@ const SECTIONS = [
         label: 'Orders',
         can: 'orders.view',
         badge: 'pendingOrders',
+        badgeNoun: 'orders pending',
         prominent: true,
       },
       // Top level rather than inside a group: images are picked from
@@ -97,6 +99,14 @@ const SECTIONS = [
       { to: '/admin/reviews', icon: Star, label: 'Reviews', can: 'reviews.view' },
       { to: '/admin/questions', icon: MessagesSquare, label: 'Q&A', can: 'questions.view' },
       { to: '/admin/contact-messages', icon: Mail, label: 'Messages', can: 'contact.view' },
+      {
+        to: '/admin/chat',
+        icon: MessageCircle,
+        label: 'WhatsApp',
+        can: 'chat.view',
+        badge: 'unreadChats',
+        badgeNoun: 'unanswered',
+      },
       { to: '/admin/faqs', icon: HelpCircle, label: 'FAQ', can: 'faqs.manage' },
       { to: '/admin/rewards', icon: Gift, label: 'Reward Points', can: 'rewards.view' },
     ],
@@ -173,7 +183,11 @@ function NavItem({ item, onNavigate, prominent = false, badge = 0, inset = false
           */}
           {badge > 0 ? (
             <span
-              title={`${badge} order${badge === 1 ? '' : 's'} pending`}
+              // Named by the row it sits on: the same slot now counts
+              // pending orders on one row and unanswered chats on another,
+              // and a tooltip that says "orders pending" over the WhatsApp
+              // count would be worse than none.
+              title={`${badge} ${item.badgeNoun ?? 'waiting'}`}
               className={cx(
                 'ml-auto grid h-5 min-w-[20px] shrink-0 place-items-center rounded-full px-1.5',
                 'text-[11px] font-bold tabular-nums leading-none',
@@ -221,6 +235,26 @@ function usePendingOrderCount(enabled) {
   })
 
   return query.data?.summary?.by_status?.pending?.orders ?? 0
+}
+
+/**
+ * How many WhatsApp threads are waiting for an answer.
+ *
+ * Same shape as the pending-order count above, and the same reasoning: the
+ * inbox list already totals it, so `per_page=1` buys the number without the
+ * backend growing a second endpoint. Not polled at all for an account that
+ * cannot open the inbox.
+ */
+function useUnreadChatCount(enabled) {
+  const query = useQuery({
+    queryKey: ['admin', 'chat', 'unread-count'],
+    queryFn: () => get('/admin/chat/conversations', { params: { per_page: 1 } }),
+    enabled,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  })
+
+  return query.data?.unread ?? 0
 }
 
 function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
@@ -328,10 +362,11 @@ function Sidebar({ onNavigate }) {
   const { pathname } = useLocation()
 
   const pendingOrders = usePendingOrderCount(can('orders.view'))
+  const unreadChats = useUnreadChatCount(can('chat.view'))
 
   const badges = useMemo(
-    () => ({ pendingOrders }),
-    [pendingOrders],
+    () => ({ pendingOrders, unreadChats }),
+    [pendingOrders, unreadChats],
   )
 
   const sections = useMemo(

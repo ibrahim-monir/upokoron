@@ -9,7 +9,6 @@ import {
   LogIn,
   Megaphone,
   Menu,
-  MessageCircle,
   Package,
   Phone,
   Search,
@@ -34,6 +33,7 @@ import { useCartDrawer } from '../features/cart/useCartDrawer'
 import { useRewardInfo } from '../features/storefront/useRewardInfo'
 import { useWishlistCount } from '../stores/wishlistStore'
 import { Footer } from './Footer'
+import { WhatsAppChat } from '../components/WhatsAppChat'
 
 function useStoreSettings() {
   return useQuery({
@@ -981,20 +981,8 @@ export function StorefrontLayout() {
 
       <Footer settings={settings} />
 
-      <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-3">
-        {/* Only rendered when the owner has actually set a WhatsApp number --
-            a chat button that opens an empty conversation is worse than none. */}
-        {settings?.store_whatsapp && (
-          <a
-            href={`https://wa.me/${settings.store_whatsapp.replace(/\D/g, '')}`}
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label="Chat on WhatsApp"
-            className="grid h-12 w-12 place-items-center rounded-full bg-[#25d366] text-white shadow-raised transition-transform hover:scale-105"
-          >
-            <MessageCircle className="h-6 w-6" aria-hidden="true" />
-          </a>
-        )}
+      <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3">
+        <WhatsAppChat settings={settings} />
       </div>
 
       {/*

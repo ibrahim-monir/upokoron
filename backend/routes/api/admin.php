@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\BannerController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
+use App\Http\Controllers\Api\V1\Admin\ChatController;
 use App\Http\Controllers\Api\V1\Admin\CouponController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController;
@@ -158,6 +159,16 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::get('contact-messages', [ContactMessageController::class, 'index'])->name('contact.index');
     Route::put('contact-messages/{message}/status', [ContactMessageController::class, 'updateStatus'])->name('contact.status');
     Route::delete('contact-messages/{message}', [ContactMessageController::class, 'destroy'])->name('contact.destroy');
+
+    /*
+    | The WhatsApp inbox. Staff read and answer here; the customer is in the
+    | WhatsApp app on their phone, which is the only place their side of the
+    | conversation can be -- a message must come from their own number.
+    */
+    Route::get('chat/conversations', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('chat/conversations/{conversation}', [ChatController::class, 'show'])->name('chat.show');
+    Route::post('chat/conversations/{conversation}/messages', [ChatController::class, 'reply'])->name('chat.reply');
+    Route::put('chat/conversations/{conversation}/archive', [ChatController::class, 'archive'])->name('chat.archive');
 
     /*
     |----------------------------------------------------------------------

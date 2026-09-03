@@ -94,6 +94,8 @@ final class Permissions
                 'contact.view' => 'Read messages sent from the contact page',
                 'contact.manage' => 'Mark contact messages read, and delete them',
                 'faqs.manage' => 'Write the questions answered on the contact page',
+                'chat.view' => 'Read the WhatsApp support inbox',
+                'chat.reply' => 'Reply to customers on WhatsApp',
             ],
             'Money' => [
                 'expenses.view' => 'View expenses',
@@ -171,6 +173,7 @@ final class Permissions
                 'reviews.view', 'reviews.moderate',
                 'questions.view', 'questions.answer',
                 'contact.view', 'contact.manage', 'faqs.manage',
+                'chat.view', 'chat.reply',
                 'expenses.view', 'expenses.manage',
                 'reports.sales', 'reports.inventory',
                 'shipping.manage', 'payments.manage',
@@ -218,6 +221,7 @@ final class Permissions
                 'reviews.view', 'reviews.moderate',
                 'questions.view', 'questions.answer',
                 'contact.view', 'contact.manage',
+                'chat.view', 'chat.reply',
             ],
 
             // Storefront accounts. No admin permissions at all.
