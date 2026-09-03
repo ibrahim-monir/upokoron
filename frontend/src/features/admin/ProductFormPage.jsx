@@ -2302,11 +2302,11 @@ export default function ProductFormPage() {
                    price of a product and how many of it there are.
                 */}
                 <div className="grid gap-5 md:grid-cols-2">
-                  <div>
+                  <div className="h-full">
 
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
+                    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-emerald-200">
 
-                      <div className="mb-4 flex items-center gap-3">
+                      <div className="flex items-center gap-3 border-b border-emerald-200 bg-emerald-50/40 px-4 py-3">
 
                         <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
                           <Tag className="h-4 w-4" />
@@ -2324,7 +2324,7 @@ export default function ProductFormPage() {
 
                       </div>
 
-                      <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid gap-4 p-4 md:grid-cols-3">
 
                         <Field
                           label="Offer price"
@@ -2375,7 +2375,7 @@ export default function ProductFormPage() {
 
                   </div>
 
-                  <div>
+                  <div className="h-full">
 
                     {/* Track stock */}
 
@@ -2387,7 +2387,7 @@ export default function ProductFormPage() {
                   */}
                   <div
                     className={cx(
-                      'overflow-hidden rounded-2xl border',
+                      'flex h-full flex-col overflow-hidden rounded-2xl border',
                       isStockTracked ? 'border-emerald-200' : 'border-ink-200',
                     )}
                   >
