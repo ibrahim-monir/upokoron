@@ -2445,11 +2445,11 @@ export default function ProductFormPage() {
                     <>
 
 
-                      <p className="px-4 pt-3 text-[11px] text-emerald-700/80">
-                        {isEdit
-                          ? `Inventory currently holds ${stockOnRecord}.`
-                          : 'Posted to Inventory as opening stock.'}
-                      </p>
+                      {isEdit && (
+                        <p className="px-4 pt-3 text-[11px] text-emerald-700/80">
+                          Inventory currently holds {stockOnRecord}.
+                        </p>
+                      )}
 
                         <div className="grid gap-4 p-4 md:grid-cols-2">
 
