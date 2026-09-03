@@ -1327,13 +1327,42 @@ export default function ProductFormPage() {
      Options
      ------------------------------------------------------------------------ */
 
-  const categoryOptions =
-    useMemo(
-      () =>
-        categories.data?.data ??
-        [],
-      [categories.data],
-    )
+  /*
+   * Parents first, each with its own children under it.
+   *
+   * The endpoint returns them sorted by depth and then name, which puts every
+   * parent above every child: Earbuds lands eight rows from Audio, indented
+   * under nothing. Depth-first here so the indentation means what it looks
+   * like it means. Anything whose parent is missing goes last rather than
+   * nowhere -- a category the picker cannot draw is a category nobody can
+   * tick.
+   */
+  const categoryOptions = useMemo(() => {
+    const all = categories.data?.data ?? []
+    const byParent = new Map()
+
+    for (const category of all) {
+      const key = category.parent_id ?? null
+      byParent.set(key, [...(byParent.get(key) ?? []), category])
+    }
+
+    const ordered = []
+    const seen = new Set()
+
+    const walk = (parentId) => {
+      for (const category of byParent.get(parentId) ?? []) {
+        if (seen.has(category.id)) continue
+
+        seen.add(category.id)
+        ordered.push(category)
+        walk(category.id)
+      }
+    }
+
+    walk(null)
+
+    return [...ordered, ...all.filter((category) => !seen.has(category.id))]
+  }, [categories.data])
 
   const brandOptions =
     useMemo(
