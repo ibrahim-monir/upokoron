@@ -159,7 +159,7 @@ export function ProductCard({ product }) {
            touch screen has none -- below that breakpoint the copy further
            down the card is the one that shows.
         */}
-        <div className="cta-overlay absolute inset-x-2 bottom-2 z-10 hidden lg:block">
+        <div className="cta-overlay absolute inset-x-0 bottom-0 z-10 hidden lg:block">
           {action}
         </div>
       </div>

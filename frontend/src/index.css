@@ -231,6 +231,20 @@
   }
 
   /*
+   * Square, and flush to the three edges it sits against -- it is a bar
+   * across the foot of the picture, not a button floating on top of one.
+   *
+   * The radius is reset here rather than with a `rounded-none` class because
+   * the child is `Button`, which brings its own `rounded-lg`; two utilities
+   * of equal specificity would be settled by stylesheet order, which is not
+   * something to leave to chance. `:is(a, button)` outweighs a bare class
+   * and covers both shapes the action takes.
+   */
+  .cta-overlay > :is(a, button) {
+    border-radius: 0;
+  }
+
+  /*
    * The two handles of the price range.
    *
    * Two <input type="range"> stacked on one track, which is the only way to
