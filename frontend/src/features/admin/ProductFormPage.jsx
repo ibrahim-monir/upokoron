@@ -936,6 +936,7 @@ export default function ProductFormPage() {
     reset,
     setError,
     setValue,
+    getValues,
     control,
     formState: { errors },
   } = useForm({
@@ -988,29 +989,7 @@ export default function ProductFormPage() {
     },
   })
 
-  /*
-   * Below useForm, not above it: these read `errors`, and a const that
-   * runs before the one it reads throws at render -- the page shows a
-   * blank error screen, and the build says nothing, because the name is
-   * in scope, only not yet initialised.
-   */
-  /*
-   * A folded section hiding a validation error is a form that will not save
-   * and will not say why, so each one knows its own fields and unfolds when
-   * one of them is complaining.
-   */
-  // Anything the form can work out for itself, or the shop can add later.
-  // Opened automatically when one of those fields is what is wrong.
-  const [showMore, setShowMore] = useState(false)
-
   const sectionHasError = (fields) => fields.some((field) => Boolean(errors[field]))
-
-  /*
-   * Folded, unless one of the folded fields is the problem. A duplicate slug
-   * reported against a box nobody can see is a form that will not save and
-   * will not say why.
-   */
-  const moreOpen = showMore || sectionHasError(['brand_id', 'unit_id'])
 
   const type = useWatch({
     control,
@@ -1379,6 +1358,25 @@ export default function ProductFormPage() {
         [],
       [units.data],
     )
+
+  /*
+   * Sold by starts on Piece.
+   *
+   * Almost everything in this shop is sold one at a time, and a unit picked
+   * for every product in turn is a question with the same answer every time.
+   * Only ever fills a blank: an edit keeps whatever the product already has,
+   * and once someone picks Kilogram it stays Kilogram.
+   */
+  useEffect(() => {
+    if (unitOptions.length === 0) return
+    if (getValues('unit_id')) return
+
+    const piece = unitOptions.find(
+      (unit) => unit.name?.toLowerCase() === 'piece',
+    )
+
+    if (piece) setValue('unit_id', String(piece.id))
+  }, [unitOptions, getValues, setValue])
 
   /* ==========================================================================
      STOCK SYNC
@@ -2506,113 +2504,6 @@ export default function ProductFormPage() {
                   </div>
                 </div>
 
-                {/*
-                   Brand, unit and barcode: real fields, rarely the reason
-                   someone opened this page. Folded, and unfolded by itself
-                   when one of them is what the form is complaining about.
-                */}
-                {moreOpen && (
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <Field
-                      label="Brand"
-                      error={
-                        errors.brand_id
-                          ?.message
-                      }
-                    >
-                      {({
-                        id: fieldId,
-                      }) => (
-                        <Select
-                          id={fieldId}
-                          {...register(
-                            'brand_id',
-                          )}
-                        >
-                          <option value="">
-                            No brand
-                          </option>
-
-                          {brandOptions.map(
-                            (brand) => (
-                              <option
-                                key={
-                                  brand.id
-                                }
-                                value={
-                                  brand.id
-                                }
-                              >
-                                {
-                                  brand.name
-                                }
-                              </option>
-                            ),
-                          )}
-                        </Select>
-                      )}
-                    </Field>
-
-                    <Field
-                      label="Sold by"
-                      hint="Example: Piece, Kg, Box."
-                      error={
-                        errors.unit_id
-                          ?.message
-                      }
-                    >
-                      {({
-                        id: fieldId,
-                      }) => (
-                        <Select
-                          id={fieldId}
-                          {...register(
-                            'unit_id',
-                          )}
-                        >
-                          <option value="">
-                            No unit
-                          </option>
-
-                          {unitOptions.map(
-                            (unit) => (
-                              <option
-                                key={
-                                  unit.id
-                                }
-                                value={
-                                  unit.id
-                                }
-                              >
-                                {
-                                  unit.name
-                                } (
-                                {
-                                  unit.short_name
-                                }
-                                )
-                              </option>
-                            ),
-                          )}
-                        </Select>
-                      )}
-                    </Field>
-
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setShowMore((value) => !value)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
-                >
-                  {moreOpen ? (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  )}
-                  {moreOpen ? 'Fewer options' : 'More options — brand, unit'}
-                </button>
             </FoldableSection>
 
 
@@ -2864,6 +2755,94 @@ export default function ProductFormPage() {
                   </span>
 
                 </label>
+
+              </div>
+
+              <div className="mt-4 space-y-4 border-t border-ink-100 pt-4">
+                <Field
+                  label="Brand"
+                  error={
+                    errors.brand_id
+                      ?.message
+                  }
+                >
+                  {({
+                    id: fieldId,
+                  }) => (
+                    <Select
+                      id={fieldId}
+                      {...register(
+                        'brand_id',
+                      )}
+                    >
+                      <option value="">
+                        No brand
+                      </option>
+
+                      {brandOptions.map(
+                        (brand) => (
+                          <option
+                            key={
+                              brand.id
+                            }
+                            value={
+                              brand.id
+                            }
+                          >
+                            {
+                              brand.name
+                            }
+                          </option>
+                        ),
+                      )}
+                    </Select>
+                  )}
+                </Field>
+
+                <Field
+                  label="Sold by"
+                  hint="Example: Piece, Kg, Box."
+                  error={
+                    errors.unit_id
+                      ?.message
+                  }
+                >
+                  {({
+                    id: fieldId,
+                  }) => (
+                    <Select
+                      id={fieldId}
+                      {...register(
+                        'unit_id',
+                      )}
+                    >
+                      <option value="">
+                        No unit
+                      </option>
+
+                      {unitOptions.map(
+                        (unit) => (
+                          <option
+                            key={
+                              unit.id
+                            }
+                            value={
+                              unit.id
+                            }
+                          >
+                            {
+                              unit.name
+                            } (
+                            {
+                              unit.short_name
+                            }
+                            )
+                          </option>
+                        ),
+                      )}
+                    </Select>
+                  )}
+                </Field>
 
               </div>
 
