@@ -69,61 +69,90 @@ function Choice({ checked, onChange, children, count }) {
 }
 
 /**
- * Price is two boxes, not a slider.
+ * A two-handle price range.
  *
- * A slider is pleasant to drag and impossible to type into, and the number a
- * shopper has in mind is usually exact -- "under 2000" -- rather than
- * somewhere along a track. The range from the catalogue fills the
- * placeholders, so the boxes still say what things here actually cost.
+ * Native <input type="range"> has one handle, so this is two of them on one
+ * track. Dragging only moves the labels; the listing is refetched when the
+ * handle is let go, because applying on every pixel of a drag is a request
+ * per pixel and a page that flickers under the cursor.
+ *
+ * The handles cannot cross. Whichever one is being dragged is clamped
+ * against the other rather than swapping with it -- swapping means the
+ * handle jumps out from under your finger mid-drag.
  */
 function PriceBlock({ range, min, max, onApply }) {
-  const [low, setLow] = useState(min)
-  const [high, setHigh] = useState(max)
+  const floor = range.min
+  const ceiling = range.max
 
-  // The URL is the source of truth: clearing the filters empties the boxes.
-  useEffect(() => setLow(min), [min])
-  useEffect(() => setHigh(max), [max])
+  // A hundred stops across the range, whatever the range is: single-taka
+  // steps on a 12,000 taka span make the handle feel stuck.
+  const step = Math.max(1, Math.round((ceiling - floor) / 100))
 
-  const submit = (event) => {
-    event.preventDefault()
+  const [low, setLow] = useState(min === '' ? floor : Number(min))
+  const [high, setHigh] = useState(max === '' ? ceiling : Number(max))
 
-    // Blur fires whenever the box is tabbed through, and applying a filter
-    // resets the page number -- so an untouched box would quietly send
-    // someone reading page 4 back to page 1.
-    if (low.trim() === min && high.trim() === max) return
+  // The URL is the source of truth: clearing the filters, or moving to a
+  // category that costs differently, puts the handles back.
+  useEffect(() => setLow(min === '' ? floor : Number(min)), [min, floor])
+  useEffect(() => setHigh(max === '' ? ceiling : Number(max)), [max, ceiling])
 
-    onApply({ min_price: low.trim(), max_price: high.trim() })
+  const commit = (nextLow, nextHigh) => {
+    // Sitting at the ends is not a filter -- it is the whole catalogue, and
+    // it should leave the URL clean rather than pin a range into it.
+    onApply({
+      min_price: nextLow <= floor ? '' : String(nextLow),
+      max_price: nextHigh >= ceiling ? '' : String(nextHigh),
+    })
   }
 
+  const leftPercent = ((low - floor) / (ceiling - floor)) * 100
+  const rightPercent = ((high - floor) / (ceiling - floor)) * 100
+
   return (
-    <form onSubmit={submit} className="flex items-center gap-2">
-      <input
-        type="number"
-        inputMode="numeric"
-        min="0"
-        value={low}
-        onChange={(event) => setLow(event.target.value)}
-        onBlur={submit}
-        placeholder={String(range.min)}
-        aria-label="Lowest price"
-        className="h-9 w-full min-w-0 rounded-lg border border-ink-200 px-2 text-sm"
-      />
-      <span className="shrink-0 text-ink-400">–</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min="0"
-        value={high}
-        onChange={(event) => setHigh(event.target.value)}
-        onBlur={submit}
-        placeholder={String(range.max)}
-        aria-label="Highest price"
-        className="h-9 w-full min-w-0 rounded-lg border border-ink-200 px-2 text-sm"
-      />
-      <button type="submit" className="sr-only">
-        Apply price range
-      </button>
-    </form>
+    <div>
+      <p className="mb-3 text-sm font-semibold text-ink-900">
+        {money(low, { decimals: 0 })} – {money(high, { decimals: 0 })}
+      </p>
+
+      <div className="relative h-4">
+        <span className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-ink-200" />
+        <span
+          className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-brand-600"
+          style={{ left: `${leftPercent}%`, right: `${100 - rightPercent}%` }}
+        />
+
+        <input
+          type="range"
+          className="range-track"
+          min={floor}
+          max={ceiling}
+          step={step}
+          value={low}
+          aria-label="Lowest price"
+          onChange={(event) => setLow(Math.min(Number(event.target.value), high))}
+          onPointerUp={() => commit(low, high)}
+          onKeyUp={() => commit(low, high)}
+        />
+
+        <input
+          type="range"
+          className="range-track"
+          min={floor}
+          max={ceiling}
+          step={step}
+          value={high}
+          aria-label="Highest price"
+          onChange={(event) => setHigh(Math.max(Number(event.target.value), low))}
+          onPointerUp={() => commit(low, high)}
+          onKeyUp={() => commit(low, high)}
+        />
+      </div>
+
+      <div className="mt-1.5 flex justify-between text-[11px] text-ink-400">
+        <span>{money(floor, { decimals: 0 })}</span>
+        <span>{money(ceiling, { decimals: 0 })}</span>
+      </div>
+    </div>
   )
 }
 
@@ -249,10 +278,9 @@ export function ProductFilters({ settings, categories, category, search, sort, p
         </Block>
       )}
 
+      {/* The slider prints the range and the chosen span itself now. */}
       {showPrice && (
-        <Block
-          title={`Price range · ${money(range.min, { decimals: 0 })} – ${money(range.max, { decimals: 0 })}`}
-        >
+        <Block title="Price range">
           <PriceBlock range={range} min={minPrice} max={maxPrice} onApply={onChange} />
         </Block>
       )}

@@ -170,6 +170,47 @@
   }
 
   /*
+   * The two handles of the price range.
+   *
+   * Two <input type="range"> stacked on one track, which is the only way to
+   * get a dual-handle slider out of a native control that has one handle.
+   * The inputs themselves take no clicks -- otherwise the one drawn on top
+   * would swallow every drag aimed at the other's handle -- and the handles
+   * take them back, so each is grabbable wherever it happens to sit.
+   *
+   * Styled here rather than in the component because a thumb is a
+   * pseudo-element, and there is no class to hang on something the browser
+   * draws itself.
+   */
+  .range-track {
+    @apply pointer-events-none absolute h-1.5 w-full appearance-none bg-transparent;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .range-track:focus {
+    outline: none;
+  }
+
+  .range-track::-webkit-slider-thumb {
+    @apply pointer-events-auto h-4 w-4 cursor-grab appearance-none rounded-full border-2 border-white bg-brand-600;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  }
+
+  .range-track:active::-webkit-slider-thumb {
+    @apply cursor-grabbing;
+  }
+
+  .range-track:focus-visible::-webkit-slider-thumb {
+    @apply ring-2 ring-brand-500/40;
+  }
+
+  .range-track::-moz-range-thumb {
+    @apply pointer-events-auto h-4 w-4 cursor-grab appearance-none rounded-full border-2 border-white bg-brand-600;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  }
+
+  /*
    * Product descriptions are authored as HTML by the admin rich text editor
    * and rendered as-is on the storefront -- one shared set of rules, so the
    * editor and the public page never disagree about what a paragraph or a
