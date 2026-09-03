@@ -861,12 +861,10 @@ export function ProductDetailPage() {
 
         {/* --------------------------------------------------------- info */}
         <div className="flex flex-col gap-4">
-          <div>
-            {product.category?.name && (
-              <p className="text-sm uppercase tracking-wide text-ink-400">{product.category.name}</p>
-            )}
-            <h1 className="mt-1 text-2xl font-semibold text-ink-900">{product.name}</h1>
-          </div>
+          {/* No category eyebrow above the title: the breadcrumb above the
+              page and the Category row below the buttons already say it, and
+              a third copy pushed the product's own name down the page. */}
+          <h1 className="text-2xl font-semibold text-ink-900">{product.name}</h1>
 
           <StarRating value={product.rating_avg} count={product.rating_count} />
 
@@ -981,8 +979,19 @@ export function ProductDetailPage() {
               </button>
             </div>
 
+            {/*
+             * Both buy buttons carry the shop's own colour: solid for Buy Now,
+             * the tinted fill for Add To Cart. They were a grey outline and a
+             * fixed green, which read as "cancel" and "unrelated" next to a
+             * crimson storefront -- and the green did not move when the owner
+             * changed their colour in Settings.
+             *
+             * The pair still reads in a definite order. Buy Now is the only
+             * solid fill on the row, so the weaker one cannot be mistaken for
+             * the checkout button.
+             */}
             <Button
-              variant="secondary"
+              variant="soft"
               size="lg"
               onClick={() => addItem(() => toast.success('Added to cart.'))}
               disabled={!canBuy}
@@ -993,7 +1002,7 @@ export function ProductDetailPage() {
             </Button>
 
             <Button
-              variant="accent"
+              variant="primary"
               size="lg"
               onClick={() => addItem(() => navigate('/checkout'))}
               disabled={!canBuy}
