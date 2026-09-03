@@ -89,9 +89,10 @@ return [
             // Which header the storefront renders. 'classic': logo, search,
             // and a Shop/Offers/Contact nav in one bar. 'categories': a
             // support-info top bar, then a plain search bar with no category
-            // button, then every top-level category along the bottom with
-            // its children in a hover mega menu. Both stay in the codebase
-            // so this is a one-setting switch, not a rebuild.
+            // button, then a two-row category menu -- the primaries, and
+            // under them the sub-categories of whichever one the visitor is
+            // inside. Both stay in the codebase so this is a one-setting
+            // switch, not a rebuild.
             'store_header_style' => 'categories',
 
             // Falls back to /logo.png in the frontend's public folder when

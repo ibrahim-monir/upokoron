@@ -90,7 +90,7 @@ const IMAGE_KEYS = ['store_logo', 'store_favicon']
 
 const CHOICES = {
   store_header_style: [
-    { value: 'categories', label: 'Categories — top bar, search, category mega menu' },
+    { value: 'categories', label: 'Categories — top bar, search, two-row category menu' },
     { value: 'classic', label: 'Classic — logo, search, Shop/Offers/Contact' },
   ],
   revenue_recognition_point: [
