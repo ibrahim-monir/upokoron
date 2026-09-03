@@ -114,6 +114,10 @@ class CheckoutController extends Controller
                         // Decided here rather than from the type string in
                         // the browser, so the rule lives in one place.
                         'collects_reference' => $m->collectsReference(),
+                        // The provider's own artwork, uploaded per method in
+                        // Admin > Payments. A shopper picks bKash by its logo
+                        // long before they have read the word.
+                        'logo' => $m->logo,
                         'extra_charge' => $m->extra_charge,
                         'is_cod' => $m->type->isCollectedOnDelivery(),
                     ])->values()->all(),

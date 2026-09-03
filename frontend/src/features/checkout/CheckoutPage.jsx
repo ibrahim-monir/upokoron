@@ -436,10 +436,32 @@ export function CheckoutPage() {
                       ) : null
                     }
                   >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <p className="text-sm font-medium text-ink-900">{paymentMethod.name}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        {/*
+                          The provider's artwork, where the owner has uploaded
+                          one (Admin > Payments). White tile behind it because
+                          bKash and Nagad both ship logos drawn for white, and
+                          object-contain so a wide wordmark and a round mark
+                          both sit correctly in the same box. A method with no
+                          logo simply shows its name, so the column never has
+                          a hole in it.
+                        */}
+                        {paymentMethod.logo && (
+                          <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-white">
+                            <img
+                              src={paymentMethod.logo}
+                              alt=""
+                              loading="lazy"
+                              className="h-full w-full object-contain p-0.5"
+                            />
+                          </span>
+                        )}
+                        <p className="truncate text-sm font-medium text-ink-900">{paymentMethod.name}</p>
+                      </span>
+
                       {Number(paymentMethod.extra_charge) > 0 && (
-                        <span className="tabular text-xs text-ink-500">
+                        <span className="tabular shrink-0 text-xs text-ink-500">
                           + {money(paymentMethod.extra_charge)}
                         </span>
                       )}
