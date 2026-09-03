@@ -78,6 +78,26 @@ export function ProductCard({ product }) {
   )
   const toggleWishlist = useWishlistStore((state) => state.toggle)
 
+  /*
+   * The buy action, declared once and placed twice below -- overlaid on the
+   * picture for a mouse, in the flow of the card for a finger. Writing it
+   * out twice is what let the two versions disagree the last time.
+   *
+   * A product with several variations sends the shopper to the page instead,
+   * because "add to cart" cannot know which colour they meant.
+   */
+  const action =
+    (product.variations_count ?? 1) > 1 ? (
+      <Link
+        to={`/products/${product.slug}`}
+        className="flex h-8 items-center justify-center rounded-lg border border-brand-200 bg-white px-3 text-sm font-medium text-brand-800 transition-colors hover:bg-brand-50"
+      >
+        {t('cart.chooseOptions')}
+      </Link>
+    ) : (
+      <AddToCart variation={variation} compact />
+    )
+
   return (
     /*
      * h-full, so the card fills whatever cell it is given.
@@ -116,7 +136,8 @@ export function ProductCard({ product }) {
         />
       </button>
 
-      <Link to={`/products/${product.slug}`} className="block aspect-square overflow-hidden bg-ink-100">
+      <div className="relative">
+        <Link to={`/products/${product.slug}`} className="block aspect-square overflow-hidden bg-ink-100">
         {product.primary_image ? (
           <img
             src={product.primary_image}
@@ -129,7 +150,19 @@ export function ProductCard({ product }) {
             <ImageOff className="h-9 w-9" aria-hidden="true" />
           </span>
         )}
-      </Link>
+        </Link>
+
+        {/*
+           Laid over the foot of the picture, so it costs the card no height
+           at all and the grid reads as pictures and prices until a cursor
+           arrives. Rendered only from lg up: it is revealed by hover, and a
+           touch screen has none -- below that breakpoint the copy further
+           down the card is the one that shows.
+        */}
+        <div className="cta-overlay absolute inset-x-2 bottom-2 z-10 hidden lg:block">
+          {action}
+        </div>
+      </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <Link
@@ -173,27 +206,11 @@ export function ProductCard({ product }) {
         </div>
 
         {/*
-          Straight into the basket for a simple product. A product with
-          several variations sends the shopper to the page instead, because
-          "add to cart" cannot know which colour they meant.
-
-          cta-reveal keeps it out of sight until the card is hovered, so a
-          grid of cards reads as pictures and prices rather than a wall of
-          buttons. On touch there is no hover, so it stays visible -- see
-          the rule in index.css.
+          The touch copy. Hidden from lg up, where the overlay on the picture
+          takes over -- so on a desktop this costs the card no height, which
+          is the point: no button, and no gap where one used to be.
         */}
-        <div className="cta-reveal pt-1">
-          {(product.variations_count ?? 1) > 1 ? (
-            <Link
-              to={`/products/${product.slug}`}
-              className="flex h-8 items-center justify-center rounded-lg border border-brand-200 px-3 text-sm font-medium text-brand-800 transition-colors hover:bg-brand-50"
-            >
-              {t('cart.chooseOptions')}
-            </Link>
-          ) : (
-            <AddToCart variation={variation} compact />
-          )}
-        </div>
+        <div className="pt-1 lg:hidden">{action}</div>
       </div>
     </div>
   )
