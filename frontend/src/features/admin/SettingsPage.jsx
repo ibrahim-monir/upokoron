@@ -44,7 +44,9 @@ const COLOUR_HINTS = {
   theme_primary: 'Buttons, links, active state, prices.',
   theme_primary_dark: 'The pressed and hover shade of the primary.',
   theme_background: 'The page behind the content.',
-  theme_dark: 'Header, footer, and the admin panel.',
+  theme_dark: 'Footer and the admin panel.',
+  theme_header:
+    'The bar carrying the logo, search and account links. Its text colour is worked out from this one, so a light choice here does not leave white links on a pale bar.',
 }
 
 /** Long-form settings that need room to write in. */

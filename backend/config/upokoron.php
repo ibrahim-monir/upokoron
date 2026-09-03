@@ -131,8 +131,15 @@ return [
             'theme_primary_dark' => '#0064E0',
             // The page behind the content.
             'theme_background' => '#F1F5F8',
-            // Header, footer, admin chrome.
+            // Footer and admin chrome.
             'theme_dark' => '#1C2B33',
+
+            // The bar carrying the logo, search and account links. Its own
+            // colour rather than theme_dark's, because a storefront header
+            // and an admin sidebar are not asking to look like each other.
+            // Text on it is picked from its brightness, so a light choice
+            // here does not leave white links on a pale bar.
+            'theme_header' => '#EFCDD6',
         ],
 
         /*

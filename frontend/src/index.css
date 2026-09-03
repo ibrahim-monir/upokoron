@@ -46,6 +46,17 @@
   --color-navy-950: #121c21;
 
   /*
+   * The storefront's logo bar, and the text that has to stay readable on
+   * it. All four are recomputed at runtime from one stored colour (see
+   * lib/theme.js) -- the ink flips between dark and light on the bar's own
+   * brightness, so the header cannot end up white-on-pale.
+   */
+  --color-header: #efcdd6;
+  --color-header-ink: #1c2b33;
+  --color-header-muted: #3c4a52;
+  --color-header-line: #00000026;
+
+  /*
    * Discount flags only. Green is the one place a second hue is allowed,
    * because "you save this much" has to survive being read at a glance on a
    * busy grid -- and in orange it would just look like everything else.

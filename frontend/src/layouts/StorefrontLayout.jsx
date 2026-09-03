@@ -524,23 +524,23 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
   const openCart = useCartDrawer((state) => state.show)
 
   return (
-    <header className="sticky top-0 z-30 bg-navy-900 shadow-sm">
+    <header className="sticky top-0 z-30 bg-header text-header-ink shadow-sm">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-3 sm:px-4 lg:gap-5">
         <Logo settings={settings} variant="light" />
 
         <SearchBar className="hidden max-w-sm flex-1 md:block lg:max-w-md" />
 
         <nav className="hidden items-center gap-5 lg:flex">
-          <NavLink to="/products" className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white">
+          <NavLink to="/products" className="whitespace-nowrap text-sm font-semibold text-header-muted hover:text-header-ink">
             {t('header.shop')}
           </NavLink>
           <NavLink
             to="/products?sort=oldest"
-            className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white"
+            className="whitespace-nowrap text-sm font-semibold text-header-muted hover:text-header-ink"
           >
             {t('header.offers')}
           </NavLink>
-          <NavLink to="/contact" className="whitespace-nowrap text-sm font-semibold text-white/95 hover:text-white">
+          <NavLink to="/contact" className="whitespace-nowrap text-sm font-semibold text-header-muted hover:text-header-ink">
             {t('header.contact')}
           </NavLink>
         </nav>
@@ -553,13 +553,13 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
             <IconCounter icon={Heart} to="/wishlist" label={t('header.wishlist')} count={wishlistCount} />
           </div>
 
-          <span className="hidden h-6 w-px bg-white/25 lg:block" />
+          <span className="hidden h-6 w-px bg-header-line lg:block" />
 
           {user ? (
             <Link
               to="/account"
               title={user.name ? t('header.signedInAs', { name: user.name }) : t('header.yourAccount')}
-              className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
+              className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-header-muted hover:text-header-ink"
             >
               <User className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">{t('header.myAccount')}</span>
@@ -567,7 +567,7 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
           ) : (
             <Link
               to="/login"
-              className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
+              className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-header-muted hover:text-header-ink"
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
               {t('header.login')}
@@ -579,7 +579,7 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
             onClick={() => setMenuOpen((open) => !open)}
             aria-label={menuOpen ? t('header.closeMenu') : t('header.openMenu')}
             aria-expanded={menuOpen}
-            className="rounded-md p-1.5 text-white hover:bg-white/15 lg:hidden"
+            className="rounded-md p-1.5 text-header-ink hover:bg-header-line lg:hidden"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -587,32 +587,32 @@ function ClassicHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) {
       </div>
 
       {menuOpen && (
-        <div className="border-t border-white/15 px-3 pb-4 pt-3 lg:hidden">
+        <div className="border-t border-header-line px-3 pb-4 pt-3 lg:hidden">
           <div className="md:hidden">
             <SearchBar />
           </div>
 
           <nav className="mt-3 flex flex-col gap-2.5">
-            <NavLink to="/products" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+            <NavLink to="/products" className="text-sm font-medium text-header-ink" onClick={() => setMenuOpen(false)}>
               {t('header.shop')}
             </NavLink>
             <NavLink
               to="/products?sort=oldest"
-              className="text-sm font-medium text-white"
+              className="text-sm font-medium text-header-ink"
               onClick={() => setMenuOpen(false)}
             >
               {t('header.offers')}
             </NavLink>
-            <NavLink to="/contact" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+            <NavLink to="/contact" className="text-sm font-medium text-header-ink" onClick={() => setMenuOpen(false)}>
               {t('header.contact')}
             </NavLink>
 
             {user ? (
-              <NavLink to="/account" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+              <NavLink to="/account" className="text-sm font-medium text-header-ink" onClick={() => setMenuOpen(false)}>
                 {t('header.myAccount')}
               </NavLink>
             ) : (
-              <NavLink to="/register" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+              <NavLink to="/register" className="text-sm font-medium text-header-ink" onClick={() => setMenuOpen(false)}>
                 {t('header.createAccount')}
               </NavLink>
             )}
@@ -670,7 +670,7 @@ function TopBar({ settings }) {
   const rewardsOn = useRewardsAdvertised()
 
   return (
-    <div className="hidden border-b border-white/10 bg-[#1C61E7] text-white sm:block">
+    <div className="hidden border-b border-white/10 bg-brand-600 text-white sm:block">
       <div className="mx-auto flex h-9 max-w-[1400px] items-center gap-4 px-3 text-xs sm:px-4">
         <NewsTicker text={settings?.store_ticker_text} />
 
@@ -851,7 +851,7 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
     <>
       <TopBar settings={settings} />
 
-      <header className="sticky top-0 z-30 bg-navy-900 shadow-sm">
+      <header className="sticky top-0 z-30 bg-header text-header-ink shadow-sm">
         <div className="mx-auto grid h-16 max-w-[1400px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 sm:px-4 lg:gap-5">
           <Logo settings={settings} variant="light" />
 
@@ -871,13 +871,13 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
               <IconCounter icon={Heart} to="/wishlist" label={t('header.wishlist')} count={wishlistCount} />
             </div>
 
-            <span className="hidden h-6 w-px bg-white/25 lg:block" />
+            <span className="hidden h-6 w-px bg-header-line lg:block" />
 
             {user ? (
               <Link
                 to="/account"
                 title={user.name ? t('header.signedInAs', { name: user.name }) : t('header.yourAccount')}
-                className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
+                className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-header-muted hover:text-header-ink"
               >
                 <User className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t('header.myAccount')}</span>
@@ -885,7 +885,7 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
             ) : (
               <Link
                 to="/login"
-                className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-white/95 hover:text-white"
+                className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-header-muted hover:text-header-ink"
               >
                 <LogIn className="h-4 w-4" aria-hidden="true" />
                 {t('header.login')}
@@ -897,7 +897,7 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
               onClick={() => setMenuOpen((open) => !open)}
               aria-label={menuOpen ? t('header.closeMenu') : t('header.openMenu')}
               aria-expanded={menuOpen}
-              className="rounded-md p-1.5 text-white hover:bg-white/15 lg:hidden"
+              className="rounded-md p-1.5 text-header-ink hover:bg-header-line lg:hidden"
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -905,7 +905,7 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
         </div>
 
         {menuOpen && (
-          <div className="border-t border-white/15 px-3 pb-4 pt-3 lg:hidden">
+          <div className="border-t border-header-line px-3 pb-4 pt-3 lg:hidden">
             <div className="md:hidden">
               <SearchBar />
             </div>
@@ -915,23 +915,23 @@ function CategoriesHeader({ settings, cartCount, user, menuOpen, setMenuOpen }) 
                 <NavLink
                   key={category.id}
                   to={`/category/${category.slug}`}
-                  className="text-sm font-medium text-white"
+                  className="text-sm font-medium text-header-ink"
                   onClick={() => setMenuOpen(false)}
                 >
                   {category.name}
                 </NavLink>
               ))}
 
-              <NavLink to="/track" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+              <NavLink to="/track" className="text-sm font-medium text-header-ink" onClick={() => setMenuOpen(false)}>
                 {t('header.orderTrack')}
               </NavLink>
 
               {user ? (
-                <NavLink to="/account" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+                <NavLink to="/account" className="text-sm font-medium text-header-ink" onClick={() => setMenuOpen(false)}>
                   {t('header.myAccount')}
                 </NavLink>
               ) : (
-                <NavLink to="/register" className="text-sm font-medium text-white" onClick={() => setMenuOpen(false)}>
+                <NavLink to="/register" className="text-sm font-medium text-header-ink" onClick={() => setMenuOpen(false)}>
                   {t('header.createAccount')}
                 </NavLink>
               )}

@@ -131,11 +131,81 @@ export function darkRamp(darkSurface, background) {
  * Returns '' when nothing is configured, so the stylesheet's own @theme
  * values stand rather than being replaced by a half-built ramp.
  */
+/** WCAG relative luminance. Green carries most of what the eye reads as brightness. */
+function luminance(rgb) {
+  const [r, g, b] = rgb.map((channel) => {
+    const c = channel / 255
+
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/**
+ * Softened text that still clears AA on its background.
+ *
+ * Pure white or black on a coloured bar is harsh, so the ink is mixed back
+ * towards the bar. How far it can go depends on the bar: a pale pink will
+ * take a lot, a saturated mid-tone almost none. Fixing the amount is what
+ * made a crimson header fail at 3.98:1 -- so the amount is searched instead,
+ * taking the softest step that still reads.
+ */
+function readableInk(bar, towards, softest) {
+  for (const amount of [softest, 0.24, 0.18, 0.12, 0.06, 0]) {
+    if (amount > softest) continue
+
+    const candidate = parseHex(mix(towards, bar, amount))
+
+    if (contrast(bar, candidate) >= 4.5) return toHex(candidate)
+  }
+
+  return toHex(towards)
+}
+
+/**
+ * The logo bar, and text that stays readable on it.
+ *
+ * The ink is chosen from the bar's own brightness rather than fixed, so a
+ * shop can put a pale pink up there without every link on it disappearing.
+ * Both weights are then held at 4.5:1 whatever colour is chosen, which is
+ * the point of deriving them rather than storing them: nobody picking a
+ * header colour should have to also work out what text survives on it.
+ */
+export function headerRamp(header) {
+  const bar = parseHex(header)
+
+  if (bar === null) return {}
+
+  // Whichever of black and white actually reads on this bar, not whichever
+  // the brightness suggests. A mid-tone blue looks dark enough for white
+  // text and gives it only 3.76:1, while black on the same blue clears 5.8.
+  const towards = contrast(bar, BLACK) >= contrast(bar, WHITE) ? BLACK : WHITE
+  const light = towards === BLACK
+
+  return {
+    '': toHex(bar),
+    ink: readableInk(bar, towards, 0.12),
+    // The quieter links: as soft as still reads, and no softer.
+    muted: readableInk(bar, towards, 0.35),
+    // Dividers and hover fills, as a translucent ink so they sit on the bar
+    // whatever colour it is.
+    line: light ? '#00000026' : '#ffffff26',
+  }
+}
+
 export function themeCss(settings) {
   const primary = settings?.theme_primary
   const primaryDark = settings?.theme_primary_dark
   const background = settings?.theme_background
   const dark = settings?.theme_dark
+  const header = settings?.theme_header
 
   if (!parseHex(primary)) return ''
 
@@ -152,6 +222,12 @@ export function themeCss(settings) {
   if (parseHex(background) && parseHex(dark)) {
     push('ink', inkRamp(background, dark))
     push('navy', darkRamp(dark, background))
+  }
+
+  // --color-header itself, plus the three that have to read on it. The empty
+  // step is the bare token rather than a numbered one.
+  for (const [step, hex] of Object.entries(headerRamp(header))) {
+    declarations.push(step === '' ? `--color-header:${hex}` : `--color-header-${step}:${hex}`)
   }
 
   return declarations.length > 0 ? `:root{${declarations.join(';')}}` : ''
