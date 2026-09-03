@@ -6,6 +6,7 @@ import { Badge, ErrorState, Spinner } from '../../components/ui'
 import { CheckoutSteps } from '../../components/CheckoutSteps'
 import { TrustBadges } from '../../components/TrustBadges'
 import { statusTone } from './orderStatus'
+import { PaymentReferenceCard } from './PaymentReferenceCard'
 import { PhoneGate } from './PhoneGate'
 import { useOrder } from './useCheckout'
 
@@ -86,6 +87,12 @@ export function OrderCompletePage() {
             </Badge>
           </div>
         </div>
+      </div>
+
+      {/* Directly under the order id, because on a transfer this is the one
+          thing still left for the customer to do. */}
+      <div className="print:hidden">
+        <PaymentReferenceCard order={data} phone={phone} />
       </div>
 
       <div className="overflow-hidden rounded-card border border-ink-200 bg-white">

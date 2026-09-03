@@ -19,6 +19,7 @@ class PaymentMethod extends Model
         'name', 'code', 'type', 'instructions', 'receive_number', 'account_id',
         'extra_charge', 'min_order_total', 'max_order_total',
         'is_active', 'position',
+        'logo',
     ];
 
     protected function casts(): array
@@ -47,6 +48,12 @@ class PaymentMethod extends Model
     public function accountKey(): Account|string
     {
         return $this->account ?? $this->type->defaultAccountKey();
+    }
+
+    /** Does the customer have a transaction id to give for this method? */
+    public function collectsReference(): bool
+    {
+        return $this->type->collectsReference();
     }
 
     /**

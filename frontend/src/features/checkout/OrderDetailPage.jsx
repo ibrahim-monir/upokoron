@@ -3,6 +3,7 @@ import { Package, Phone, Truck } from 'lucide-react'
 import { dateTime, money } from '../../lib/format'
 import { Badge, Button, ErrorState, Spinner, useToast } from '../../components/ui'
 import { statusTone } from './orderStatus'
+import { PaymentReferenceCard } from './PaymentReferenceCard'
 import { PhoneGate } from './PhoneGate'
 import { useCancelOrder, useOrder } from './useCheckout'
 
@@ -108,6 +109,8 @@ export function OrderDetailPage() {
           )}
         </dl>
       </div>
+
+      <PaymentReferenceCard order={data} phone={phone} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-card border border-ink-200 bg-white p-4">

@@ -353,7 +353,11 @@ function SectionCard({ title, icon: Icon, action, children, className = '' }) {
 function RecordPayment({ order, onDone }) {
   const toast = useToast()
   const [amount, setAmount] = useState(order.due_total)
-  const [reference, setReference] = useState('')
+
+  // Prefilled with the id the customer submitted, since on a bKash order
+  // that is almost always the reference being recorded -- and retyping a
+  // ten-character id off another panel is how digits get transposed.
+  const [reference, setReference] = useState(order.payment_reference ?? '')
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -398,6 +402,25 @@ function RecordPayment({ order, onDone }) {
             {money(order.due_total)}
           </p>
         </div>
+
+        {/*
+          The customer's own claim, and nothing more -- it moved no money and
+          marked nothing paid. Check it against the statement before pressing
+          the button below.
+        */}
+        {order.payment_reference && (
+          <div className="rounded-xl bg-brand-50 p-3">
+            <p className="text-xs font-medium text-brand-700">Customer says they paid</p>
+            <p className="mt-1 text-sm font-bold tabular text-brand-900">
+              {order.payment_reference}
+            </p>
+            {order.payment_reference_at && (
+              <p className="mt-0.5 text-[11px] text-brand-700">
+                submitted {dateTime(order.payment_reference_at)} — unverified
+              </p>
+            )}
+          </div>
+        )}
 
         <Input
           value={amount}

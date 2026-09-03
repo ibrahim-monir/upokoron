@@ -174,8 +174,15 @@ class OrderService
             );
         }
 
+        // Only meaningful on a method the customer settles themselves. A COD
+        // order has nothing to have a transaction id yet, and accepting one
+        // there would put a number in front of staff that means nothing.
+        $reference = $data->paymentMethod->collectsReference()
+            ? ($data->paymentReference ?: null)
+            : null;
+
         return DB::transaction(function () use (
-            $cart, $data, $customer, $placedBy, $summary, $shippingFields,
+            $cart, $data, $customer, $placedBy, $summary, $shippingFields, $reference,
             $zone, $subtotal, $shippingCharge, $extraCharge, $total,
             $couponId, $couponCode, $couponDiscount,
             $rewardPointsUsed, $rewardPointsDiscount,
@@ -189,6 +196,8 @@ class OrderService
                 'status' => OrderStatus::Pending,
                 'payment_status' => PaymentStatus::Unpaid,
                 'payment_method_id' => $data->paymentMethod->id,
+                'payment_reference' => $reference,
+                'payment_reference_at' => $reference === null ? null : now(),
                 'customer_address_id' => $data->address?->id,
 
                 'ship_name' => $shippingFields['name'],

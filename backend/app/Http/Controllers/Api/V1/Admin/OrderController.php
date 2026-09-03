@@ -137,6 +137,12 @@ class OrderController extends Controller
                 'payment_method' => $order->paymentMethod?->name,
                 'is_cod' => $order->paymentMethod?->type->isCollectedOnDelivery() ?? false,
 
+                // The customer's own claim, unverified. Shown so whoever
+                // records the payment has the id to look for on the
+                // statement instead of asking for it over the phone.
+                'payment_reference' => $order->payment_reference,
+                'payment_reference_at' => $order->payment_reference_at?->toIso8601String(),
+
                 'subtotal' => $order->subtotal,
                 'discount_total' => $order->discount_total,
                 'shipping_charge' => $order->shipping_charge,

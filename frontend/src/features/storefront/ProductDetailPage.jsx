@@ -799,7 +799,7 @@ export function ProductDetailPage() {
         <div className="flex flex-col gap-3">
           <div className="relative aspect-square overflow-hidden rounded-card border border-ink-200 bg-white">
             {hasDiscount && (
-              <span className="absolute left-3 top-3 z-10 rounded-full bg-success-600 px-2.5 py-1 text-xs font-semibold text-white">
+              <span className="absolute left-3 top-3 z-10 rounded-full bg-sale-600 px-2.5 py-1 text-xs font-semibold text-white">
                 −{discountPercent}%
               </span>
             )}

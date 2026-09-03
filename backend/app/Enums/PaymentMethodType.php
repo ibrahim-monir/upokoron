@@ -52,6 +52,21 @@ enum PaymentMethodType: string
     }
 
     /**
+     * Does the customer end up holding a transaction id for this?
+     *
+     * A manual transfer is the whole reason the field exists: the customer
+     * sends the money from their own wallet and the only proof either side
+     * has, until the statement is read, is the id bKash gave them. Cash and
+     * COD produce no such number, and a gateway produces one the shop is
+     * told directly -- asking the customer to copy it out would be asking
+     * them to retype something the shop already knows better.
+     */
+    public function collectsReference(): bool
+    {
+        return $this === self::Manual;
+    }
+
+    /**
      * Where money LANDS when this method is used.
      *
      * Strictly the destination, never the debt it settles. The two are easy

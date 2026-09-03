@@ -89,6 +89,10 @@ class PaymentMethodController extends Controller
             ],
             'type' => [$required, Rule::in(array_column(PaymentMethodType::cases(), 'value'))],
             'instructions' => ['nullable', 'string', 'max:1000'],
+
+            // A URL from the image library. The owner uploads the artwork
+            // their payment provider gives them; nothing is shipped here.
+            'logo' => ['nullable', 'string', 'max:255'],
             // The merchant's own bKash/Nagad number or similar -- shown to
             // the customer at checkout as its own highlighted line, so it is
             // validated as a short id rather than free text.
@@ -113,6 +117,7 @@ class PaymentMethodController extends Controller
             'type' => $method->type->value,
             'type_label' => $method->type->label(),
             'instructions' => $method->instructions,
+            'logo' => $method->logo,
             'receive_number' => $method->receive_number,
             'extra_charge' => $method->extra_charge,
             'min_order_total' => $method->min_order_total,

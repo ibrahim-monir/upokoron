@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\Shop\RewardController;
 use App\Http\Controllers\Api\V1\Shop\RewardInfoController;
 use App\Http\Controllers\Api\V1\Shop\ReviewController;
 use App\Http\Controllers\Api\V1\Shop\ShippingController;
+use App\Models\PaymentMethod;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +28,23 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('settings', [SettingController::class, 'publicSettings'])
     ->name('settings');
+
+// What the shop accepts, for the footer. Public and cart-free, unlike the
+// list inside the checkout payload.
+Route::get('accepted-payments', function () {
+    return response()->json([
+        'data' => PaymentMethod::query()
+            ->active()
+            ->orderBy('position')
+            ->get(['id', 'name', 'code', 'logo'])
+            ->map(fn ($method) => [
+                'id' => $method->id,
+                'name' => $method->name,
+                'code' => $method->code,
+                'logo' => $method->logo,
+            ]),
+    ]);
+})->name('accepted-payments');
 
 Route::get('rewards', [RewardInfoController::class, 'show'])
     ->name('rewards');

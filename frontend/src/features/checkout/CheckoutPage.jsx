@@ -10,20 +10,45 @@ import { DistrictSelect } from '../../components/DistrictSelect'
 import { CouponBox, RewardPointsBox } from '../cart/RewardFields'
 import { useCheckout, usePlaceOrder, useShippingOptions } from './useCheckout'
 
-/** A selectable card. Used for addresses, delivery options and payment. */
-function Choice({ selected, onSelect, disabled, children }) {
-  return (
+/**
+ * A selectable card. Used for addresses, delivery options and payment.
+ *
+ * `footer` is for content the card must hold but the BUTTON must not: a text
+ * input inside a <button> is invalid HTML, and browsers deal with it by
+ * eating the clicks meant for the input. So a card with a footer stops being
+ * a button and grows one instead, with the footer as its sibling -- same
+ * border, same fill, still one card to look at.
+ */
+function Choice({ selected, onSelect, disabled, footer, children }) {
+  // The same card either way; all that changes is which element owns the
+  // border -- the button itself, or the wrapper the button sits in.
+  const card = cx(
+    'w-full rounded-card border-2 text-left transition-colors',
+    selected ? 'border-brand-600 bg-brand-50' : 'border-ink-200 bg-white',
+  )
+
+  const label = (
     <button
       type="button"
       onClick={onSelect}
       disabled={disabled}
       className={cx(
-        'w-full rounded-card border-2 p-3 text-left transition-colors disabled:opacity-50',
-        selected ? 'border-brand-600 bg-brand-50' : 'border-ink-200 bg-white enabled:hover:border-brand-300',
+        'w-full p-3 text-left disabled:opacity-50',
+        !footer && card,
+        !footer && !selected && 'enabled:hover:border-brand-300',
       )}
     >
       {children}
     </button>
+  )
+
+  if (!footer) return label
+
+  return (
+    <div className={cx(card, !selected && 'hover:border-brand-300')}>
+      {label}
+      <div className="px-3 pb-3">{footer}</div>
+    </div>
   )
 }
 
@@ -71,6 +96,7 @@ export function CheckoutPage() {
       city: '',
       district: '',
       customer_note: '',
+      payment_reference: '',
     },
   })
 
@@ -160,6 +186,11 @@ export function CheckoutPage() {
       shipping_rate_id: rateId,
       payment_method_id: methodId,
       customer_note: values.customer_note || null,
+
+      // Only ever sent for a method the customer settles themselves, and
+      // optional even then -- most people pay after reading the confirmation
+      // page, and there is a box for it there too.
+      payment_reference: method?.collects_reference ? values.payment_reference || null : null,
     }
 
     if (selectedAddress) {
@@ -386,6 +417,24 @@ export function CheckoutPage() {
                     key={paymentMethod.id}
                     selected={paymentMethod.id === methodId}
                     onSelect={() => setMethodId(paymentMethod.id)}
+                    // Only the chosen method asks for an id, and only a method
+                    // the customer settles themselves has one to ask for. Three
+                    // boxes open at once would be three chances to type the
+                    // number into the wrong wallet.
+                    footer={
+                      paymentMethod.id === methodId && paymentMethod.collects_reference ? (
+                        <Field
+                          label={t('checkout.transactionId')}
+                          hint={
+                            paymentMethod.receive_number
+                              ? t('checkout.transactionIdHintSent', { number: paymentMethod.receive_number })
+                              : t('checkout.transactionIdHint')
+                          }
+                          placeholder={t('checkout.transactionIdPlaceholder')}
+                          {...form.register('payment_reference')}
+                        />
+                      ) : null
+                    }
                   >
                     <div className="flex items-baseline justify-between gap-3">
                       <p className="text-sm font-medium text-ink-900">{paymentMethod.name}</p>

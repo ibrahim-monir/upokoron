@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { get } from '../lib/api'
 import {
-  Banknote,
-  Landmark,
   Mail,
   MapPin,
   Phone,
-  Smartphone,
-  Wallet,
 } from 'lucide-react'
 
 import { cx } from '../lib/format'
@@ -19,20 +17,26 @@ import {
   YoutubeIcon,
 } from '../components/BrandIcons'
 
-/*
- * What checkout actually offers (see PaymentMethodSeeder). Each badge's own
- * brand colour carries the identity here -- a generic icon rather than the
- * literal wordmark, since no bKash/Nagad logo artwork is licensed for use
- * in this codebase, but the colour alone reads as "that one" at a glance.
- * bKash and Nagad are brand names, kept as-is in both languages; the other
- * two are translated via labelKey.
+/**
+ * What this shop actually accepts, read from the payment methods the owner
+ * has switched on.
+ *
+ * It used to be a list written out here, which meant the footer went on
+ * advertising Nagad after someone turned Nagad off. The provider's own
+ * artwork is uploaded per method (Admin > Operations > Payments); a method
+ * without one falls back to its name, so the row is never broken by a
+ * missing file.
  */
-const PAYMENT_METHODS = [
-  { labelKey: 'footer.cashOnDelivery', icon: Banknote, bgClass: 'bg-success-600' },
-  { label: 'bKash', icon: Smartphone, bgClass: 'bg-[#E2136E]' },
-  { label: 'Nagad', icon: Wallet, bgClass: 'bg-[#F5821F]' },
-  { labelKey: 'footer.bankTransfer', icon: Landmark, bgClass: 'bg-brand-600' },
-]
+function useAcceptedPayments() {
+  const query = useQuery({
+    queryKey: ['shop', 'accepted-payments'],
+    queryFn: () => get('/shop/accepted-payments'),
+    staleTime: 5 * 60 * 1000,
+    select: (response) => response.data,
+  })
+
+  return query.data ?? []
+}
 
 function FooterLink({ to, children }) {
   return (
@@ -65,6 +69,7 @@ function FooterColumn({ title, children }) {
 export function Footer({ settings }) {
   const { t } = useTranslation()
   const storeName = settings?.store_name ?? 'Upokoron'
+  const payments = useAcceptedPayments()
 
   const socials = [
     {
@@ -259,25 +264,46 @@ export function Footer({ settings }) {
                   </a>
                 )}
 
-                <div className="pt-1">
-                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white/65">
-                    {t('footer.weAccept')}
-                  </p>
+                {/*
+                   Kept where it was, filled from what the owner has actually
+                   switched on. Method names are the provider's own -- bKash
+                   is bKash in both languages -- so only the heading is
+                   translated. A method with no uploaded artwork shows its
+                   name, so a missing file never leaves a gap in the row.
+                */}
+                {payments.length > 0 && (
+                  <div className="pt-1">
+                    <p className="mb-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white/65">
+                      {t('footer.weAccept')}
+                    </p>
 
-                  <div className="flex flex-wrap gap-2">
-                    {PAYMENT_METHODS.map(({ label, labelKey, icon: Icon, bgClass }) => (
-                      <span
-                        key={labelKey ?? label}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-3 text-xs font-medium text-white/85"
-                      >
-                        <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-white', bgClass)}>
-                          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                    <div className="flex flex-wrap gap-2">
+                      {payments.map((method) => (
+                        <span
+                          key={method.id}
+                          title={method.name}
+                          className={cx(
+                            'inline-flex items-center gap-2 rounded-full border border-white/15',
+                            'bg-white/5 text-xs font-medium text-white/85',
+                            method.logo ? 'py-1 pl-1 pr-3' : 'px-3 py-1.5',
+                          )}
+                        >
+                          {method.logo && (
+                            <span className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-white">
+                              <img
+                                src={method.logo}
+                                alt=""
+                                loading="lazy"
+                                className="h-full w-full object-contain"
+                              />
+                            </span>
+                          )}
+                          {method.name}
                         </span>
-                        {labelKey ? t(labelKey) : label}
-                      </span>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </address>
             </FooterColumn>
           </div>
@@ -288,7 +314,7 @@ export function Footer({ settings }) {
           COPYRIGHT BAR
       ========================================================== */}
       <div className="bg-navy-950 text-white">
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1400px] flex-col items-start gap-3 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p className="font-medium">
             © {new Date().getFullYear()} {storeName}. {t('footer.allRightsReserved')}.
           </p>

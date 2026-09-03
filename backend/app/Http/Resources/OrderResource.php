@@ -41,7 +41,19 @@ class OrderResource extends JsonResource
                 'code' => $this->paymentMethod->code,
                 'name' => $this->paymentMethod->name,
                 'is_cod' => $this->paymentMethod->type->isCollectedOnDelivery(),
+                'receive_number' => $this->paymentMethod->receive_number,
+                'collects_reference' => $this->paymentMethod->collectsReference(),
             ]),
+
+            // What the customer told us they paid with, and whether they can
+            // still say so. Not a payment: `paid_total` is untouched by it.
+            'payment_reference' => $this->payment_reference,
+            'payment_reference_at' => $this->payment_reference_at?->toIso8601String(),
+            'can_submit_payment_reference' => $this->whenLoaded(
+                'paymentMethod',
+                fn (): bool => ($this->paymentMethod?->collectsReference() ?? false)
+                    && ! $this->status->isFinal(),
+            ),
 
             'shipping' => [
                 'name' => $this->ship_name,

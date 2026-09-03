@@ -110,6 +110,10 @@ class CheckoutController extends Controller
                         // be shown to the customer -- there is no version of
                         // "send us the money" that keeps the number private.
                         'receive_number' => $m->receive_number,
+                        // Whether the screen should ask for a transaction id.
+                        // Decided here rather than from the type string in
+                        // the browser, so the rule lives in one place.
+                        'collects_reference' => $m->collectsReference(),
                         'extra_charge' => $m->extra_charge,
                         'is_cod' => $m->type->isCollectedOnDelivery(),
                     ])->values()->all(),
@@ -156,6 +160,13 @@ class CheckoutController extends Controller
             'shipping_rate_id' => ['required', 'integer', 'exists:shipping_rates,id'],
             'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
             'customer_note' => ['nullable', 'string', 'max:500'],
+
+            // The transaction id, for a customer who paid before pressing
+            // the button. Optional even on a manual method: plenty of people
+            // pay first and read the confirmation page second, and refusing
+            // the order over a missing note would lose the sale. They can add
+            // it afterwards from the order page.
+            'payment_reference' => ['nullable', 'string', 'max:64'],
 
             // Either a saved address...
             'customer_address_id' => ['nullable', 'integer'],
@@ -207,6 +218,7 @@ class CheckoutController extends Controller
                 address: $address,
                 addressFields: $data['address'] ?? null,
                 customerNote: $data['customer_note'] ?? null,
+                paymentReference: $data['payment_reference'] ?? null,
             ),
             customer: $customer,
         );
@@ -266,6 +278,49 @@ class CheckoutController extends Controller
         ]);
 
         return response()->json(['data' => new OrderResource($order)]);
+    }
+
+    /**
+     * The transaction id for an order the customer settled themselves.
+     *
+     * Writes a claim onto the order, nothing more. It does not mark the
+     * order paid, does not touch the balance and posts nothing to the
+     * ledger -- a number typed into a form is not money, and someone at the
+     * shop still has to find it on the statement and record the payment.
+     *
+     * Editable while the order is still owed for, because the commonest
+     * thing to arrive in this box is a typo, and a customer who cannot fix
+     * their own typo phones instead.
+     */
+    public function submitPaymentReference(Request $request, string $number): JsonResponse
+    {
+        $order = $this->findForCaller($request, $number, ['paymentMethod']);
+
+        $data = $request->validate([
+            'payment_reference' => ['required', 'string', 'max:64'],
+        ]);
+
+        abort_unless(
+            $order->paymentMethod?->collectsReference() ?? false,
+            422,
+            'This order was not paid by transfer, so there is no transaction id to give.',
+        );
+
+        abort_if(
+            $order->status->isFinal(),
+            422,
+            'This order is closed.',
+        );
+
+        $order->forceFill([
+            'payment_reference' => trim($data['payment_reference']),
+            'payment_reference_at' => now(),
+        ])->save();
+
+        return response()->json([
+            'message' => 'Thanks -- we will check it and confirm your payment.',
+            'data' => new OrderResource($order),
+        ]);
     }
 
     /**

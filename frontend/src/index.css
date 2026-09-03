@@ -105,17 +105,31 @@
   /*
    * Semantic colours are separate from the accent on purpose: "this worked"
    * must never be confusable with "this is a price".
+   *
+   * Every step that any component actually asks for is defined here, even
+   * where the ramp then looks lopsided. Tailwind emits nothing at all for an
+   * undefined step, so `bg-success-600` against a three-step ramp was not a
+   * slightly-wrong green -- it was a badge with no background, which is how
+   * the discount flag on the product page came to be white text on a
+   * photograph.
    */
   --color-success-50: #edfbf3;
   --color-success-500: #16a34a;
+  --color-success-600: #169143;
   --color-success-700: #15803d;
   --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
   --color-warning-500: #f59e0b;
   --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
   --color-danger-50: #fef2f2;
   --color-danger-300: #fca5a5;
   --color-danger-500: #dc2626;
+  --color-danger-600: #ca2121;
   --color-danger-700: #b91c1c;
+  --color-danger-900: #7f1d1d;
 
   --font-sans: 'Hind Siliguri', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 

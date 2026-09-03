@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { CreditCard, Image as ImageIcon, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { api, get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
 import { Badge, Button, ErrorState, Field, Select, Spinner, Textarea, useToast } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
+import { MediaPicker } from './media/MediaLibrary'
 
 /**
  * How the shop gets paid.
@@ -32,6 +33,7 @@ function useMethods() {
 }
 
 function MethodForm({ method, onClose }) {
+  const [pickingLogo, setPickingLogo] = useState(false)
   const toast = useToast()
   const queryClient = useQueryClient()
 
@@ -41,6 +43,7 @@ function MethodForm({ method, onClose }) {
     type: method?.type ?? 'manual',
     instructions: method?.instructions ?? '',
     receive_number: method?.receive_number ?? '',
+    logo: method?.logo ?? '',
     extra_charge: method?.extra_charge ?? '0.00',
     min_order_total: method?.min_order_total ?? '',
     max_order_total: method?.max_order_total ?? '',
@@ -57,6 +60,7 @@ function MethodForm({ method, onClose }) {
         type: form.type,
         instructions: form.instructions.trim() || null,
         receive_number: form.receive_number.trim() || null,
+        logo: form.logo || null,
         extra_charge: Number(form.extra_charge || 0),
         min_order_total: form.min_order_total === '' ? null : Number(form.min_order_total),
         max_order_total: form.max_order_total === '' ? null : Number(form.max_order_total),
@@ -81,6 +85,14 @@ function MethodForm({ method, onClose }) {
 
   return (
     <div className="rounded-lg border border-ink-200 bg-ink-50 p-3">
+      <MediaPicker
+        open={pickingLogo}
+        onClose={() => setPickingLogo(false)}
+        onSelect={(item) => set('logo', item.url)}
+        folder="payments"
+        title="Choose a payment logo"
+      />
+
       <div className="flex items-center justify-between gap-2">
         <h4 className="text-sm font-semibold text-ink-900">
           {method ? 'Edit payment method' : 'New payment method'}
@@ -120,6 +132,39 @@ function MethodForm({ method, onClose }) {
           value={form.receive_number}
           onChange={(event) => set('receive_number', event.target.value)}
         />
+
+        {/*
+           The provider's own artwork, uploaded by the shop. Shown in the
+           footer's "We Accept" row; without one that row falls back to the
+           method's name.
+        */}
+        <Field
+          className="sm:col-span-2"
+          label="Logo (optional)"
+          hint="Upload the artwork your payment provider gives merchants. Shown in the footer."
+        >
+          {() => (
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-ink-200 bg-white">
+                {form.logo ? (
+                  <img src={form.logo} alt="" className="h-full w-full object-contain p-1" />
+                ) : (
+                  <ImageIcon className="h-4 w-4 text-ink-400" aria-hidden="true" />
+                )}
+              </span>
+
+              <Button variant="secondary" size="sm" onClick={() => setPickingLogo(true)}>
+                {form.logo ? 'Change' : 'Choose'}
+              </Button>
+
+              {form.logo && (
+                <Button variant="ghost" size="sm" onClick={() => set('logo', '')}>
+                  Remove
+                </Button>
+              )}
+            </div>
+          )}
+        </Field>
 
         <Field
           className="sm:col-span-2"

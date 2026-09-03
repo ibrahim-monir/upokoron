@@ -32,6 +32,13 @@ final class PlaceOrderData
         public readonly ?array $addressFields = null,
 
         public readonly ?string $customerNote = null,
+
+        /**
+         * The transaction id the customer says they paid with, on a method
+         * that is settled by hand. A claim, not a receipt -- it is written
+         * to the order for staff to check, and posts nothing.
+         */
+        public readonly ?string $paymentReference = null,
     ) {}
 
     /**

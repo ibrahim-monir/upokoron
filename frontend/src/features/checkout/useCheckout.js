@@ -77,6 +77,33 @@ export function useOrder(number, phone) {
   })
 }
 
+/**
+ * "I have paid -- here is the bKash transaction id."
+ *
+ * Writes a note on the order for staff to check against the statement. It
+ * does NOT mark the order paid: the shop confirms the money itself, and a
+ * storefront that could declare its own orders settled would be an invitation.
+ */
+export function useSubmitPaymentReference() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ number, reference, phone }) => {
+      const { data } = await api.post(`/shop/orders/${number}/payment-reference`, {
+        payment_reference: reference,
+        phone: phone || undefined,
+      })
+
+      return data.data
+    },
+    onSuccess() {
+      // Prefix match: this covers both the list and the single order, whose
+      // key carries the guest's phone on the end.
+      queryClient.invalidateQueries({ queryKey: ['shop', 'orders'] })
+    },
+  })
+}
+
 export function useCancelOrder() {
   const queryClient = useQueryClient()
 

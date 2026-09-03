@@ -47,6 +47,7 @@ class Order extends Model
             'refunded_total' => 'decimal:2',
             'cost_total' => 'decimal:2',
             'weight_kg' => 'decimal:3',
+            'payment_reference_at' => 'datetime',
             'placed_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'shipped_at' => 'datetime',

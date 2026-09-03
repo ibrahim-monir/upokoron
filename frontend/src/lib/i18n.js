@@ -261,6 +261,16 @@ const STRINGS = {
   'checkout.payment': { en: 'Payment', bn: 'পেমেন্ট' },
   'checkout.sendPaymentTo': { en: 'Send payment to', bn: 'যেখানে পেমেন্ট পাঠাবেন' },
   'checkout.copyReceiveNumber': { en: 'Copy the receive number', bn: 'নম্বরটি কপি করুন' },
+  'checkout.transactionId': { en: 'Transaction ID (optional)', bn: 'ট্রানজেকশন আইডি (ঐচ্ছিক)' },
+  'checkout.transactionIdHintSent': {
+    en: 'Already sent the money to {number}? Put the transaction ID here. You can also add it after placing the order.',
+    bn: '{number} নম্বরে টাকা পাঠিয়ে ফেলেছেন? ট্রানজেকশন আইডিটি এখানে দিন। অর্ডার করার পরেও যোগ করা যাবে।',
+  },
+  'checkout.transactionIdHint': {
+    en: 'If you have already sent the money, put the transaction ID here. You can also add it after placing the order.',
+    bn: 'টাকা পাঠিয়ে থাকলে ট্রানজেকশন আইডিটি এখানে দিন। অর্ডার করার পরেও যোগ করা যাবে।',
+  },
+  'checkout.transactionIdPlaceholder': { en: 'e.g. 9F4KJ2XY7B', bn: 'যেমন 9F4KJ2XY7B' },
   'checkout.noteForUs': { en: 'Note for us (optional)', bn: 'আমাদের জন্য নোট (ঐচ্ছিক)' },
   'checkout.deliveryInstructions': { en: 'Any delivery instructions', bn: 'ডেলিভারি সংক্রান্ত নির্দেশনা' },
 
