@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -312,11 +312,7 @@ const schema = z
  * parent is most of the answer to which one is meant.
  */
 function CategoryPicker({ options, primaryId, extraIds, invalid, onChange }) {
-  const [open, setOpen] = useState(false)
   const [term, setTerm] = useState('')
-
-  const box = useRef(null)
-  const filter = useRef(null)
 
   const primary = Number(primaryId) || null
   const extra = extraIds.map(Number).filter((id) => id && id !== primary)
@@ -328,30 +324,6 @@ function CategoryPicker({ options, primaryId, extraIds, invalid, onChange }) {
   )
 
   const isChosen = (id) => id === primary || extra.includes(id)
-
-  // Closed by default, and closed again by Escape or a click anywhere else --
-  // the two things anyone tries on a panel that is in the way.
-  useEffect(() => {
-    if (!open) return undefined
-
-    const onKey = (event) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-
-    const onPointer = (event) => {
-      if (!box.current?.contains(event.target)) setOpen(false)
-    }
-
-    window.addEventListener('keydown', onKey)
-    document.addEventListener('mousedown', onPointer)
-
-    filter.current?.focus()
-
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.removeEventListener('mousedown', onPointer)
-    }
-  }, [open])
 
   const toggle = (id) => {
     if (id === primary) {
@@ -386,69 +358,32 @@ function CategoryPicker({ options, primaryId, extraIds, invalid, onChange }) {
     })
   }
 
-  const nameOf = (id) => options.find((category) => category.id === id)?.name
-
   const chosenCount = (primary ? 1 : 0) + extra.length
 
-  /*
-   * The closed control has to answer "what is this filed under" without being
-   * opened, so it names the main category rather than counting to one. The
-   * overflow is a count, because three names in a half-width control truncate
-   * to nothing anyone can read.
-   */
-  const summary =
-    primary === null
-      ? 'Choose one or more'
-      : extra.length === 0
-        ? nameOf(primary)
-        : `${nameOf(primary)} + ${extra.length} more`
-
   return (
-    <div ref={box} className="relative mt-2">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-haspopup="true"
+    <div className="mt-2">
+      {/*
+         Open, always. It was a dropdown, and a dropdown is the wrong shape
+         for something you tick several of: it hides what is already chosen
+         behind a click, and the click that ticks the second one is the same
+         click that could shut it.
+      */}
+      {options.length > 8 && (
+        <Input
+          value={term}
+          onChange={(event) => setTerm(event.target.value)}
+          placeholder="Filter categories"
+          aria-label="Filter categories"
+          className="mb-2 h-9 w-full"
+        />
+      )}
+
+      <div
         className={cx(
-          // Reads as the select it replaced, so the row does not look like
-          // two unrelated kinds of control standing side by side.
-          'flex h-10 w-full items-center gap-2 rounded-lg border bg-white px-3 text-left text-sm',
-          invalid ? 'border-danger-500' : 'border-ink-300 hover:border-ink-400',
+          'max-h-64 overflow-y-auto rounded-lg border bg-white p-1',
+          invalid ? 'border-danger-500' : 'border-ink-300',
         )}
       >
-        <span
-          className={cx(
-            'min-w-0 flex-1 truncate',
-            primary === null ? 'text-ink-400' : 'text-ink-900',
-          )}
-        >
-          {summary}
-        </span>
-
-        <ChevronDown
-          className={cx(
-            'h-4 w-4 shrink-0 text-ink-400 transition-transform',
-            open && 'rotate-180',
-          )}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-11 z-30 overflow-hidden rounded-lg border border-ink-200 bg-white shadow-raised">
-          <div className="border-b border-ink-100 p-2">
-            <Input
-              ref={filter}
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder="Filter categories"
-              aria-label="Filter categories"
-              className="h-9 w-full"
-            />
-          </div>
-
-          <div className="max-h-56 overflow-y-auto p-1">
             {visible.length === 0 ? (
               <p className="px-2 py-4 text-center text-xs text-ink-500">
                 {options.length === 0 ? 'No categories yet.' : 'Nothing matches that.'}
@@ -495,44 +430,27 @@ function CategoryPicker({ options, primaryId, extraIds, invalid, onChange }) {
                         Make main
                       </button>
                     )}
-                  </div>
-                )
-              })
-            )}
-          </div>
+                </div>
+              )
+            })
+          )}
+      </div>
 
-          <div className="flex items-center justify-between gap-2 border-t border-ink-100 bg-ink-50 px-3 py-1.5">
-            <span className="text-xs text-ink-500">
-              {chosenCount === 0 ? 'Choose at least one' : `${chosenCount} chosen`}
-            </span>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <span className="text-xs text-ink-500">
+          {chosenCount === 0 ? 'Choose at least one' : `${chosenCount} chosen`}
+        </span>
 
-            <span className="flex items-center gap-3">
-              {chosenCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onChange({ primary: null, extra: [] })}
-                  className="text-xs font-medium text-brand-800 hover:text-brand-900"
-                >
-                  Clear
-                </button>
-              )}
-
-              {/*
-                 The panel stays open while several are ticked -- that is the
-                 point of it -- so it needs a way out that is not "click
-                 somewhere harmless".
-              */}
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="text-xs font-medium text-ink-600 hover:text-ink-900"
-              >
-                Done
-              </button>
-            </span>
-          </div>
-        </div>
-      )}
+        {chosenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange({ primary: null, extra: [] })}
+            className="text-xs font-medium text-brand-800 hover:text-brand-900"
+          >
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   )
 }
