@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  FolderTree,
   Image as ImageIcon,
   Info,
   Package,
@@ -1930,49 +1931,6 @@ export default function ProductFormPage() {
                   })}
                 />
 
-                {/*
-                   One product, several shelves, one control -- in the half
-                   of the row the old single-category dropdown used to hold.
-                */}
-                <div>
-                  <p className="text-sm font-medium text-ink-800">
-                    Categories
-                    <span
-                      className="ml-0.5 text-danger-500"
-                      aria-hidden="true"
-                    >
-                      *
-                    </span>
-                  </p>
-
-                  <p className="mt-0.5 text-xs text-ink-500">
-                    Tick every category this belongs in. The first is the main
-                    one, used by the breadcrumb and the URL.
-                  </p>
-
-                  <CategoryPicker
-                    options={categoryOptions}
-                    primaryId={primaryCategoryId}
-                    extraIds={extraCategoryIds}
-                    invalid={Boolean(errors.category_id)}
-                    onChange={({ primary, extra }) => {
-                      setValue('category_id', primary ?? '', {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      })
-                      setExtraCategoryIds(extra)
-                    }}
-                  />
-
-                  {errors.category_id?.message && (
-                    <p
-                      role="alert"
-                      className="mt-1.5 text-xs text-danger-700"
-                    >
-                      {errors.category_id.message}
-                    </p>
-                  )}
-                </div>
 
                 <Field
                   label="Full description"
@@ -2898,6 +2856,56 @@ export default function ProductFormPage() {
             {/* ===============================================================
                PUBLISHING
                =============================================================== */}
+
+            <SidebarSection
+              icon={FolderTree}
+              title="Categories"
+              description="Where this appears in the shop."
+            >
+              {/*
+                 One product, several shelves, one control -- in the half
+                 of the row the old single-category dropdown used to hold.
+              */}
+              <div>
+                <p className="text-sm font-medium text-ink-800">
+                  Categories
+                  <span
+                    className="ml-0.5 text-danger-500"
+                    aria-hidden="true"
+                  >
+                    *
+                  </span>
+                </p>
+
+                <p className="mt-0.5 text-xs text-ink-500">
+                  Tick every category this belongs in. The first is the main
+                  one, used by the breadcrumb and the URL.
+                </p>
+
+                <CategoryPicker
+                  options={categoryOptions}
+                  primaryId={primaryCategoryId}
+                  extraIds={extraCategoryIds}
+                  invalid={Boolean(errors.category_id)}
+                  onChange={({ primary, extra }) => {
+                    setValue('category_id', primary ?? '', {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                    setExtraCategoryIds(extra)
+                  }}
+                />
+
+                {errors.category_id?.message && (
+                  <p
+                    role="alert"
+                    className="mt-1.5 text-xs text-danger-700"
+                  >
+                    {errors.category_id.message}
+                  </p>
+                )}
+              </div>
+            </SidebarSection>
 
             <SidebarSection
               icon={ShieldCheck}
