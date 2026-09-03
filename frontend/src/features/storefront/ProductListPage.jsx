@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { PackageOpen } from 'lucide-react'
 import { get } from '../../lib/api'
 import { EmptyState, ErrorState, Pagination } from '../../components/ui'
-import { PRODUCT_GRID, ProductCard, ProductCardSkeleton } from './ProductCard'
+import { PRODUCT_GRID_WITH_SIDEBAR, ProductCard, ProductCardSkeleton } from './ProductCard'
 import { FILTER_KEYS, ProductFilters } from './ProductFilters'
 
 function useSidebarData() {
@@ -45,12 +45,13 @@ export function ProductListPage() {
   )
 
   const query = useQuery({
-    queryKey: ['shop', 'products', { search, sort, category, page, ...filters }],
+    // sort rides in with the rest: it is one of the sidebar's own controls,
+    // and naming it twice is two places to forget to change.
+    queryKey: ['shop', 'products', { search, category, page, ...filters }],
     queryFn: () =>
       get('/shop/products', {
         params: {
           search: search || undefined,
-          sort: sort || undefined,
           category: category || undefined,
           page,
           ...filters,
@@ -90,7 +91,7 @@ export function ProductListPage() {
       {query.isError && <ErrorState error={query.error} onRetry={query.refetch} />}
 
       {query.isLoading ? (
-        <div className={PRODUCT_GRID}>
+        <div className={PRODUCT_GRID_WITH_SIDEBAR}>
           {Array.from({ length: 8 }).map((_, index) => (
             <ProductCardSkeleton key={index} />
           ))}
@@ -106,7 +107,7 @@ export function ProductListPage() {
           }
         />
       ) : (
-        <div className={PRODUCT_GRID}>
+        <div className={PRODUCT_GRID_WITH_SIDEBAR}>
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

@@ -7,11 +7,13 @@ import { get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
 
 /**
- * Keys the sidebar narrows a listing by, so the page can clear them as a
- * set. `sort` is not among them: it is an ordering, not a filter, and
- * "clear filters" should not quietly put the list back into newest-first.
+ * Everything the sidebar sets, so the page can clear it as a set.
+ *
+ * `sort` is in here despite being an ordering rather than a filter: it is a
+ * block inside a panel headed Filters, and a reset that leaves one of the
+ * panel's own controls where it was is a reset that did not.
  */
-export const FILTER_KEYS = ['min_price', 'max_price', 'min_rating']
+export const FILTER_KEYS = ['min_price', 'max_price', 'min_rating', 'sort']
 
 /** Only what the API implements. Offering a sort the backend ignores looks like a bug. */
 export const SORTS = [
@@ -205,7 +207,7 @@ export function ProductFilters({ settings, categories, category, search, sort, p
   const showPrice = settings?.show_price_filter !== false && range !== null && range.min < range.max
   const showRating = settings?.show_rating_filter !== false && ratings.length > 0
 
-  const activeCount = [minPrice, maxPrice, minRating].filter(Boolean).length
+  const activeCount = [minPrice, maxPrice, minRating, sort].filter(Boolean).length
 
   if (!showCategories && !showSort && !showPrice && !showRating) return null
 
@@ -232,7 +234,7 @@ export function ProductFilters({ settings, categories, category, search, sort, p
           className="flex w-fit items-center gap-1 text-xs font-semibold text-ink-500 hover:text-danger-700"
         >
           <X className="h-3 w-3" aria-hidden="true" />
-          Clear all filters
+          Reset filters
         </button>
       )}
 
