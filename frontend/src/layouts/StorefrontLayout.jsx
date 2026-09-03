@@ -745,11 +745,13 @@ function useActiveCategory(list) {
 function CategoryBar() {
   const categories = useStoreCategories()
 
-  // A category with nothing behind it and nothing under it is a dead end,
-  // and a menu item that opens an empty page is worse than no menu item.
-  const list = (categories.data ?? []).filter(
-    (category) => category.product_count > 0 || (category.children ?? []).length > 0,
-  )
+  // A menu item that opens an empty page is worse than no menu item.
+  //
+  // product_count is the whole subtree, not the category's own shelf, so
+  // this keeps a primary that stocks nothing directly but has products under
+  // its sub-categories, and drops one whose branch is empty all the way
+  // down. Publishing a single product anywhere beneath it brings it back.
+  const list = (categories.data ?? []).filter((category) => category.product_count > 0)
 
   const { root, slug } = useActiveCategory(list)
   const subs = root?.children ?? []
@@ -805,26 +807,10 @@ function CategoryBar() {
           <div className="rail mx-auto max-w-[1400px] px-3 sm:px-4">
             <ul className="mx-auto flex w-max items-center gap-1">
               {/*
-                 The parent leads its own row. Without it there is no way back
-                 to the whole category once a sub-category has been picked,
-                 short of the top row -- which by then no longer looks like
-                 the thing you are already inside.
+                 No "All <category>" entry: the primary in the row above is
+                 that link, and it is already lit. Two links to one page, one
+                 directly under the other, is one of them saying nothing.
               */}
-              <li>
-                <Link
-                  to={`/category/${root.slug}`}
-                  aria-current={slug === root.slug ? 'page' : undefined}
-                  className={cx(
-                    'block whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
-                    slug === root.slug
-                      ? 'font-semibold text-brand-800'
-                      : 'text-ink-600 hover:text-brand-800',
-                  )}
-                >
-                  All {root.name}
-                </Link>
-              </li>
-
               {subs.map((child) => {
                 const isHere = slug === child.slug
 
@@ -999,7 +985,7 @@ export function StorefrontLayout() {
             a chat button that opens an empty conversation is worse than none. */}
         {settings?.store_whatsapp && (
           <a
-            href={`https://wa.me/${settings.store_whatsapp.replace(/\\D/g, '')}`}
+            href={`https://wa.me/${settings.store_whatsapp.replace(/\D/g, '')}`}
             target="_blank"
             rel="noreferrer noopener"
             aria-label="Chat on WhatsApp"
