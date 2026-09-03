@@ -208,17 +208,27 @@
   /*
    * A card action that waits until it is wanted.
    *
-   * Hidden until the card is hovered -- but ONLY where hovering exists. A
-   * phone has no hover state, so on touch the button simply stays put:
-   * getting that backwards would hide the buy button from most of this
-   * shop's customers, which is the whole reason this is a media query and
-   * not a `group-hover:opacity-0` on the element.
+   * Hidden until the card is hovered, and only on screens wide enough to be
+   * a computer. Phones and portrait tablets keep the button exactly where it
+   * was -- hiding a buy button behind a hover on a device that cannot hover
+   * would cost this shop most of its orders.
+   *
+   * The gate is width, NOT `(hover: hover) and (pointer: fine)`, which is
+   * what this tried first and why it did nothing on the owner's machine:
+   * those ask about the PRIMARY pointer, and any touch-capable computer --
+   * every touchscreen laptop -- answers "coarse, cannot hover" even with a
+   * mouse plugged in. `any-hover` is no better; a touch-only context reports
+   * false for that too. Width is the one signal that does not lie.
+   *
+   * The cost is a large touch-only tablet in landscape, which lands above
+   * the breakpoint and cannot hover. It is not stranded: tapping the card
+   * opens the product page, where Add To Cart is always visible.
    *
    * The space it occupies is reserved either way, so revealing it never
    * reflows the grid under the cursor. Keyboard users get it from
    * :focus-within, since they never hover at all.
    */
-  @media (hover: hover) and (pointer: fine) {
+  @media (min-width: 64rem) {
     .cta-reveal {
       opacity: 0;
       transform: translateY(0.25rem);
