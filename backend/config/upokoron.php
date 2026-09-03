@@ -54,7 +54,7 @@ return [
      * public was silently demoted to private the first time anyone saved it
      * through the admin API.
      */
-    'public_setting_groups' => ['store', 'pages', 'theme', 'home', 'marketing', 'product', 'faq'],
+    'public_setting_groups' => ['store', 'pages', 'theme', 'home', 'marketing', 'product', 'faq', 'filters'],
 
     'settings' => [
 
@@ -255,6 +255,30 @@ return [
 
             'page_privacy' => '',
             'page_terms' => '',
+        ],
+
+        /*
+         * The category page's sidebar filters.
+         *
+         * Each one is a switch rather than a fixed list, because which
+         * filters help depends on the catalogue. A shop selling one brand
+         * has no use for a brand filter, and a shop whose prices are all
+         * within a hundred taka of each other has no use for a price one --
+         * in both cases the filter is a control that cannot change the
+         * result, which is worse than no control.
+         *
+         * A block also hides itself when there is nothing to put in it, so
+         * these say "never show this", not "show it if it has something".
+         */
+        'filters' => [
+            'show_category_filter' => true,
+            'show_brand_filter' => true,
+            'show_price_filter' => true,
+            'show_stock_filter' => true,
+
+            // Brands beyond this sit behind a "Show all" toggle. A list long
+            // enough to scroll past pushes every other filter off the screen.
+            'brand_filter_limit' => 8,
         ],
 
         'sales' => [

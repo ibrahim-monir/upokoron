@@ -4,15 +4,36 @@ import { PackageOpen } from 'lucide-react'
 import { get } from '../../lib/api'
 import { EmptyState, ErrorState, Pagination, Select } from '../../components/ui'
 import { PRODUCT_GRID, ProductCard, ProductCardSkeleton } from './ProductCard'
+import { FILTER_KEYS, ProductFilters } from './ProductFilters'
 
 // Only what the API actually implements. Offering "price: low to high"
 // when the backend ignores it looks like a bug to the customer.
 const SORTS = [
   { value: '', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
+  { value: 'price', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
   { value: 'name', label: 'Name A–Z' },
   { value: 'name_desc', label: 'Name Z–A' },
 ]
+
+function useSidebarData() {
+  const settings = useQuery({
+    queryKey: ['shop', 'settings'],
+    queryFn: () => get('/shop/settings'),
+    staleTime: 5 * 60 * 1000,
+    select: (response) => response.data,
+  })
+
+  const categories = useQuery({
+    queryKey: ['shop', 'categories'],
+    queryFn: () => get('/shop/categories'),
+    staleTime: 5 * 60 * 1000,
+    select: (response) => response.data,
+  })
+
+  return { settings: settings.data, categories: categories.data ?? [] }
+}
 
 export function ProductListPage() {
   // /category/:slug is the canonical link now; ?category= still works for
@@ -25,8 +46,17 @@ export function ProductListPage() {
   const category = slug || params.get('category') || ''
   const page = Number(params.get('page') ?? 1)
 
+  const { settings, categories } = useSidebarData()
+
+  // Every sidebar filter, straight off the URL. The URL is the whole state:
+  // a filtered listing is then a link somebody can send, and the back button
+  // undoes one filter rather than the entire visit.
+  const filters = Object.fromEntries(
+    FILTER_KEYS.map((key) => [key, params.get(key) || undefined]),
+  )
+
   const query = useQuery({
-    queryKey: ['shop', 'products', { search, sort, category, page }],
+    queryKey: ['shop', 'products', { search, sort, category, page, ...filters }],
     queryFn: () =>
       get('/shop/products', {
         params: {
@@ -34,6 +64,7 @@ export function ProductListPage() {
           sort: sort || undefined,
           category: category || undefined,
           page,
+          ...filters,
         },
       }),
     placeholderData: (previous) => previous,
@@ -55,7 +86,7 @@ export function ProductListPage() {
 
   const products = query.data?.data ?? []
 
-  return (
+  const grid = (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -110,6 +141,24 @@ export function ProductListPage() {
       )}
 
       <Pagination meta={query.data?.meta} onPage={(next) => update({ page: next })} />
+    </div>
+  )
+
+  return (
+    // Flex, not a two-column grid: when every filter block is switched off
+    // or empty the sidebar renders nothing, and a grid would still hold its
+    // 16rem column and its gap open beside the products.
+    <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+      <ProductFilters
+        settings={settings}
+        categories={categories}
+        category={category}
+        search={search}
+        params={params}
+        onChange={update}
+      />
+
+      <div className="min-w-0 flex-1">{grid}</div>
     </div>
   )
 }

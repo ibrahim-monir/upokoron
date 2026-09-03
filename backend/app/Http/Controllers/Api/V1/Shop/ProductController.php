@@ -8,8 +8,11 @@ use App\Enums\OrderStatus;
 use App\Enums\ProductStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductVariation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +22,73 @@ class ProductController extends Controller
     /**
      * Public storefront product listing.
      */
+    /**
+     * What the sidebar filters can offer for this category or search.
+     *
+     * Scoped by category and search only, deliberately not by the filters
+     * themselves. Recomputing the brand list from the already-filtered
+     * results makes every brand you tick remove the others from the list,
+     * so unticking one is the only way to see what else there was -- the
+     * filters end up fighting the person using them.
+     *
+     * Brands with nothing published behind them are left out: a filter that
+     * can only ever return nothing is not a choice.
+     */
+    public function filters(Request $request): JsonResponse
+    {
+        $base = fn () => Product::query()
+            ->published()
+            ->when($request->filled('search'), function ($query) use ($request): void {
+                $term = '%'.$request->string('search')->trim().'%';
+                $query->where('name', 'like', $term);
+            })
+            ->when($request->filled('category'), function ($query) use ($request): void {
+                $category = Category::query()->where('slug', $request->string('category')->trim())->first();
+
+                $category !== null ? $query->inCategory($category) : $query->whereRaw('1 = 0');
+            });
+
+        $brands = (clone $base())
+            ->whereNotNull('brand_id')
+            ->selectRaw('brand_id, COUNT(*) as total')
+            ->groupBy('brand_id')
+            ->pluck('total', 'brand_id');
+
+        $names = Brand::query()
+            ->whereIn('id', $brands->keys())
+            ->active()
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+
+        $prices = ProductVariation::query()
+            ->where('is_default', true)
+            ->whereIn('product_id', (clone $base())->select('products.id'))
+            ->selectRaw('MIN(selling_price) as low, MAX(selling_price) as high')
+            ->first();
+
+        return response()->json([
+            'data' => [
+                'brands' => $names->map(fn (Brand $brand): array => [
+                    'id' => $brand->id,
+                    'name' => $brand->name,
+                    'slug' => $brand->slug,
+                    'product_count' => (int) ($brands[$brand->id] ?? 0),
+                ])->values(),
+
+                // Null when there is nothing to price, so the frontend can
+                // leave the block out rather than draw an empty slider.
+                'price' => $prices?->low === null ? null : [
+                    'min' => (int) floor((float) $prices->low),
+                    'max' => (int) ceil((float) $prices->high),
+                ],
+
+                'in_stock' => (clone $base())
+                    ->whereHas('defaultVariation.inventory', fn ($i) => $i->whereRaw('quantity - reserved_quantity > 0'))
+                    ->count(),
+            ],
+        ]);
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $perPage = min(
@@ -65,6 +135,44 @@ class ProductController extends Controller
                 }
             })
 
+            // Filter by brand slug.
+            ->when($request->filled('brand'), function ($query) use ($request): void {
+                $query->whereHas('brand', fn ($b) => $b->where('slug', $request->string('brand')->trim()));
+            })
+
+            // Price range, read off the variation the listing actually shows
+            // a price for. Filtering on any variation would put a product in
+            // a "under 500" list because one size of it is cheap while the
+            // card beside it says 2,400.
+            ->when($request->filled('min_price'), function ($query) use ($request): void {
+                $min = $request->string('min_price')->value();
+                $query->whereHas('defaultVariation', fn ($v) => $v->where('selling_price', '>=', $min));
+            })
+            ->when($request->filled('max_price'), function ($query) use ($request): void {
+                $max = $request->string('max_price')->value();
+                $query->whereHas('defaultVariation', fn ($v) => $v->where('selling_price', '<=', $max));
+            })
+
+            // In stock: what is free to sell, not what is on the shelf.
+            // Reserved units belong to orders already placed, and a shopper
+            // who filters for "in stock" and reaches a sold-out page has been
+            // told something false.
+            ->when($request->boolean('in_stock'), function ($query): void {
+                $query->whereHas('defaultVariation.inventory', function ($inventory): void {
+                    $inventory->whereRaw('quantity - reserved_quantity > 0');
+                });
+            })
+
+            // The default variation's price, for sorting. A subquery rather
+            // than a join: a product with no default variation still belongs
+            // in the list, it just sorts as having no price.
+            ->addSelect(['list_price' => ProductVariation::query()
+                ->select('selling_price')
+                ->whereColumn('product_id', 'products.id')
+                ->where('is_default', true)
+                ->limit(1),
+            ])
+
             // Optional product type filter.
             ->when(
                 $request->filled('type'),
@@ -93,12 +201,20 @@ class ProductController extends Controller
                 $request->string('sort')->value() === 'name_desc',
                 fn ($query) => $query->orderByDesc('name')
             )
+            ->when(
+                $request->string('sort')->value() === 'price',
+                fn ($query) => $query->orderBy('list_price')
+            )
+            ->when(
+                $request->string('sort')->value() === 'price_desc',
+                fn ($query) => $query->orderByDesc('list_price')
+            )
 
             // Default: newest products first.
             ->when(
                 ! in_array(
                     $request->string('sort')->value(),
-                    ['oldest', 'name', 'name_desc'],
+                    ['oldest', 'name', 'name_desc', 'price', 'price_desc'],
                     true
                 ),
                 fn ($query) => $query->latest('id')

@@ -36,6 +36,11 @@ Route::post('rewards/balance', [RewardInfoController::class, 'balanceByPhone'])
     ->middleware('throttle:rewards-balance')
     ->name('rewards.balance');
 
+// What the category sidebar can offer: brands with something behind them,
+// and the price range actually on sale.
+Route::get('product-filters', [ProductController::class, 'filters'])
+    ->name('product-filters');
+
 Route::get('faqs', [\App\Http\Controllers\Api\V1\Shop\FaqController::class, 'index'])
     ->name('faqs');
 
