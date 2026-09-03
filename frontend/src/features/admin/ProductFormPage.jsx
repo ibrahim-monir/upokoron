@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
-  FolderTree,
   Image as ImageIcon,
   Info,
   Package,
@@ -1093,7 +1092,7 @@ export default function ProductFormPage() {
    * reported against a box nobody can see is a form that will not save and
    * will not say why.
    */
-  const moreOpen = showMore || sectionHasError(['brand_id', 'unit_id', 'barcode'])
+  const moreOpen = showMore || sectionHasError(['brand_id', 'unit_id'])
 
   const type = useWatch({
     control,
@@ -2027,6 +2026,29 @@ export default function ProductFormPage() {
                   )}
                 </Field>
 
+                {/*
+                   Accessories, picked per product. "Related products" already
+                   offers the same category -- alternatives to something the
+                   shopper has chosen. These are what goes WITH it: the wire
+                   and the connector for a battery.
+                */}
+                <div>
+                  <p className="text-sm font-medium text-ink-800">
+                    Additional products
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-ink-500">
+                    Shown on this product's page as &ldquo;Goes Well With&rdquo;.
+                    Search for the accessories that go with it.
+                  </p>
+
+                  <PairedProductPicker
+                    selected={pairedIds}
+                    onChange={setPairedIds}
+                    excludeId={id ? Number(id) : null}
+                  />
+                </div>
+
                 <div className="grid gap-5 md:grid-cols-2">
                   <Field
                     label="Product type"
@@ -2193,17 +2215,6 @@ export default function ProductFormPage() {
                       )}
                     </Field>
 
-                    <Field
-                      label="Barcode"
-                      placeholder="Scan or enter barcode"
-                      error={
-                        errors.barcode
-                          ?.message
-                      }
-                      {...register(
-                        'barcode',
-                      )}
-                    />
                   </div>
                 )}
 
@@ -2217,7 +2228,7 @@ export default function ProductFormPage() {
                   ) : (
                     <ChevronRight className="h-3.5 w-3.5" />
                   )}
-                  {moreOpen ? 'Fewer options' : 'More options — brand, unit, barcode'}
+                  {moreOpen ? 'Fewer options' : 'More options — brand, unit'}
                 </button>
             </FoldableSection>
 
@@ -2239,28 +2250,6 @@ export default function ProductFormPage() {
               defaultOpen={true}
               forceOpen={sectionHasError(['selling_price', 'compare_at_price', 'special_price', 'special_starts_at', 'special_ends_at'])}
             >
-
-                <div className="grid gap-5 md:grid-cols-2">
-
-                  <div className="rounded-2xl border border-ink-200 bg-white p-4">
-
-                    <p className="mb-4 text-sm font-semibold text-ink-900">
-                      Regular Price
-                    </p>
-
-
-                  </div>
-
-                  <div className="rounded-2xl border border-ink-200 bg-white p-4">
-
-                    <p className="mb-4 text-sm font-semibold text-ink-900">
-                      Discount Price
-                    </p>
-
-
-                  </div>
-
-                </div>
 
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
 
@@ -2865,56 +2854,6 @@ export default function ProductFormPage() {
                =============================================================== */}
 
             <SidebarSection
-              icon={FolderTree}
-              title="Categories"
-              description="Where this appears in the shop."
-            >
-              {/*
-                 One product, several shelves, one control -- in the half
-                 of the row the old single-category dropdown used to hold.
-              */}
-              <div>
-                <p className="text-sm font-medium text-ink-800">
-                  Categories
-                  <span
-                    className="ml-0.5 text-danger-500"
-                    aria-hidden="true"
-                  >
-                    *
-                  </span>
-                </p>
-
-                <p className="mt-0.5 text-xs text-ink-500">
-                  Tick every category this belongs in. The first is the main
-                  one, used by the breadcrumb and the URL.
-                </p>
-
-                <CategoryPicker
-                  options={categoryOptions}
-                  primaryId={primaryCategoryId}
-                  extraIds={extraCategoryIds}
-                  invalid={Boolean(errors.category_id)}
-                  onChange={({ primary, extra }) => {
-                    setValue('category_id', primary ?? '', {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    })
-                    setExtraCategoryIds(extra)
-                  }}
-                />
-
-                {errors.category_id?.message && (
-                  <p
-                    role="alert"
-                    className="mt-1.5 text-xs text-danger-700"
-                  >
-                    {errors.category_id.message}
-                  </p>
-                )}
-              </div>
-            </SidebarSection>
-
-            <SidebarSection
               icon={ShieldCheck}
               title="Publishing"
               description="Visibility and storefront status."
@@ -2989,6 +2928,52 @@ export default function ProductFormPage() {
 
                 </label>
 
+              </div>
+
+              <div className="mt-4 border-t border-ink-100 pt-4">
+              {/*
+                 One product, several shelves, one control -- in the half
+                 of the row the old single-category dropdown used to hold.
+              */}
+              <div>
+                <p className="text-sm font-medium text-ink-800">
+                  Categories
+                  <span
+                    className="ml-0.5 text-danger-500"
+                    aria-hidden="true"
+                  >
+                    *
+                  </span>
+                </p>
+
+                <p className="mt-0.5 text-xs text-ink-500">
+                  Tick every category this belongs in. The first is the main
+                  one, used by the breadcrumb and the URL.
+                </p>
+
+                <CategoryPicker
+                  options={categoryOptions}
+                  primaryId={primaryCategoryId}
+                  extraIds={extraCategoryIds}
+                  invalid={Boolean(errors.category_id)}
+                  onChange={({ primary, extra }) => {
+                    setValue('category_id', primary ?? '', {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                    setExtraCategoryIds(extra)
+                  }}
+                />
+
+                {errors.category_id?.message && (
+                  <p
+                    role="alert"
+                    className="mt-1.5 text-xs text-danger-700"
+                  >
+                    {errors.category_id.message}
+                  </p>
+                )}
+              </div>
               </div>
 
             </SidebarSection>
