@@ -969,8 +969,7 @@ export default function ProductFormPage() {
    * reported against a box nobody can see is a form that will not save and
    * will not say why.
    */
-  const moreOpen =
-    showMore || sectionHasError(['slug', 'type', 'brand_id', 'unit_id', 'sku', 'barcode'])
+  const moreOpen = showMore || sectionHasError(['brand_id', 'unit_id', 'barcode'])
 
 
   /* ------------------------------------------------------------------------
@@ -1899,8 +1898,8 @@ export default function ProductFormPage() {
 
             <FoldableSection
                   icon={ShoppingBag}
-                  title="Basic information"
-                  description="Essential information used to identify and organize the product."
+                  title="Product"
+                  description="Everything needed to put this on the shelf."
                   defaultOpen={true}
                   forceOpen={sectionHasError(['name', 'slug', 'category_id', 'brand_id', 'unit_id', 'type', 'sku', 'barcode'])}
                 >
@@ -1915,7 +1914,6 @@ export default function ProductFormPage() {
                   {...register('name')}
                 />
 
-                {moreOpen && (
                 <Field
                   label="Product slug"
                   placeholder="baseus-65w-gan-charger"
@@ -1931,264 +1929,78 @@ export default function ProductFormPage() {
                     onChange: () => setSlugAuto(false),
                   })}
                 />
-                )}
-
-                {moreOpen && (
-                <div className="grid gap-5 md:grid-cols-2">
-
-                  <Field
-                    label="Product type"
-                    required
-                    hint={
-                      type ===
-                      'variable'
-                        ? 'Product has multiple variations.'
-                        : 'Product has one version.'
-                    }
-                  >
-                    {({
-                      id: fieldId,
-                    }) => (
-                      <Select
-                        id={fieldId}
-                        {...register(
-                          'type',
-                        )}
-                      >
-                        <option value="simple">
-                          Simple product
-                        </option>
-
-                        <option value="variable">
-                          Variable product
-                        </option>
-                      </Select>
-                    )}
-                  </Field>
-
-                  {/*
-                     One product, several shelves, one control -- in the half
-                     of the row the old single-category dropdown used to hold.
-                  */}
-                  <div>
-                    <p className="text-sm font-medium text-ink-800">
-                      Categories
-                      <span
-                        className="ml-0.5 text-danger-500"
-                        aria-hidden="true"
-                      >
-                        *
-                      </span>
-                    </p>
-
-                    <p className="mt-0.5 text-xs text-ink-500">
-                      Tick every category this belongs in. The first is the main
-                      one, used by the breadcrumb and the URL.
-                    </p>
-
-                    <CategoryPicker
-                      options={categoryOptions}
-                      primaryId={primaryCategoryId}
-                      extraIds={extraCategoryIds}
-                      invalid={Boolean(errors.category_id)}
-                      onChange={({ primary, extra }) => {
-                        setValue('category_id', primary ?? '', {
-                          shouldValidate: true,
-                          shouldDirty: true,
-                        })
-                        setExtraCategoryIds(extra)
-                      }}
-                    />
-
-                    {errors.category_id?.message && (
-                      <p
-                        role="alert"
-                        className="mt-1.5 text-xs text-danger-700"
-                      >
-                        {errors.category_id.message}
-                      </p>
-                    )}
-                  </div>
-
-                </div>
-                )}
 
                 {/*
-                   Accessories, picked per product. "Related products" already
-                   offers the same category -- alternatives to something the
-                   shopper has chosen. These are what goes WITH it: the wire
-                   and the connector for a battery.
+                   One product, several shelves, one control -- in the half
+                   of the row the old single-category dropdown used to hold.
                 */}
                 <div>
                   <p className="text-sm font-medium text-ink-800">
-                    Additional products
+                    Categories
+                    <span
+                      className="ml-0.5 text-danger-500"
+                      aria-hidden="true"
+                    >
+                      *
+                    </span>
                   </p>
 
                   <p className="mt-0.5 text-xs text-ink-500">
-                    Shown on this product's page as &ldquo;Goes Well With&rdquo;.
-                    Search for the accessories that go with it.
+                    Tick every category this belongs in. The first is the main
+                    one, used by the breadcrumb and the URL.
                   </p>
 
-                  <PairedProductPicker
-                    selected={pairedIds}
-                    onChange={setPairedIds}
-                    excludeId={id ? Number(id) : null}
-                  />
-                </div>
-
-                {moreOpen && (
-                <div className="grid gap-5 md:grid-cols-2">
-
-                  <Field
-                    label="Brand"
-                    error={
-                      errors.brand_id
-                        ?.message
-                    }
-                  >
-                    {({
-                      id: fieldId,
-                    }) => (
-                      <Select
-                        id={fieldId}
-                        {...register(
-                          'brand_id',
-                        )}
-                      >
-                        <option value="">
-                          No brand
-                        </option>
-
-                        {brandOptions.map(
-                          (brand) => (
-                            <option
-                              key={
-                                brand.id
-                              }
-                              value={
-                                brand.id
-                              }
-                            >
-                              {
-                                brand.name
-                              }
-                            </option>
-                          ),
-                        )}
-                      </Select>
-                    )}
-                  </Field>
-
-                  <Field
-                    label="Sold by"
-                    hint="Example: Piece, Kg, Box."
-                    error={
-                      errors.unit_id
-                        ?.message
-                    }
-                  >
-                    {({
-                      id: fieldId,
-                    }) => (
-                      <Select
-                        id={fieldId}
-                        {...register(
-                          'unit_id',
-                        )}
-                      >
-                        <option value="">
-                          No unit
-                        </option>
-
-                        {unitOptions.map(
-                          (unit) => (
-                            <option
-                              key={
-                                unit.id
-                              }
-                              value={
-                                unit.id
-                              }
-                            >
-                              {
-                                unit.name
-                              } (
-                              {
-                                unit.short_name
-                              }
-                              )
-                            </option>
-                          ),
-                        )}
-                      </Select>
-                    )}
-                  </Field>
-
-                </div>
-                )}
-
-                {moreOpen && (
-                <div className="grid gap-5 md:grid-cols-2">
-
-                  <Field
-                    label="SKU"
-                    placeholder="e.g. BASEUS-65W-BLK"
-                    hint="Leave blank to generate automatically."
-                    error={
-                      errors.sku?.message
-                    }
-                    {...register('sku')}
+                  <CategoryPicker
+                    options={categoryOptions}
+                    primaryId={primaryCategoryId}
+                    extraIds={extraCategoryIds}
+                    invalid={Boolean(errors.category_id)}
+                    onChange={({ primary, extra }) => {
+                      setValue('category_id', primary ?? '', {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      })
+                      setExtraCategoryIds(extra)
+                    }}
                   />
 
-                  <Field
-                    label="Barcode"
-                    placeholder="Scan or enter barcode"
-                    error={
-                      errors.barcode
-                        ?.message
-                    }
-                    {...register(
-                      'barcode',
-                    )}
-                  />
-
-                </div>
-                )}
-
-
-                {/*
-                   Name and category are what a product needs to exist; the
-                   API asks for three more and fills all three in itself. The
-                   rest live here rather than in front of someone adding a
-                   charger, and nothing has moved -- opening this puts every
-                   field back exactly where it was.
-                */}
-                <button
-                  type="button"
-                  onClick={() => setShowMore((value) => !value)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
-                >
-                  {moreOpen ? (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
+                  {errors.category_id?.message && (
+                    <p
+                      role="alert"
+                      className="mt-1.5 text-xs text-danger-700"
+                    >
+                      {errors.category_id.message}
+                    </p>
                   )}
-                  {moreOpen ? 'Fewer options' : 'More options — slug, type, brand, SKU'}
-                </button>
-            </FoldableSection>
+                </div>
 
-            {/* ===============================================================
-               02 PRODUCT CONTENT
-               =============================================================== */}
-
-            <FoldableSection
-              icon={Info}
-              title="Product content"
-              description="Content displayed on the storefront."
-              bodyClass="space-y-5 p-5"
-              defaultOpen={false}
-              forceOpen={sectionHasError(['short_description', 'description'])}
-            >
+                <Field
+                  label="Full description"
+                  error={
+                    errors.description
+                      ?.message
+                  }
+                >
+                  {({
+                    id: fieldId,
+                    invalid,
+                  }) => (
+                    <Controller
+                      name="description"
+                      control={control}
+                      render={({ field }) => (
+                        <RichTextEditor
+                          id={fieldId}
+                          invalid={invalid}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="Describe the product, features, compatibility and important details..."
+                        />
+                      )}
+                    />
+                  )}
+                </Field>
 
                 <Field
                   label="Short description"
@@ -2250,35 +2062,200 @@ export default function ProductFormPage() {
                   )}
                 </Field>
 
-                <Field
-                  label="Full description"
-                  error={
-                    errors.description
-                      ?.message
-                  }
-                >
-                  {({
-                    id: fieldId,
-                    invalid,
-                  }) => (
-                    <Controller
-                      name="description"
-                      control={control}
-                      render={({ field }) => (
-                        <RichTextEditor
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Field
+                    label="Product type"
+                    required
+                    hint={
+                      type ===
+                      'variable'
+                        ? 'Product has multiple variations.'
+                        : 'Product has one version.'
+                    }
+                  >
+                    {({
+                      id: fieldId,
+                    }) => (
+                      <Select
+                        id={fieldId}
+                        {...register(
+                          'type',
+                        )}
+                      >
+                        <option value="simple">
+                          Simple product
+                        </option>
+
+                        <option value="variable">
+                          Variable product
+                        </option>
+                      </Select>
+                    )}
+                  </Field>
+
+                  <Field
+                    label="SKU"
+                    placeholder="e.g. BASEUS-65W-BLK"
+                    hint="Leave blank to generate automatically."
+                    error={
+                      errors.sku?.message
+                    }
+                    {...register('sku')}
+                  />
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Field
+                    label="Regular price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    error={
+                      errors.compare_at_price
+                        ?.message
+                    }
+                    {...register(
+                      'compare_at_price',
+                    )}
+                  />
+
+                  <Field
+                    label="Discount Price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    error={
+                      errors.selling_price
+                        ?.message
+                    }
+                    {...register(
+                      'selling_price',
+                    )}
+                  />
+                </div>
+
+                {/*
+                   Brand, unit and barcode: real fields, rarely the reason
+                   someone opened this page. Folded, and unfolded by itself
+                   when one of them is what the form is complaining about.
+                */}
+                {moreOpen && (
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <Field
+                      label="Brand"
+                      error={
+                        errors.brand_id
+                          ?.message
+                      }
+                    >
+                      {({
+                        id: fieldId,
+                      }) => (
+                        <Select
                           id={fieldId}
-                          invalid={invalid}
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          placeholder="Describe the product, features, compatibility and important details..."
-                        />
+                          {...register(
+                            'brand_id',
+                          )}
+                        >
+                          <option value="">
+                            No brand
+                          </option>
+
+                          {brandOptions.map(
+                            (brand) => (
+                              <option
+                                key={
+                                  brand.id
+                                }
+                                value={
+                                  brand.id
+                                }
+                              >
+                                {
+                                  brand.name
+                                }
+                              </option>
+                            ),
+                          )}
+                        </Select>
+                      )}
+                    </Field>
+
+                    <Field
+                      label="Sold by"
+                      hint="Example: Piece, Kg, Box."
+                      error={
+                        errors.unit_id
+                          ?.message
+                      }
+                    >
+                      {({
+                        id: fieldId,
+                      }) => (
+                        <Select
+                          id={fieldId}
+                          {...register(
+                            'unit_id',
+                          )}
+                        >
+                          <option value="">
+                            No unit
+                          </option>
+
+                          {unitOptions.map(
+                            (unit) => (
+                              <option
+                                key={
+                                  unit.id
+                                }
+                                value={
+                                  unit.id
+                                }
+                              >
+                                {
+                                  unit.name
+                                } (
+                                {
+                                  unit.short_name
+                                }
+                                )
+                              </option>
+                            ),
+                          )}
+                        </Select>
+                      )}
+                    </Field>
+
+                    <Field
+                      label="Barcode"
+                      placeholder="Scan or enter barcode"
+                      error={
+                        errors.barcode
+                          ?.message
+                      }
+                      {...register(
+                        'barcode',
                       )}
                     />
-                  )}
-                </Field>
+                  </div>
+                )}
 
+                <button
+                  type="button"
+                  onClick={() => setShowMore((value) => !value)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
+                >
+                  {moreOpen ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                  {moreOpen ? 'Fewer options' : 'More options — brand, unit, barcode'}
+                </button>
             </FoldableSection>
+
 
             {/* ===============================================================
                04 PRICING
@@ -2306,20 +2283,6 @@ export default function ProductFormPage() {
                       Regular Price
                     </p>
 
-                    <Field
-                      label="Old price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      error={
-                        errors.compare_at_price
-                          ?.message
-                      }
-                      {...register(
-                        'compare_at_price',
-                      )}
-                    />
 
                   </div>
 
@@ -2329,20 +2292,6 @@ export default function ProductFormPage() {
                       Discount Price
                     </p>
 
-                    <Field
-                      label="Selling price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      error={
-                        errors.selling_price
-                          ?.message
-                      }
-                      {...register(
-                        'selling_price',
-                      )}
-                    />
 
                   </div>
 
