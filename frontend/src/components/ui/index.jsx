@@ -109,10 +109,29 @@ export function ErrorState({ error, onRetry }) {
 }
 
 /** Wide content scrolls inside its own container; the page never does. */
-export function TableWrap({ className, children }) {
+/**
+ * A table in a card.
+ *
+ * By default the table is as wide as its content needs and the card scrolls
+ * sideways -- right for a table whose columns cannot usefully be squeezed,
+ * like a ledger of figures.
+ *
+ * `fit` is the other choice: the table is laid out to the width available and
+ * the columns divide it up, so nothing scrolls horizontally. It only works if
+ * the columns are given widths (`<Th className="w-[26%]">`) and the cells
+ * inside can shrink -- a cell full of `whitespace-nowrap` will simply spill
+ * out of its column instead. Use `truncate` on those.
+ */
+export function TableWrap({ fit = false, className, children }) {
   return (
-    <div className={cx('scroll-x rounded-card border border-ink-200 bg-white', className)}>
-      <table className="w-full min-w-max text-sm">{children}</table>
+    <div
+      className={cx(
+        'rounded-card border border-ink-200 bg-white',
+        !fit && 'scroll-x',
+        className,
+      )}
+    >
+      <table className={cx('w-full text-sm', fit ? 'table-fixed' : 'min-w-max')}>{children}</table>
     </div>
   )
 }

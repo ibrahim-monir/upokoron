@@ -617,270 +617,278 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <TableWrap>
-              <thead>
-                <tr className="bg-slate-50/80">
-                  <Th className="w-10">
-                    <input
-                      type="checkbox"
-                      checked={allOnPageSelected}
-                      onChange={(event) =>
-                        setSelected(
-                          event.target.checked
-                            ? new Set(products.map((product) => product.id))
-                            : new Set(),
-                        )
-                      }
-                      aria-label="Select every product on this page"
-                      className="h-4 w-4 rounded border-slate-300 text-brand-800"
-                    />
-                  </Th>
-                  <Th className="w-14" />
-                  <Th>Name</Th>
-                  <Th>SKU</Th>
-                  {seesStock && <Th>Stock</Th>}
-                  <Th numeric>Price</Th>
-                  <Th>Categories</Th>
-                  <Th>Brand</Th>
-                  <Th className="w-10" />
-                  <Th>Date</Th>
-                </tr>
-              </thead>
+          <TableWrap fit>
+            <thead>
+              <tr className="bg-slate-50/80">
+                <Th className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    onChange={(event) =>
+                      setSelected(
+                        event.target.checked
+                          ? new Set(products.map((product) => product.id))
+                          : new Set(),
+                      )
+                    }
+                    aria-label="Select every product on this page"
+                    className="h-4 w-4 rounded border-slate-300 text-brand-800"
+                  />
+                </Th>
+                <Th className="w-14" />
+                {/*
+                   Name gets a quarter of the row and everything else divides
+                   the rest. Widths are declared here rather than left to the
+                   content because the table is `fit`: without them the
+                   browser splits the width evenly and the name -- the one
+                   column anybody scans -- comes out as narrow as Brand.
+                */}
+                <Th className="w-[26%]">Name</Th>
+                <Th className="w-[13%]">SKU</Th>
+                {seesStock && <Th className="w-[12%]">Stock</Th>}
+                <Th numeric className="w-[9%]">Price</Th>
+                <Th className="w-[14%]">Categories</Th>
+                <Th className="w-[10%]">Brand</Th>
+                <Th className="w-10" />
+                <Th className="w-[12%]">Date</Th>
+              </tr>
+            </thead>
 
-              <tbody>
-                {products.map((product) => {
-                  const isOpen = expanded.has(product.id)
-                  const canExpand = seesStock && product.stock?.tracked
+            <tbody>
+              {products.map((product) => {
+                const isOpen = expanded.has(product.id)
+                const canExpand = seesStock && product.stock?.tracked
 
-                  return (
-                    <Fragment key={product.id}>
-                      <tr
-                        className={cx(
-                          'group border-t border-slate-100 transition-colors hover:bg-slate-50/70',
-                          selected.has(product.id) && 'bg-brand-50/50',
-                          isOpen && 'bg-slate-50/70',
-                        )}
-                      >
-                        <Td>
-                          <input
-                            type="checkbox"
-                            checked={selected.has(product.id)}
-                            onChange={() => toggle(product.id)}
-                            aria-label={`Select ${product.name}`}
-                            className="h-4 w-4 rounded border-slate-300 text-brand-800"
-                          />
-                        </Td>
+                return (
+                  <Fragment key={product.id}>
+                    <tr
+                      className={cx(
+                        'group border-t border-slate-100 transition-colors hover:bg-slate-50/70',
+                        selected.has(product.id) && 'bg-brand-50/50',
+                        isOpen && 'bg-slate-50/70',
+                      )}
+                    >
+                      <Td>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(product.id)}
+                          onChange={() => toggle(product.id)}
+                          aria-label={`Select ${product.name}`}
+                          className="h-4 w-4 rounded border-slate-300 text-brand-800"
+                        />
+                      </Td>
 
-                        <Td>
-                          <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded border border-slate-200 bg-slate-50">
-                            {product.primary_image ? (
-                              <img src={product.primary_image} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              <ImageOff className="h-4 w-4 text-slate-400" />
-                            )}
-                          </span>
-                        </Td>
+                      <Td>
+                        <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded border border-slate-200 bg-slate-50">
+                          {product.primary_image ? (
+                            <img src={product.primary_image} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <ImageOff className="h-4 w-4 text-slate-400" />
+                          )}
+                        </span>
+                      </Td>
 
-                        <Td>
-                          <div className="min-w-[220px]">
+                      <Td>
+                        <div className="break-words">
+                          <Link
+                            to={`/admin/products/${product.id}/edit`}
+                            className="text-sm font-semibold text-brand-800 hover:underline"
+                          >
+                            {product.name}
+                          </Link>
+
+                          {product.status !== 'active' && (
+                            <span className="ml-1.5 text-sm text-slate-500">
+                              &mdash; {product.status_label ?? product.status}
+                            </span>
+                          )}
+
+                          {/*
+                             The row actions appear on hover, the way every list
+                             of this kind does it. They stay in the DOM so the
+                             keyboard still reaches them; only the eye loses them
+                             until the row is under the cursor.
+                          */}
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-slate-500 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                            <span>ID: {product.id}</span>
+
+                            <span aria-hidden="true">|</span>
                             <Link
                               to={`/admin/products/${product.id}/edit`}
-                              className="text-sm font-semibold text-brand-800 hover:underline"
+                              className="text-brand-700 hover:text-brand-900 hover:underline"
                             >
-                              {product.name}
+                              Edit
                             </Link>
 
-                            {product.status !== 'active' && (
-                              <span className="ml-1.5 text-sm text-slate-500">
-                                &mdash; {product.status_label ?? product.status}
-                              </span>
+                            {canExpand && seesStock && (
+                              <>
+                                <span aria-hidden="true">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpanded(product.id)}
+                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                >
+                                  {isOpen ? 'Hide stock' : 'Stock'}
+                                </button>
+                              </>
                             )}
 
-                            {/*
-                               The row actions appear on hover, the way every list
-                               of this kind does it. They stay in the DOM so the
-                               keyboard still reaches them; only the eye loses them
-                               until the row is under the cursor.
-                            */}
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-slate-500 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                              <span>ID: {product.id}</span>
+                            {can('products.create') && (
+                              <>
+                                <span aria-hidden="true">|</span>
+                                <button
+                                  type="button"
+                                  disabled={duplicate.isPending}
+                                  onClick={() =>
+                                    duplicate.mutate({
+                                      url: `/admin/products/${product.id}/duplicate`,
+                                    })
+                                  }
+                                  className="text-brand-700 hover:text-brand-900 hover:underline disabled:opacity-50"
+                                >
+                                  Duplicate
+                                </button>
+                              </>
+                            )}
 
-                              <span aria-hidden="true">|</span>
-                              <Link
-                                to={`/admin/products/${product.id}/edit`}
-                                className="text-brand-700 hover:text-brand-900 hover:underline"
-                              >
-                                Edit
-                              </Link>
+                            {product.status === 'active' && (
+                              <>
+                                <span aria-hidden="true">|</span>
+                                <a
+                                  href={`/products/${product.slug}`}
+                                  target="_blank"
+                                  rel="noreferrer noopener"
+                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                >
+                                  Preview
+                                </a>
+                              </>
+                            )}
 
-                              {canExpand && seesStock && (
-                                <>
-                                  <span aria-hidden="true">|</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleExpanded(product.id)}
-                                    className="text-brand-700 hover:text-brand-900 hover:underline"
-                                  >
-                                    {isOpen ? 'Hide stock' : 'Stock'}
-                                  </button>
-                                </>
-                              )}
+                            {can('products.delete') && (
+                              <>
+                                <span aria-hidden="true">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!window.confirm(`Delete ${product.name}?`)) return
 
-                              {can('products.create') && (
-                                <>
-                                  <span aria-hidden="true">|</span>
-                                  <button
-                                    type="button"
-                                    disabled={duplicate.isPending}
-                                    onClick={() =>
-                                      duplicate.mutate({
-                                        url: `/admin/products/${product.id}/duplicate`,
-                                      })
-                                    }
-                                    className="text-brand-700 hover:text-brand-900 hover:underline disabled:opacity-50"
-                                  >
-                                    Duplicate
-                                  </button>
-                                </>
-                              )}
-
-                              {product.status === 'active' && (
-                                <>
-                                  <span aria-hidden="true">|</span>
-                                  <a
-                                    href={`/products/${product.slug}`}
-                                    target="_blank"
-                                    rel="noreferrer noopener"
-                                    className="text-brand-700 hover:text-brand-900 hover:underline"
-                                  >
-                                    Preview
-                                  </a>
-                                </>
-                              )}
-
-                              {can('products.delete') && (
-                                <>
-                                  <span aria-hidden="true">|</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (!window.confirm(`Delete ${product.name}?`)) return
-
-                                      remove.mutate({
-                                        method: 'delete',
-                                        url: `/admin/products/${product.id}`,
-                                      })
-                                    }}
-                                    className="text-danger-700 hover:text-danger-900 hover:underline"
-                                  >
-                                    Trash
-                                  </button>
-                                </>
-                              )}
-                            </div>
+                                    remove.mutate({
+                                      method: 'delete',
+                                      url: `/admin/products/${product.id}`,
+                                    })
+                                  }}
+                                  className="text-danger-700 hover:text-danger-900 hover:underline"
+                                >
+                                  Trash
+                                </button>
+                              </>
+                            )}
                           </div>
-                        </Td>
+                        </div>
+                      </Td>
 
+                      <Td>
+                        <span
+                          className="block truncate text-xs text-slate-600"
+                          title={product.default_variation?.sku ?? undefined}
+                        >
+                          {product.default_variation?.sku ?? '-'}
+                        </span>
+                      </Td>
+
+                      {seesStock && (
                         <Td>
-                          <span className="whitespace-nowrap text-xs text-slate-600">
-                            {product.default_variation?.sku ?? '-'}
-                          </span>
-                        </Td>
-
-                        {seesStock && (
-                          <Td>
-                            {product.default_variation?.in_stock ? (
-                              <span className="whitespace-nowrap text-xs font-semibold text-accent-700">
-                                In stock
-                                <span className="ml-1 font-normal text-slate-500">
-                                  ({quantity(product.default_variation?.available_quantity)})
-                                </span>
+                          {product.default_variation?.in_stock ? (
+                            <span className="whitespace-nowrap text-xs font-semibold text-accent-700">
+                              In stock
+                              <span className="ml-1 font-normal text-slate-500">
+                                ({quantity(product.default_variation?.available_quantity)})
                               </span>
-                            ) : (
-                              <span className="whitespace-nowrap text-xs font-semibold text-danger-700">
-                                Out of stock
-                                <span className="ml-1 font-normal text-slate-500">(0)</span>
-                              </span>
-                            )}
-                          </Td>
-                        )}
-
-                        <Td numeric>
-                          <span className="tabular text-sm font-semibold text-slate-900">
-                            {money(product.default_variation?.selling_price ?? 0)}
-                          </span>
+                            </span>
+                          ) : (
+                            <span className="whitespace-nowrap text-xs font-semibold text-danger-700">
+                              Out of stock
+                              <span className="ml-1 font-normal text-slate-500">(0)</span>
+                            </span>
+                          )}
                         </Td>
-
-                        <Td>
-                          <span className="flex flex-wrap gap-x-1 gap-y-0.5 text-xs text-slate-600">
-                            {(product.categories ?? []).length === 0
-                              ? 'Uncategorized'
-                              : (product.categories ?? []).map((category, index) => (
-                                  <Link
-                                    key={category.id}
-                                    to={`/admin/products?category=${category.slug}`}
-                                    className="text-brand-700 hover:underline"
-                                  >
-                                    {category.name}
-                                    {index < (product.categories ?? []).length - 1 && ','}
-                                  </Link>
-                                ))}
-                          </span>
-                        </Td>
-
-                        <Td>
-                          <span className="whitespace-nowrap text-xs text-slate-600">
-                            {product.brand?.name ?? '-'}
-                          </span>
-                        </Td>
-
-                        <Td>
-                          <Star
-                            className={
-                              product.is_featured
-                                ? 'h-4 w-4 fill-warning-500 text-warning-500'
-                                : 'h-4 w-4 text-slate-300'
-                            }
-                            aria-label={product.is_featured ? 'Featured' : 'Not featured'}
-                          />
-                        </Td>
-
-                        <Td>
-                          <span className="block whitespace-nowrap text-[11px] text-slate-500">
-                            {product.status === 'active' ? 'Published' : 'Last modified'}
-                          </span>
-                          <span className="block whitespace-nowrap text-xs text-slate-700">
-                            {date(
-                              product.status === 'active'
-                                ? product.published_at ?? product.created_at
-                                : product.updated_at ?? product.created_at,
-                            )}
-                          </span>
-                        </Td>
-                      </tr>
-
-                      {isOpen && (
-                        <VariationStockRows
-                          product={product}
-                          colSpan={columnCount}
-                          canAdjust={canAdjust}
-                          onAdjust={(row) => {
-                            setViewing(null)
-                            setAdjusting(row)
-                          }}
-                          onHistory={(row) => {
-                            setAdjusting(null)
-                            setViewing(row)
-                          }}
-                        />
                       )}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </TableWrap>
-          </div>
+
+                      <Td numeric>
+                        <span className="tabular text-sm font-semibold text-slate-900">
+                          {money(product.default_variation?.selling_price ?? 0)}
+                        </span>
+                      </Td>
+
+                      <Td>
+                        <span className="flex flex-wrap gap-x-1 gap-y-0.5 text-xs text-slate-600">
+                          {(product.categories ?? []).length === 0
+                            ? 'Uncategorized'
+                            : (product.categories ?? []).map((category, index) => (
+                                <Link
+                                  key={category.id}
+                                  to={`/admin/products?category=${category.slug}`}
+                                  className="text-brand-700 hover:underline"
+                                >
+                                  {category.name}
+                                  {index < (product.categories ?? []).length - 1 && ','}
+                                </Link>
+                              ))}
+                        </span>
+                      </Td>
+
+                      <Td>
+                        <span className="block truncate text-xs text-slate-600" title={product.brand?.name ?? undefined}>
+                          {product.brand?.name ?? '-'}
+                        </span>
+                      </Td>
+
+                      <Td>
+                        <Star
+                          className={
+                            product.is_featured
+                              ? 'h-4 w-4 fill-warning-500 text-warning-500'
+                              : 'h-4 w-4 text-slate-300'
+                          }
+                          aria-label={product.is_featured ? 'Featured' : 'Not featured'}
+                        />
+                      </Td>
+
+                      <Td>
+                        <span className="block truncate text-[11px] text-slate-500">
+                          {product.status === 'active' ? 'Published' : 'Last modified'}
+                        </span>
+                        <span className="block truncate text-xs text-slate-700">
+                          {date(
+                            product.status === 'active'
+                              ? product.published_at ?? product.created_at
+                              : product.updated_at ?? product.created_at,
+                          )}
+                        </span>
+                      </Td>
+                    </tr>
+
+                    {isOpen && (
+                      <VariationStockRows
+                        product={product}
+                        colSpan={columnCount}
+                        canAdjust={canAdjust}
+                        onAdjust={(row) => {
+                          setViewing(null)
+                          setAdjusting(row)
+                        }}
+                        onHistory={(row) => {
+                          setAdjusting(null)
+                          setViewing(row)
+                        }}
+                      />
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </TableWrap>
 
           <div className="border-t border-slate-100 px-4 py-3">
             <Pagination meta={query.data?.meta} onPage={(page) => update({ page })} />
