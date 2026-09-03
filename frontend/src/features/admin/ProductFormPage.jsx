@@ -954,23 +954,6 @@ export default function ProductFormPage() {
   const [pairedIds, setPairedIds] =
     useState([])
 
-  /*
-   * A folded section hiding a validation error is a form that will not save
-   * and will not say why, so each one knows its own fields and unfolds when
-   * one of them is complaining.
-   */
-  // Anything the form can work out for itself, or the shop can add later.
-  // Opened automatically when one of those fields is what is wrong.
-  const [showMore, setShowMore] = useState(false)
-
-  const sectionHasError = (fields) => fields.some((field) => Boolean(errors[field]))
-
-  /*
-   * Folded, unless one of the folded fields is the problem. A duplicate slug
-   * reported against a box nobody can see is a form that will not save and
-   * will not say why.
-   */
-  const moreOpen = showMore || sectionHasError(['brand_id', 'unit_id', 'barcode'])
 
 
   /* ------------------------------------------------------------------------
@@ -1087,6 +1070,30 @@ export default function ProductFormPage() {
       meta_description: '',
     },
   })
+
+  /*
+   * Below useForm, not above it: these read `errors`, and a const that
+   * runs before the one it reads throws at render -- the page shows a
+   * blank error screen, and the build says nothing, because the name is
+   * in scope, only not yet initialised.
+   */
+  /*
+   * A folded section hiding a validation error is a form that will not save
+   * and will not say why, so each one knows its own fields and unfolds when
+   * one of them is complaining.
+   */
+  // Anything the form can work out for itself, or the shop can add later.
+  // Opened automatically when one of those fields is what is wrong.
+  const [showMore, setShowMore] = useState(false)
+
+  const sectionHasError = (fields) => fields.some((field) => Boolean(errors[field]))
+
+  /*
+   * Folded, unless one of the folded fields is the problem. A duplicate slug
+   * reported against a box nobody can see is a form that will not save and
+   * will not say why.
+   */
+  const moreOpen = showMore || sectionHasError(['brand_id', 'unit_id', 'barcode'])
 
   const type = useWatch({
     control,
