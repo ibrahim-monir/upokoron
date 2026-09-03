@@ -5,10 +5,10 @@ import {
   Archive,
   CheckCircle2,
   ChevronRight,
+  Copy,
   Edit3,
   History,
   ImageOff,
-  MoreHorizontal,
   Package,
   Plus,
   Search,
@@ -260,7 +260,6 @@ export default function ProductsPage() {
   const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState(params.get('search') ?? '')
   const [selected, setSelected] = useState(new Set())
-  const [actionsOpen, setActionsOpen] = useState(null)
   const [expanded, setExpanded] = useState(new Set())
   const [adjusting, setAdjusting] = useState(null)
   const [viewing, setViewing] = useState(null)
@@ -303,6 +302,18 @@ export default function ProductsPage() {
   })
 
   const remove = useWrite('admin.products')
+
+  /*
+   * Copy, then go straight to the copy's edit form.
+   *
+   * Nobody duplicates a product in order to have two of it. They duplicate it
+   * to make the next one, so the useful end of the action is the form with
+   * the fields already filled in -- not a fresh row in the list they then
+   * have to find and open.
+   */
+  const duplicate = useWrite('admin.products', {
+    onSuccess: (data) => navigate(`/admin/products/${data?.product?.id}/edit`),
+  })
   const products = query.data?.data ?? []
   const total = query.data?.meta?.total ?? 0
 
@@ -827,68 +838,84 @@ export default function ProductsPage() {
                         </Td>
 
                         <Td className="text-right">
-                          <div className="relative flex justify-end">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActionsOpen((value) => (value === product.id ? null : product.id))
-                              }
-                              className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 opacity-70 transition hover:bg-slate-100 hover:text-slate-900 group-hover:opacity-100"
-                              aria-label={`Actions for ${product.name}`}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </button>
+                          {/*
+                             Inline icons rather than a menu behind a "...".
+                             There are only ever four of these and they are
+                             the same four on every row, so a menu charged a
+                             click and a guess for something a row of icons
+                             says outright. Each carries a title and an
+                             aria-label, because an icon on its own is a
+                             rebus -- and the label is what a screen reader
+                             has to work from.
+                          */}
+                          <div className="flex items-center justify-end gap-0.5 opacity-70 transition group-hover:opacity-100">
+                            {can('products.update') && (
+                              <Link
+                                to={`/admin/products/${product.id}/edit`}
+                                title="Edit product"
+                                aria-label={`Edit ${product.name}`}
+                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </Link>
+                            )}
 
-                            {actionsOpen === product.id && (
-                              <div className="absolute right-0 top-9 z-20 w-40 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-left shadow-xl">
-                                {can('products.update') && (
-                                  <Link
-                                    to={`/admin/products/${product.id}/edit`}
-                                    onClick={() => setActionsOpen(null)}
-                                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <Edit3 className="h-3.5 w-3.5" />
-                                    Edit product
-                                  </Link>
-                                )}
+                            {can('products.create') && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  duplicate.mutate({
+                                    url: `/admin/products/${product.id}/duplicate`,
+                                  })
+                                }
+                                disabled={duplicate.isPending}
+                                title="Duplicate as a draft"
+                                aria-label={`Duplicate ${product.name}`}
+                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            )}
 
-                                {canExpand && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setActionsOpen(null)
-                                      toggleExpanded(product.id)
-                                    }}
-                                    className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <Package className="h-3.5 w-3.5" />
-                                    {isOpen ? 'Hide stock' : 'Manage stock'}
-                                  </button>
+                            {canExpand && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(product.id)}
+                                aria-expanded={isOpen}
+                                title={isOpen ? 'Hide stock' : 'Manage stock'}
+                                aria-label={`${isOpen ? 'Hide' : 'Manage'} stock for ${product.name}`}
+                                className={cx(
+                                  'grid h-8 w-8 place-items-center rounded-lg transition',
+                                  isOpen
+                                    ? 'bg-slate-900 text-white'
+                                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-900',
                                 )}
+                              >
+                                <Package className="h-4 w-4" />
+                              </button>
+                            )}
 
-                                {can('products.delete') && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setActionsOpen(null)
-                                      if (
-                                        window.confirm(
-                                          `Archive “${product.name}”? Its history is kept.`,
-                                        )
-                                      ) {
-                                        remove.mutate({
-                                          method: 'delete',
-                                          url: `/admin/products/${product.id}`,
-                                        })
-                                      }
-                                    }}
-                                    className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                                  >
-                                    <XCircle className="h-3.5 w-3.5" />
-                                    Archive
-                                  </button>
-                                )}
-                              </div>
+                            {can('products.delete') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      `Archive “${product.name}”? Its history is kept.`,
+                                    )
+                                  ) {
+                                    remove.mutate({
+                                      method: 'delete',
+                                      url: `/admin/products/${product.id}`,
+                                    })
+                                  }
+                                }}
+                                title="Archive product"
+                                aria-label={`Archive ${product.name}`}
+                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
                             )}
                           </div>
                         </Td>

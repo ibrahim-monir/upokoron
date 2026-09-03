@@ -10,6 +10,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Copy,
   Image as ImageIcon,
   Info,
   Package,
@@ -287,6 +288,256 @@ const schema = z
   )
 
 /* ==========================================================================
+   CATEGORIES
+   ========================================================================== */
+
+/**
+ * Every category a product belongs in, chosen in one place.
+ *
+ * The schema keeps one category on the product row and the rest in a pivot,
+ * because the row one is what a breadcrumb and a URL read and the pivot is
+ * what extra listings are found through. That is a storage detail, and it
+ * used to leak into the form as two separate controls -- a dropdown for the
+ * main one and a list for the others -- which asked whoever was filing a
+ * kettle to know the difference before they could tick a box.
+ *
+ * So: one list. Tick what applies. The first thing ticked becomes the main
+ * category on its own, and any other tick can be promoted to it. Unticking
+ * the main one hands the title to whatever is still ticked rather than
+ * leaving the product with none.
+ *
+ * A checkbox list rather than the search box the accessory picker uses: a
+ * shop has tens of categories, not hundreds, and the tree is the thing being
+ * chosen from -- seeing "Kitchen > Small appliances" indented under its
+ * parent is most of the answer to which one is meant.
+ */
+function CategoryPicker({ options, primaryId, extraIds, invalid, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [term, setTerm] = useState('')
+
+  const box = useRef(null)
+  const filter = useRef(null)
+
+  const primary = Number(primaryId) || null
+  const extra = extraIds.map(Number).filter((id) => id && id !== primary)
+
+  const query = term.trim().toLowerCase()
+
+  const visible = options.filter(
+    (category) => query === '' || category.name.toLowerCase().includes(query),
+  )
+
+  const isChosen = (id) => id === primary || extra.includes(id)
+
+  // Closed by default, and closed again by Escape or a click anywhere else --
+  // the two things anyone tries on a panel that is in the way.
+  useEffect(() => {
+    if (!open) return undefined
+
+    const onKey = (event) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    const onPointer = (event) => {
+      if (!box.current?.contains(event.target)) setOpen(false)
+    }
+
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onPointer)
+
+    filter.current?.focus()
+
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onPointer)
+    }
+  }, [open])
+
+  const toggle = (id) => {
+    if (id === primary) {
+      // The main category cannot simply vanish: the next one still ticked
+      // takes the title, and only an empty list leaves the product with none.
+      onChange({ primary: extra[0] ?? null, extra: extra.slice(1) })
+
+      return
+    }
+
+    if (extra.includes(id)) {
+      onChange({ primary, extra: extra.filter((value) => value !== id) })
+
+      return
+    }
+
+    // First tick of all becomes the main one, so the commonest case -- one
+    // category, chosen once -- needs no second decision.
+    if (primary === null) {
+      onChange({ primary: id, extra })
+
+      return
+    }
+
+    onChange({ primary, extra: [...extra, id] })
+  }
+
+  const makePrimary = (id) => {
+    onChange({
+      primary: id,
+      extra: [primary, ...extra].filter((value) => value && value !== id),
+    })
+  }
+
+  const nameOf = (id) => options.find((category) => category.id === id)?.name
+
+  const chosenCount = (primary ? 1 : 0) + extra.length
+
+  /*
+   * The closed control has to answer "what is this filed under" without being
+   * opened, so it names the main category rather than counting to one. The
+   * overflow is a count, because three names in a half-width control truncate
+   * to nothing anyone can read.
+   */
+  const summary =
+    primary === null
+      ? 'Choose categories'
+      : extra.length === 0
+        ? nameOf(primary)
+        : `${nameOf(primary)} + ${extra.length} more`
+
+  return (
+    <div ref={box} className="relative mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        className={cx(
+          // Reads as the select it replaced, so the row does not look like
+          // two unrelated kinds of control standing side by side.
+          'flex h-10 w-full items-center gap-2 rounded-lg border bg-white px-3 text-left text-sm',
+          invalid ? 'border-danger-500' : 'border-ink-300 hover:border-ink-400',
+        )}
+      >
+        <span
+          className={cx(
+            'min-w-0 flex-1 truncate',
+            primary === null ? 'text-ink-400' : 'text-ink-900',
+          )}
+        >
+          {summary}
+        </span>
+
+        <ChevronDown
+          className={cx(
+            'h-4 w-4 shrink-0 text-ink-400 transition-transform',
+            open && 'rotate-180',
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-11 z-30 overflow-hidden rounded-lg border border-ink-200 bg-white shadow-raised">
+          <div className="border-b border-ink-100 p-2">
+            <Input
+              ref={filter}
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="Filter categories"
+              aria-label="Filter categories"
+              className="h-9 w-full"
+            />
+          </div>
+
+          <div className="max-h-56 overflow-y-auto p-1">
+            {visible.length === 0 ? (
+              <p className="px-2 py-4 text-center text-xs text-ink-500">
+                {options.length === 0 ? 'No categories yet.' : 'Nothing matches that.'}
+              </p>
+            ) : (
+              visible.map((category) => {
+                const chosen = isChosen(category.id)
+
+                return (
+                  <div
+                    key={category.id}
+                    className="group/row flex items-center gap-2 rounded-md pr-2 hover:bg-ink-50"
+                  >
+                    <label
+                      className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-1.5 text-sm text-ink-800"
+                      style={{ paddingLeft: `${0.5 + (category.depth ?? 0) * 0.85}rem` }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={chosen}
+                        onChange={() => toggle(category.id)}
+                        className="h-4 w-4 shrink-0 rounded border-ink-300"
+                      />
+                      <span className="truncate">{category.name}</span>
+                    </label>
+
+                    {category.id === primary && (
+                      <span className="shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-800">
+                        Main
+                      </span>
+                    )}
+
+                    {/*
+                       Only on a ticked row, and only on hover: an unticked
+                       category has nothing to be promoted, and a column of
+                       "make main" links would drown the ticks themselves.
+                    */}
+                    {chosen && category.id !== primary && (
+                      <button
+                        type="button"
+                        onClick={() => makePrimary(category.id)}
+                        className="shrink-0 text-[11px] font-medium text-brand-800 opacity-0 transition-opacity hover:text-brand-900 focus:opacity-100 group-hover/row:opacity-100"
+                      >
+                        Make main
+                      </button>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 border-t border-ink-100 bg-ink-50 px-3 py-1.5">
+            <span className="text-xs text-ink-500">
+              {chosenCount === 0 ? 'Choose at least one' : `${chosenCount} chosen`}
+            </span>
+
+            <span className="flex items-center gap-3">
+              {chosenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ primary: null, extra: [] })}
+                  className="text-xs font-medium text-brand-800 hover:text-brand-900"
+                >
+                  Clear
+                </button>
+              )}
+
+              {/*
+                 The panel stays open while several are ticked -- that is the
+                 point of it -- so it needs a way out that is not "click
+                 somewhere harmless".
+              */}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-xs font-medium text-ink-600 hover:text-ink-900"
+              >
+                Done
+              </button>
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ==========================================================================
    ADDITIONAL PRODUCTS
    ========================================================================== */
 
@@ -501,6 +752,67 @@ function SectionHeader({
   )
 }
 
+/**
+ * A section of the form that can be folded away.
+ *
+ * The SEO card was already built this way; this is that card's own pattern,
+ * made reusable so the rest of the form can use it too. Most of what this
+ * page asks for is optional -- the API needs five fields -- and everything
+ * optional being open at once is what makes adding one charger feel like
+ * filing a return.
+ *
+ * `forceOpen` is not a nicety: a section folded over a validation error is
+ * a form that refuses to save and points at nothing.
+ */
+function FoldableSection({
+  icon: Icon,
+  title,
+  description,
+  defaultOpen = true,
+  forceOpen = false,
+  // Each section keeps the body classes it already had: some of them
+  // are a four-column grid, and replacing that with a stack would
+  // rearrange the form while claiming only to fold it.
+  bodyClass = 'space-y-5 p-5',
+  children,
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const shown = open || forceOpen
+
+  return (
+    <Card className="overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={shown}
+        className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-ink-50"
+      >
+        <div
+          className={cx(
+            'grid h-9 w-9 shrink-0 place-items-center rounded-xl',
+            forceOpen ? 'bg-danger-50 text-danger-700' : 'bg-ink-100 text-ink-600',
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-ink-900">{title}</h2>
+          {description && <p className="mt-0.5 text-xs leading-5 text-ink-500">{description}</p>}
+        </div>
+
+        {shown ? (
+          <ChevronDown className="h-4 w-4 shrink-0 text-ink-400" />
+        ) : (
+          <ChevronRight className="h-4 w-4 shrink-0 text-ink-400" />
+        )}
+      </button>
+
+      {shown && <div className={cx('border-t border-ink-100', bodyClass)}>{children}</div>}
+    </Card>
+  )
+}
+
 function SidebarSection({
   icon: Icon,
   title,
@@ -582,6 +894,41 @@ export default function ProductFormPage() {
   const [saving, setSaving] =
     useState(false)
 
+  const [duplicating, setDuplicating] =
+    useState(false)
+
+  /*
+   * Copy this product and open the copy.
+   *
+   * Offered from the form rather than only from the list because this is
+   * where the thought occurs: someone looking at a finished product realises
+   * the next one is the same but for one field. Unsaved edits are NOT part of
+   * the copy -- the server copies what is stored -- so the warning below says
+   * so rather than letting them be quietly lost.
+   */
+  const duplicate = async () => {
+    if (
+      !window.confirm(
+        'Copy this product as a new draft? Anything you have changed here without saving is not included.',
+      )
+    ) {
+      return
+    }
+
+    setDuplicating(true)
+
+    try {
+      const response = await post(`/admin/products/${id}/duplicate`)
+
+      toast.success(response?.message ?? 'Copied.')
+      navigate(`/admin/products/${response?.product?.id}/edit`)
+    } catch (error) {
+      toast.error(error?.message ?? 'Could not copy that product.')
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
   const [images, setImages] =
     useState([])
 
@@ -595,13 +942,36 @@ export default function ProductFormPage() {
     useState([])
 
 
+  // Categories BESIDES the primary one. The primary lives on the product row
+  // and is what a breadcrumb reads; these are the other shelves the same
+  // product should also be found on.
+  const [extraCategoryIds, setExtraCategoryIds] =
+    useState([])
+
   // Accessories: what goes WITH this product, as opposed to the same-category
   // products that are alternatives TO it.
   const [pairedIds, setPairedIds] =
     useState([])
 
-  const [seoOpen, setSeoOpen] =
-    useState(false)
+  /*
+   * A folded section hiding a validation error is a form that will not save
+   * and will not say why, so each one knows its own fields and unfolds when
+   * one of them is complaining.
+   */
+  // Anything the form can work out for itself, or the shop can add later.
+  // Opened automatically when one of those fields is what is wrong.
+  const [showMore, setShowMore] = useState(false)
+
+  const sectionHasError = (fields) => fields.some((field) => Boolean(errors[field]))
+
+  /*
+   * Folded, unless one of the folded fields is the problem. A duplicate slug
+   * reported against a box nobody can see is a form that will not save and
+   * will not say why.
+   */
+  const moreOpen =
+    showMore || sectionHasError(['slug', 'type', 'brand_id', 'unit_id', 'sku', 'barcode'])
+
 
   /* ------------------------------------------------------------------------
      Queries
@@ -731,6 +1101,14 @@ export default function ProductFormPage() {
   const productName = useWatch({
     control,
     name: 'name',
+  })
+
+  // Watched, so the extras list drops whichever category is primary the
+  // moment it is changed -- rather than offering a tick that the save would
+  // silently undo.
+  const primaryCategoryId = useWatch({
+    control,
+    name: 'category_id',
   })
 
   /*
@@ -1000,6 +1378,12 @@ export default function ProductFormPage() {
     )
 
 
+    setExtraCategoryIds(
+      (product.additional_categories ?? []).map(
+        (category) => category.id,
+      ),
+    )
+
     setPairedIds(
       product.paired_product_ids ??
         [],
@@ -1254,6 +1638,21 @@ export default function ProductFormPage() {
           row.description?.trim(),
       )
 
+    /*
+     * The primary is filtered out here as well as on the server.
+     *
+     * Someone can promote one of the extras to primary without unticking it
+     * first, and the server drops it from the pivot silently -- so a form
+     * that sent it anyway would show a box ticked that the next load has
+     * cleared, and look like it lost the change.
+     */
+    payload.category_ids =
+      extraCategoryIds.filter(
+        (categoryId) =>
+          Number(categoryId) !==
+          Number(payload.category_id),
+      )
+
     payload.paired_product_ids =
       pairedIds
 
@@ -1443,6 +1842,18 @@ export default function ProductFormPage() {
 
           <div className="flex shrink-0 gap-2">
 
+            {isEdit && (
+              <Button
+                type="button"
+                variant="secondary"
+                loading={duplicating}
+                onClick={duplicate}
+              >
+                <Copy className="h-4 w-4" />
+                Duplicate
+              </Button>
+            )}
+
             <Button
               type="button"
               variant="secondary"
@@ -1486,17 +1897,13 @@ export default function ProductFormPage() {
                01 BASIC INFORMATION
                =============================================================== */}
 
-            <Card className="overflow-hidden">
-
-              <div className="border-b border-ink-100 px-5 py-4">
-                <SectionHeader
+            <FoldableSection
                   icon={ShoppingBag}
                   title="Basic information"
                   description="Essential information used to identify and organize the product."
-                />
-              </div>
-
-              <div className="space-y-5 p-5">
+                  defaultOpen={true}
+                  forceOpen={sectionHasError(['name', 'slug', 'category_id', 'brand_id', 'unit_id', 'type', 'sku', 'barcode'])}
+                >
 
                 <Field
                   label="Product name"
@@ -1508,6 +1915,7 @@ export default function ProductFormPage() {
                   {...register('name')}
                 />
 
+                {moreOpen && (
                 <Field
                   label="Product slug"
                   placeholder="baseus-65w-gan-charger"
@@ -1523,7 +1931,9 @@ export default function ProductFormPage() {
                     onChange: () => setSlugAuto(false),
                   })}
                 />
+                )}
 
+                {moreOpen && (
                 <div className="grid gap-5 md:grid-cols-2">
 
                   <Field
@@ -1556,57 +1966,52 @@ export default function ProductFormPage() {
                     )}
                   </Field>
 
-                  <Field
-                    label="Category"
-                    required
-                    error={
-                      errors.category_id
-                        ?.message
-                    }
-                  >
-                    {({
-                      id: fieldId,
-                      invalid,
-                    }) => (
-                      <Select
-                        id={fieldId}
-                        invalid={invalid}
-                        {...register(
-                          'category_id',
-                        )}
+                  {/*
+                     One product, several shelves, one control -- in the half
+                     of the row the old single-category dropdown used to hold.
+                  */}
+                  <div>
+                    <p className="text-sm font-medium text-ink-800">
+                      Categories
+                      <span
+                        className="ml-0.5 text-danger-500"
+                        aria-hidden="true"
                       >
-                        <option value="">
-                          Choose category
-                        </option>
+                        *
+                      </span>
+                    </p>
 
-                        {categoryOptions.map(
-                          (
-                            category,
-                          ) => (
-                            <option
-                              key={
-                                category.id
-                              }
-                              value={
-                                category.id
-                              }
-                            >
-                              {'— '.repeat(
-                                category.depth ??
-                                  0,
-                              )}
+                    <p className="mt-0.5 text-xs text-ink-500">
+                      Tick every category this belongs in. The first is the main
+                      one, used by the breadcrumb and the URL.
+                    </p>
 
-                              {
-                                category.name
-                              }
-                            </option>
-                          ),
-                        )}
-                      </Select>
+                    <CategoryPicker
+                      options={categoryOptions}
+                      primaryId={primaryCategoryId}
+                      extraIds={extraCategoryIds}
+                      invalid={Boolean(errors.category_id)}
+                      onChange={({ primary, extra }) => {
+                        setValue('category_id', primary ?? '', {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        })
+                        setExtraCategoryIds(extra)
+                      }}
+                    />
+
+                    {errors.category_id?.message && (
+                      <p
+                        role="alert"
+                        className="mt-1.5 text-xs text-danger-700"
+                      >
+                        {errors.category_id.message}
+                      </p>
                     )}
-                  </Field>
+                  </div>
 
                 </div>
+                )}
 
                 {/*
                    Accessories, picked per product. "Related products" already
@@ -1631,6 +2036,7 @@ export default function ProductFormPage() {
                   />
                 </div>
 
+                {moreOpen && (
                 <div className="grid gap-5 md:grid-cols-2">
 
                   <Field
@@ -1719,7 +2125,9 @@ export default function ProductFormPage() {
                   </Field>
 
                 </div>
+                )}
 
+                {moreOpen && (
                 <div className="grid gap-5 md:grid-cols-2">
 
                   <Field
@@ -1745,25 +2153,42 @@ export default function ProductFormPage() {
                   />
 
                 </div>
+                )}
 
-              </div>
-            </Card>
+
+                {/*
+                   Name and category are what a product needs to exist; the
+                   API asks for three more and fills all three in itself. The
+                   rest live here rather than in front of someone adding a
+                   charger, and nothing has moved -- opening this puts every
+                   field back exactly where it was.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setShowMore((value) => !value)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-900"
+                >
+                  {moreOpen ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                  {moreOpen ? 'Fewer options' : 'More options — slug, type, brand, SKU'}
+                </button>
+            </FoldableSection>
 
             {/* ===============================================================
                02 PRODUCT CONTENT
                =============================================================== */}
 
-            <Card className="overflow-hidden">
-
-              <div className="border-b border-ink-100 px-5 py-4">
-                <SectionHeader
-                  icon={Info}
-                  title="Product content"
-                  description="Content displayed on the storefront."
-                />
-              </div>
-
-              <div className="space-y-5 p-5">
+            <FoldableSection
+              icon={Info}
+              title="Product content"
+              description="Content displayed on the storefront."
+              bodyClass="space-y-5 p-5"
+              defaultOpen={false}
+              forceOpen={sectionHasError(['short_description', 'description'])}
+            >
 
                 <Field
                   label="Short description"
@@ -1853,29 +2278,25 @@ export default function ProductFormPage() {
                   )}
                 </Field>
 
-              </div>
-            </Card>
+            </FoldableSection>
 
             {/* ===============================================================
                04 PRICING
                =============================================================== */}
 
-            <Card className="overflow-hidden">
-
-              <div className="border-b border-ink-100 px-5 py-4">
-                <SectionHeader
-                  icon={Tag}
-                  title="Pricing"
-                  description={
+            <FoldableSection
+              icon={Tag}
+              title="Pricing"
+              description={
                     type ===
                     'variable'
                       ? 'Default pricing. Individual variations may override these values.'
                       : 'Set the normal and promotional pricing.'
                   }
-                />
-              </div>
-
-              <div className="space-y-5 p-5">
+              bodyClass="space-y-5 p-5"
+              defaultOpen={true}
+              forceOpen={sectionHasError(['selling_price', 'compare_at_price', 'special_price', 'special_starts_at', 'special_ends_at'])}
+            >
 
                 <div className="grid gap-5 md:grid-cols-2">
 
@@ -1996,8 +2417,7 @@ export default function ProductFormPage() {
                   </div>
                 </div>
 
-              </div>
-            </Card>
+            </FoldableSection>
 
             {/* ===============================================================
                05 VARIATIONS
@@ -2034,17 +2454,14 @@ export default function ProductFormPage() {
                06 INVENTORY
                =============================================================== */}
 
-            <Card className="overflow-hidden">
-
-              <div className="border-b border-ink-100 px-5 py-4">
-                <SectionHeader
-                  icon={Package}
-                  title="Inventory"
-                  description="Stock quantity is synchronized with the inventory ledger."
-                />
-              </div>
-
-              <div className="space-y-5 p-5">
+            <FoldableSection
+              icon={Package}
+              title="Inventory"
+              description="Stock quantity is synchronized with the inventory ledger."
+              bodyClass="space-y-5 p-5"
+              defaultOpen={true}
+              forceOpen={sectionHasError(['low_stock_alert', 'unit_cost', 'opening_quantity'])}
+            >
 
                 {/* Track stock */}
 
@@ -2224,24 +2641,20 @@ export default function ProductFormPage() {
                   </div>
                 )}
 
-              </div>
-            </Card>
+            </FoldableSection>
 
             {/* ===============================================================
                07 SHIPPING
                =============================================================== */}
 
-            <Card className="overflow-hidden">
-
-              <div className="border-b border-ink-100 px-5 py-4">
-                <SectionHeader
-                  icon={Package}
-                  title="Shipping & warranty"
-                  description="Physical dimensions and warranty information."
-                />
-              </div>
-
-              <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+            <FoldableSection
+              icon={Package}
+              title="Shipping & warranty"
+              description="Physical dimensions and warranty information."
+              bodyClass="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4"
+              defaultOpen={false}
+              forceOpen={sectionHasError(['weight', 'length', 'width', 'height', 'warranty'])}
+            >
 
                 <Field
                   label="Weight (kg)"
@@ -2307,24 +2720,20 @@ export default function ProductFormPage() {
 
                 </div>
 
-              </div>
-            </Card>
+            </FoldableSection>
 
             {/* ===============================================================
                08 ADDITIONAL INFORMATION
                =============================================================== */}
 
-            <Card className="overflow-hidden">
-
-              <div className="border-b border-ink-100 px-5 py-4">
-                <SectionHeader
-                  icon={Info}
-                  title="Additional information"
-                  description="Extra feature and value pairs displayed on the storefront."
-                />
-              </div>
-
-              <div className="p-5">
+            <FoldableSection
+              icon={Info}
+              title="Additional information"
+              description="Extra feature and value pairs displayed on the storefront."
+              bodyClass="p-5"
+              defaultOpen={false}
+              forceOpen={sectionHasError(['additional_info'])}
+            >
 
                 {additionalInfo.length ===
                 0 ? (
@@ -2478,52 +2887,20 @@ export default function ProductFormPage() {
                   Add information
                 </Button>
 
-              </div>
-            </Card>
+            </FoldableSection>
 
             {/* ===============================================================
                09 SEO
                =============================================================== */}
 
-            <Card className="overflow-hidden">
-
-              <button
-                type="button"
-                onClick={() =>
-                  setSeoOpen(
-                    (value) =>
-                      !value,
-                  )
-                }
-                className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-ink-50"
-              >
-
-                <div className="grid h-9 w-9 place-items-center rounded-xl bg-ink-100 text-ink-600">
-                  <Search className="h-4 w-4" />
-                </div>
-
-                <div className="flex-1">
-
-                  <h2 className="text-sm font-semibold text-ink-900">
-                    SEO settings
-                  </h2>
-
-                  <p className="text-xs text-ink-500">
-                    Search engine title and description.
-                  </p>
-
-                </div>
-
-                {seoOpen ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-
-              </button>
-
-              {seoOpen && (
-                <div className="space-y-4 border-t border-ink-100 p-5">
+            <FoldableSection
+              icon={Search}
+              title="SEO settings"
+              description="Search engine title and description."
+              bodyClass="space-y-4 p-5"
+              defaultOpen={false}
+              forceOpen={sectionHasError(['meta_title', 'meta_description'])}
+            >
 
                   <Field
                     label="Meta title"
@@ -2558,10 +2935,8 @@ export default function ProductFormPage() {
                     )}
                   </Field>
 
-                </div>
-              )}
+            </FoldableSection>
 
-            </Card>
 
           </div>
 

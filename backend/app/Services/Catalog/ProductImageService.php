@@ -122,7 +122,21 @@ class ProductImageService
             $product = $image->product;
             $wasPrimary = $image->is_primary;
 
-            if (! str_starts_with($image->path, 'http')) {
+            /*
+             * Delete the FILE only when no other row still names it.
+             *
+             * Two rows can point at one file legitimately: attaching the same
+             * library image to two products copies disk and path, and so does
+             * duplicating a product. Deleting unconditionally then blanks the
+             * other product's photograph from under it -- silently, since the
+             * row survives and only the image 404s.
+             */
+            $stillInUse = ProductImage::where('disk', $image->disk)
+                ->where('path', $image->path)
+                ->whereKeyNot($image->getKey())
+                ->exists();
+
+            if (! $stillInUse && ! str_starts_with($image->path, 'http')) {
                 Storage::disk($image->disk)->delete($image->path);
             }
 

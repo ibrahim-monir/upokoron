@@ -198,6 +198,29 @@ class ProductController extends Controller
         ], 201);
     }
 
+    /**
+     * Copy a product as a draft.
+     *
+     * Requires products.create rather than products.view: this makes a new
+     * product, and someone trusted only to read the catalogue must not be
+     * able to fill it with copies.
+     */
+    public function duplicate(Request $request, Product $product): JsonResponse
+    {
+        abort_unless($request->user()?->can('products.create'), 403);
+
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:200'],
+        ]);
+
+        $copy = $this->products->duplicate($product, $data['name'] ?? null);
+
+        return response()->json([
+            'message' => "Copied as a draft: [{$copy->name}].",
+            'product' => new ProductResource($copy),
+        ], 201);
+    }
+
     public function show(Request $request, Product $product): ProductResource
     {
         abort_unless($request->user()?->can('products.view'), 403);

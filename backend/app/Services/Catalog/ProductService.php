@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Catalog;
 
+use App\Enums\ProductStatus;
 use App\Enums\ProductType;
 use App\Exceptions\BusinessRuleException;
 use App\Models\AttributeValue;
@@ -61,6 +62,158 @@ class ProductService
 
             return $this->loaded($product);
         });
+    }
+
+    /**
+     * Copy a product, everything about it except its history.
+     *
+     * What a duplicate is FOR is starting the next product from this one:
+     * same brand, same specs, same photographs, one field different. So the
+     * description of the goods is copied in full, and every trace of trading
+     * is left behind -- stock, sales, ratings, reviews, the cost the last
+     * purchase came in at. A copy that inherited a rating of 4.8 from 200
+     * reviews it never earned would be a lie told by a convenience feature.
+     *
+     * It lands as a DRAFT, never live. The whole point is that it is about to
+     * be edited, and a half-edited clone of a real product appearing on the
+     * storefront -- at the original's price, under a name ending in "(Copy)"
+     * -- is the obvious way for this feature to embarrass a shop.
+     */
+    public function duplicate(Product $product, ?string $name = null): Product
+    {
+        return DB::transaction(function () use ($product, $name): Product {
+            // load, not loadMissing: a product arriving here with variations
+            // already loaded would keep that copy -- and it would be the one
+            // without attributeValues, which lazy loading is disabled to
+            // catch rather than paper over.
+            $product->load(['categories', 'images', 'attributeValues', 'pairedProducts']);
+
+            $copy = $product->replicate([
+                // Regenerated from the new name by HasSlug.
+                'slug',
+                // Trading history. None of it belongs to a product that has
+                // never been sold.
+                'view_count', 'sold_count', 'rating_avg', 'rating_count',
+                'published_at', 'created_by',
+            ]);
+
+            $copy->name = filled($name) ? $name : $product->name.' (Copy)';
+            $copy->slug = null;
+            $copy->status = ProductStatus::Draft;
+
+            // Two identical products in the featured row is a mistake nobody
+            // meant to make; the copy can be featured again on purpose.
+            $copy->is_featured = false;
+            $copy->published_at = null;
+            $copy->created_by = Auth::id();
+            $copy->save();
+
+            $copy->categories()->sync($product->categories->pluck('id')->all());
+
+            $copy->pairedProducts()->sync(
+                $product->pairedProducts
+                    ->mapWithKeys(fn (Product $p) => [$p->id => ['position' => $p->pivot->position]])
+                    ->all(),
+            );
+
+            $copy->attributeValues()->sync(
+                $product->attributeValues
+                    ->mapWithKeys(fn (AttributeValue $v) => [$v->id => ['attribute_id' => $v->pivot->attribute_id]])
+                    ->all(),
+            );
+
+            $images = $this->copyImages($product, $copy);
+
+            $this->copyVariations($product, $copy, $images);
+
+            return $this->loaded($copy);
+        });
+    }
+
+    /**
+     * The photographs, as rows pointing at the same files.
+     *
+     * No file is copied: two rows naming one path is exactly what already
+     * happens when the same library image is attached to two products, and
+     * ProductImageService::delete only removes a file once no row still
+     * refers to it.
+     *
+     * @return array<int, int>  old image id => new image id, for the
+     *                          variation thumbnails that point at them
+     */
+    private function copyImages(Product $product, Product $copy): array
+    {
+        $map = [];
+
+        foreach ($product->images as $image) {
+            $new = $image->replicate(['product_id']);
+            $new->product_id = $copy->id;
+            $new->save();
+
+            $map[$image->id] = $new->id;
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param  array<int, int>  $imageMap
+     */
+    private function copyVariations(Product $product, Product $copy, array $imageMap): void
+    {
+        $takenSkus = [];
+
+        $variations = $product->variations()
+            ->withTrashed()
+            ->with('attributeValues')
+            ->orderBy('position')
+            ->get();
+
+        foreach ($variations as $variation) {
+            // A variation deleted from the original is not part of what is
+            // being copied -- it is part of what was undone. Loaded with the
+            // trashed ones only so this can leave them out on purpose rather
+            // than by not thinking about them.
+            if ($variation->trashed()) {
+                continue;
+            }
+
+            $labels = $variation->attributeValues->pluck('value')->all();
+
+            $new = $variation->replicate([
+                // Both are unique columns, and both name a thing in the real
+                // world rather than a description of one. A barcode is
+                // printed on a box; the copy is not that box.
+                'sku', 'barcode',
+                // What the ORIGINAL last cost to buy in. The copy has never
+                // been purchased, and carrying this over would put an
+                // invented cost into the first margin report that reads it.
+                'last_purchase_price',
+                'product_id',
+            ]);
+
+            $sku = $this->skus->generate($copy, $labels, $takenSkus);
+            $takenSkus[] = $sku;
+
+            $new->product_id = $copy->id;
+            $new->sku = $sku;
+            $new->barcode = null;
+            $new->last_purchase_price = null;
+            $new->image_id = $imageMap[$variation->image_id] ?? null;
+            $new->save();
+
+            // attribute_id rides on the pivot as well as on the value, so the
+            // variation's options can be read per attribute without a join
+            // back to attribute_values. Copied from the pivot rather than
+            // from the value, so it stays whatever the original recorded.
+            $new->attributeValues()->attach(
+                $variation->attributeValues
+                    ->mapWithKeys(fn (AttributeValue $v) => [
+                        $v->id => ['attribute_id' => $v->pivot->attribute_id ?? $v->attribute_id],
+                    ])
+                    ->all(),
+            );
+        }
     }
 
     /**

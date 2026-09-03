@@ -102,6 +102,12 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     // apiResource, or {product} would swallow "bulk" as an id.
     Route::post('products/bulk', [ProductController::class, 'bulk'])->name('products.bulk');
 
+    // Before apiResource, or `products/{product}` would swallow nothing --
+    // but keep it here anyway so the whole product surface reads in one
+    // place rather than half of it appearing after the resource line.
+    Route::post('products/{product}/duplicate', [ProductController::class, 'duplicate'])
+        ->name('products.duplicate');
+
     Route::apiResource('products', ProductController::class);
     Route::post('products/{id}/restore', [ProductController::class, 'restore'])
         ->whereNumber('id')

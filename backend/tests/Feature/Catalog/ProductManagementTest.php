@@ -57,6 +57,88 @@ class ProductManagementTest extends TestCase
         return ['attribute' => $attribute, 'values' => $created];
     }
 
+    // ─── Categories ──────────────────────────────────────────────────────
+
+    /**
+     * A product sits on one shelf primarily and may sit on others as well.
+     *
+     * The primary lives on the product row -- it is what a breadcrumb and a
+     * URL read -- and the pivot holds ONLY the extras. Keeping the primary
+     * out of the pivot is what stops a category listing counting the same
+     * product twice.
+     */
+    public function test_a_product_can_belong_to_several_categories(): void
+    {
+        $this->actingAsRole('owner');
+
+        $kitchen = Category::factory()->create(['name' => 'Kitchen']);
+        $gifts = Category::factory()->create(['name' => 'Gifts']);
+
+        $this->postJson('/api/v1/admin/products', $this->simplePayload([
+            'name' => 'Electric Kettle',
+            'category_ids' => [$kitchen->id, $gifts->id],
+        ]))->assertCreated();
+
+        $product = Product::with('categories')->where('name', 'Electric Kettle')->sole();
+
+        $this->assertSame($this->category->id, $product->category_id);
+        $this->assertEqualsCanonicalizing(
+            [$kitchen->id, $gifts->id],
+            $product->categories->pluck('id')->all(),
+        );
+
+        // Both listings find it: the primary from the column, the extra from
+        // the pivot, which is the whole point of the two living apart.
+        $this->assertTrue(Product::inCategory($gifts)->whereKey($product->id)->exists());
+        $this->assertTrue(Product::inCategory($this->category)->whereKey($product->id)->exists());
+    }
+
+    public function test_the_primary_category_is_never_also_stored_as_an_extra(): void
+    {
+        $this->actingAsRole('owner');
+
+        $gifts = Category::factory()->create(['name' => 'Gifts']);
+
+        $this->postJson('/api/v1/admin/products', $this->simplePayload([
+            'name' => 'Desk Lamp',
+            // The form can send the primary among the extras -- promoting a
+            // ticked category to primary without unticking it first is the
+            // obvious way for that to happen.
+            'category_ids' => [$this->category->id, $gifts->id],
+        ]))->assertCreated();
+
+        $product = Product::with('categories')->where('name', 'Desk Lamp')->sole();
+
+        $this->assertSame([$gifts->id], $product->categories->pluck('id')->all());
+    }
+
+    public function test_editing_a_product_replaces_its_additional_categories(): void
+    {
+        $this->actingAsRole('owner');
+
+        $kitchen = Category::factory()->create(['name' => 'Kitchen']);
+        $gifts = Category::factory()->create(['name' => 'Gifts']);
+
+        $this->postJson('/api/v1/admin/products', $this->simplePayload([
+            'name' => 'Rice Cooker',
+            'category_ids' => [$kitchen->id],
+        ]))->assertCreated();
+
+        $product = Product::where('name', 'Rice Cooker')->sole();
+
+        $this->putJson("/api/v1/admin/products/{$product->id}", $this->simplePayload([
+            'name' => 'Rice Cooker',
+            'category_ids' => [$gifts->id],
+        ]))->assertOk();
+
+        $this->assertSame([$gifts->id], $product->load('categories')->categories->pluck('id')->all());
+
+        // And the edit form gets them back to tick.
+        $this->getJson("/api/v1/admin/products/{$product->id}")
+            ->assertOk()
+            ->assertJsonPath('data.additional_categories.0.id', $gifts->id);
+    }
+
     // ─── Simple products ─────────────────────────────────────────────────
 
     /**
