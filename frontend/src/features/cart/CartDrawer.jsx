@@ -180,11 +180,11 @@ export function CartDrawer() {
           open ? 'translate-x-0' : 'translate-x-full',
         )}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-ink-200 px-4 py-3.5">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-ink-900">
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-brand-600 px-4 py-3.5 text-white">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-white">
             Shopping Cart
             {lines.length > 0 && (
-              <span className="tabular rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-800">
+              <span className="tabular rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold text-white">
                 {data?.item_count}
               </span>
             )}
@@ -194,7 +194,7 @@ export function CartDrawer() {
             type="button"
             onClick={hide}
             aria-label="Close cart"
-            className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-900"
+            className="grid h-8 w-8 place-items-center rounded-lg text-white transition-colors hover:bg-white/20"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
