@@ -19,8 +19,23 @@ class SettingController extends Controller
 
         $group = $request->string('group')->value();
 
+        // Declared keys only, the same set update() will accept.
+        //
+        // all() merges the config defaults over every row in the table, so a
+        // setting that has since been retired from config still comes back
+        // -- and the screen would render it, submit it with everything else,
+        // and update() would refuse the whole save over a field the screen
+        // itself handed the user. One retired setting made every settings
+        // change on the site impossible, including the brand colours.
+        //
+        // The row is left alone rather than deleted: if the feature comes
+        // back, its value is still there.
+        $data = $group !== ''
+            ? $this->settings->group($group)
+            : array_intersect_key($this->settings->all(), $this->knownDefaults());
+
         return response()->json([
-            'data' => $group !== '' ? $this->settings->group($group) : $this->settings->all(),
+            'data' => $data,
             'groups' => array_keys(config('upokoron.settings', [])),
         ]);
     }
@@ -42,8 +57,10 @@ class SettingController extends Controller
         $unknown = array_diff(array_keys($validated['settings']), $known);
 
         if ($unknown !== []) {
+            // Name them. This used to say only "Unknown setting keys.", which
+            // is true and useless: the one thing needed to fix it is which.
             return response()->json([
-                'message' => 'Unknown setting keys.',
+                'message' => 'Unknown setting keys: '.implode(', ', $unknown).'.',
                 'errors' => ['settings' => array_values($unknown)],
             ], 422);
         }
