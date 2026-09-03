@@ -398,7 +398,7 @@ function CategoryPicker({ options, primaryId, extraIds, invalid, onChange }) {
    */
   const summary =
     primary === null
-      ? 'Choose categories'
+      ? 'Choose one or more'
       : extra.length === 0
         ? nameOf(primary)
         : `${nameOf(primary)} + ${extra.length} more`
