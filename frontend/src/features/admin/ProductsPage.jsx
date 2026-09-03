@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Archive,
   CheckCircle2,
+  Download,
   History,
   ImageOff,
   Package,
@@ -388,10 +389,21 @@ export default function ProductsPage() {
         </div>
 
         {can('products.create') && (
-          <Button onClick={() => navigate('/admin/products/new')} className="h-10 shrink-0">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add product
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => navigate('/admin/products/import')}
+              className="h-10"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Import
+            </Button>
+
+            <Button onClick={() => navigate('/admin/products/new')} className="h-10">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add product
+            </Button>
+          </div>
         )}
       </section>
 

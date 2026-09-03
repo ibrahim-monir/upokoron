@@ -44,6 +44,35 @@ return [
     ],
 
     /*
+    | Product import: pulling a product page apart into a draft, and reading a
+    | supplier's price list.
+    |
+    | The caps exist because this is the one place the shop's own server makes
+    | requests to an address a user typed. `block_private_hosts` is the
+    | important one -- without it "https://<anything>" reaches localhost, the
+    | database, and on a cloud host the metadata service that hands out
+    | credentials. Turn it off only to import from a machine on your own LAN,
+    | and only if every admin is trusted.
+    */
+    'import' => [
+        'timeout' => (int) env('IMPORT_TIMEOUT', 10),
+        'connect_timeout' => (int) env('IMPORT_CONNECT_TIMEOUT', 5),
+        'max_bytes' => (int) env('IMPORT_MAX_BYTES', 2 * 1024 * 1024),
+        'max_redirects' => (int) env('IMPORT_MAX_REDIRECTS', 3),
+        'block_private_hosts' => (bool) env('IMPORT_BLOCK_PRIVATE_HOSTS', true),
+        'user_agent' => env('IMPORT_USER_AGENT', 'UpokoronBot/1.0 (+product import)'),
+
+        // How many pictures one imported product may pull in. A gallery of
+        // twenty near-identical shots is the supplier's problem, not the
+        // shop's storage bill.
+        'max_images' => (int) env('IMPORT_MAX_IMAGES', 6),
+
+        // Rows one CSV may carry. Past this it is a data migration, and it
+        // wants a command with a progress bar rather than a web request.
+        'max_csv_rows' => (int) env('IMPORT_MAX_CSV_ROWS', 2000),
+    ],
+
+    /*
     | Runtime-editable settings and their factory defaults.
     */
     /*

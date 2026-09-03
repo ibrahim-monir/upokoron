@@ -206,6 +206,13 @@ export const router = createBrowserRouter([
         element: guarded('products.create', lazyAdmin(() => import('../features/admin/ProductFormPage'))),
       },
       {
+        // Before `products/:id/edit` would matter only if this were an id --
+        // it is not, but keeping the two static product paths together is
+        // how the next static one avoids being read as an id by accident.
+        path: 'products/import',
+        element: guarded('products.create', lazyAdmin(() => import('../features/admin/ProductImportPage'))),
+      },
+      {
         path: 'products/:id/edit',
         element: guarded('products.update', lazyAdmin(() => import('../features/admin/ProductFormPage'))),
       },

@@ -8,32 +8,41 @@ use App\Http\Controllers\Controller;
 use App\Models\Media;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\Catalog\Import\ProductImageImporter;
 use App\Services\Catalog\ProductImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProductImageController extends Controller
 {
-    public function __construct(private readonly ProductImageService $images) {}
+    public function __construct(
+        private readonly ProductImageService $images,
+        private readonly ProductImageImporter $importer,
+    ) {}
 
     public function store(Request $request, Product $product): JsonResponse
     {
         abort_unless($request->user()?->can('products.update'), 403);
 
         /*
-         * Three ways in, in order of preference:
+         * Four ways in, in order of preference:
          *
-         *   media_id  from the library -- the admin panel's route. The file
-         *             is already stored and de-duplicated, so the same photo
-         *             on six products is kept once.
-         *   image     a direct upload, for a one-off.
-         *   url       externally hosted, so a shop can list products before
-         *             it has any uploads at all.
+         *   media_id    from the library -- the admin panel's route. The file
+         *               is already stored and de-duplicated, so the same photo
+         *               on six products is kept once.
+         *   image       a direct upload, for a one-off.
+         *   source_url  a picture on someone else's server, COPIED into the
+         *               library. This is what an imported product uses.
+         *   url         externally hosted and left there, so a shop can list
+         *               products before it has any uploads at all. Kept, but
+         *               source_url is the better answer: a hotlink breaks the
+         *               day the other site tidies up.
          */
         $request->validate([
-            'media_id' => ['required_without_all:image,url', 'integer', 'exists:media,id'],
-            'image' => ['required_without_all:media_id,url', 'file', 'image', 'max:4096'],
-            'url' => ['required_without_all:media_id,image', 'url', 'max:255'],
+            'media_id' => ['required_without_all:image,url,source_url', 'integer', 'exists:media,id'],
+            'image' => ['required_without_all:media_id,url,source_url', 'file', 'image', 'max:4096'],
+            'url' => ['required_without_all:media_id,image,source_url', 'url', 'max:255'],
+            'source_url' => ['required_without_all:media_id,image,url', 'url', 'max:2000'],
             'alt' => ['nullable', 'string', 'max:200'],
         ]);
 
@@ -46,6 +55,7 @@ class ProductImageController extends Controller
                 $alt,
             ),
             $request->hasFile('image') => $this->images->upload($product, $request->file('image'), $alt),
+            $request->filled('source_url') => $this->importer->import($product, $request->string('source_url')->value(), $alt),
             default => $this->images->attachUrl($product, $request->string('url')->value(), $alt),
         };
 

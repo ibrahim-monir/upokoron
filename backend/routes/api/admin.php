@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\Admin\OrderController;
 use App\Http\Controllers\Api\V1\Admin\PaymentMethodController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
+use App\Http\Controllers\Api\V1\Admin\ProductImportController;
 use App\Http\Controllers\Api\V1\Admin\RewardController;
 use App\Http\Controllers\Api\V1\Admin\ContactMessageController;
 use App\Http\Controllers\Api\V1\Admin\FaqController;
@@ -101,6 +102,24 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     // Publish, feature or withdraw several at once. Declared before the
     // apiResource, or {product} would swallow "bulk" as an id.
     Route::post('products/bulk', [ProductController::class, 'bulk'])->name('products.bulk');
+
+    /*
+     * Import. Three segments, so none of these collide with
+     * `products/{product}`, but they are declared up here with the rest of
+     * the non-resource product routes anyway.
+     *
+     * `scrape` makes the server fetch an address a person typed, which is
+     * the one outbound request in this application that a user controls --
+     * hence its own, tighter rate limit.
+     */
+    Route::post('products/import/scrape', [ProductImportController::class, 'scrape'])
+        ->middleware('throttle:import')
+        ->name('products.import.scrape');
+    Route::post('products/import/csv', [ProductImportController::class, 'csv'])
+        ->middleware('throttle:import')
+        ->name('products.import.csv');
+    Route::get('products/import/template', [ProductImportController::class, 'template'])
+        ->name('products.import.template');
 
     // Before apiResource, or `products/{product}` would swallow nothing --
     // but keep it here anyway so the whole product surface reads in one

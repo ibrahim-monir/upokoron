@@ -88,7 +88,20 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('rewards-balance', fn (Request $request) => Limit::perMinute(5)
             ->by($request->ip()));
 
+        // Asking a question about a product. Open to anyone, like the contact
+        // form, and limited the same way -- a shopper has one or two
+        // questions, and anything posting more than that is not a shopper.
+        RateLimiter::for('questions', fn (Request $request) => Limit::perMinute(5)
+            ->by($request->user()?->id ?: $request->ip()));
+
         RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)
+            ->by($request->user()?->id ?: $request->ip()));
+
+        // Product import. Every call here makes this server fetch a page
+        // somewhere else, so the limit is about the other site as much as
+        // this one: an admin importing a catalogue by hand never approaches
+        // twenty a minute, and a script pointed at a supplier would.
+        RateLimiter::for('import', fn (Request $request) => Limit::perMinute(20)
             ->by($request->user()?->id ?: $request->ip()));
     }
 
