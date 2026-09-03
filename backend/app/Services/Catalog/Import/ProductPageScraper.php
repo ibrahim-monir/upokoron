@@ -55,6 +55,7 @@ class ProductPageScraper
         $this->fromSpecTables($xpath, $product);
 
         $product->images = $this->tidyImages($product->images, $finalUrl);
+        $product->name = $this->withoutSiteSuffix($product->name, $xpath, $finalUrl);
 
         if (! $product->isUsable()) {
             throw new BusinessRuleException(
@@ -144,7 +145,22 @@ class ProductPageScraper
         $nodes = [];
 
         foreach ($xpath->query('//script[@type="application/ld+json"]') ?: [] as $script) {
-            $decoded = json_decode(trim($script->textContent), true);
+            $raw = trim($script->textContent);
+            $decoded = json_decode($raw, true);
+
+            /*
+             * Shops write their description into this block with the line
+             * breaks still in it, which is invalid JSON -- a raw newline
+             * inside a string is exactly what the spec forbids -- so a strict
+             * decode returns null and the page falls through to OpenGraph
+             * with no price on it. Every control character is whitespace as
+             * far as this document is concerned, so replacing them costs
+             * nothing and rescues the block. Found on techshopbd.com, whose
+             * markup is otherwise complete.
+             */
+            if (! is_array($decoded)) {
+                $decoded = json_decode((string) preg_replace('/[\x00-\x1F]+/', ' ', $raw), true);
+            }
 
             if (! is_array($decoded)) {
                 continue;
@@ -338,6 +354,46 @@ class ProductPageScraper
         }
 
         return array_slice(array_keys($seen), 0, (int) config('upokoron.import.max_images', 6));
+    }
+
+    /**
+     * "Arduino Uno R3 Price in BD | TechShopBD" -> "Arduino Uno R3 Price in BD".
+     *
+     * A page title is written for a search result, so it carries the shop's
+     * name; a product name must not. Only a trailing piece that actually
+     * matches the site is cut -- product names are full of separators
+     * ("2-in-1", "5.5x2.1mm"), and a rule that trimmed at any dash would eat
+     * them.
+     */
+    private function withoutSiteSuffix(?string $name, DOMXPath $xpath, string $url): ?string
+    {
+        if (blank($name)) {
+            return $name;
+        }
+
+        $host = strtolower((string) preg_replace('/^www\./', '', (string) parse_url($url, PHP_URL_HOST)));
+
+        $sites = array_filter([
+            $this->meta($xpath, 'og:site_name'),
+            $host,
+            // techshopbd.com -> techshopbd, which is how the title spells it.
+            strtok($host, '.') ?: null,
+        ]);
+
+        if (preg_match('/^(.*\S)\s*[|:·\x{2013}\x{2014}-]\s*([^|:·\x{2013}\x{2014}-]+)$/u', $name, $matches) !== 1) {
+            return $name;
+        }
+
+        $normalise = static fn (string $value): string => strtolower((string) preg_replace('/[^a-z0-9]/i', '', $value));
+        $tail = $normalise(trim($matches[2]));
+
+        foreach ($sites as $site) {
+            if ($tail !== '' && $tail === $normalise((string) $site)) {
+                return trim($matches[1]);
+            }
+        }
+
+        return $name;
     }
 
     /** Set a field only if it is still empty: earlier sources are better sources. */

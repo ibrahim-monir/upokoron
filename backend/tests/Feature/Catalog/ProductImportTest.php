@@ -125,6 +125,79 @@ class ProductImportTest extends TestCase
             ->assertJsonPath('product.images.0', 'https://shop.test/img/sr5200.jpg');
     }
 
+    /**
+     * Both halves of this are what a real shop actually served.
+     *
+     * techshopbd.com publishes a complete JSON-LD Product -- and writes its
+     * description into it with the line breaks left in, which is invalid
+     * JSON. A strict decode returns null, and the whole block, price and all,
+     * is thrown away silently. The title is the other half: written for a
+     * search result, so it carries the shop's name after the product's.
+     */
+    public function test_it_survives_the_raw_line_breaks_shops_leave_in_their_json_ld(): void
+    {
+        $this->allowFakeHosts();
+        $this->actingAsRole('manager');
+
+        $this->page(
+            '<html><head>'
+            .'<meta property="og:site_name" content="TechShopBD">'
+            .'<title>Arduino Uno R3 Price in BD | TechShopBD</title>'
+            .'<script type="application/ld+json">'
+            .'{"@context":"https://schema.org","@graph":[{"@type":["WebPage","ItemPage"],"name":"page"},'
+            .'{"@type":"Product","name":"Arduino Uno R3","sku":"131106001253",'
+            ."\"description\":\"The Arduino Uno R3,\nbuilt around the ATmega328P.\","
+            .'"offers":{"@type":"Offer","price":"920.04","priceCurrency":"BDT",'
+            .'"availability":"https://schema.org/InStock"}}]}'
+            .'</script></head><body></body></html>'
+        );
+
+        $this->postJson('/api/v1/admin/products/import/scrape', ['url' => 'https://shop.test/p/uno'])
+            ->assertOk()
+            ->assertJsonPath('product.name', 'Arduino Uno R3')
+            ->assertJsonPath('product.sku', '131106001253')
+            ->assertJsonPath('product.selling_price', '920.04');
+    }
+
+    public function test_the_shop_name_is_cut_off_a_page_title(): void
+    {
+        $this->allowFakeHosts();
+        $this->actingAsRole('manager');
+
+        $this->page(
+            '<html><head>'
+            .'<meta property="og:site_name" content="TechShopBD">'
+            .'<meta property="og:title" content="Arduino Uno R3 Price in BD | TechShopBD">'
+            .'<meta property="og:description" content="A development board.">'
+            .'<meta property="og:image" content="https://shop.test/uno.jpg">'
+            .'</head><body></body></html>'
+        );
+
+        $this->postJson('/api/v1/admin/products/import/scrape', ['url' => 'https://shop.test/p/uno'])
+            ->assertOk()
+            ->assertJsonPath('product.name', 'Arduino Uno R3 Price in BD');
+    }
+
+    /** A dash inside the product's own name is not a shop name and must survive. */
+    public function test_a_title_that_is_only_a_product_name_is_left_alone(): void
+    {
+        $this->allowFakeHosts();
+        $this->actingAsRole('manager');
+
+        $this->page(
+            '<html><head>'
+            .'<meta property="og:site_name" content="TechShopBD">'
+            .'<meta property="og:title" content="Wall Mounted 2-in-1 Charging Stand">'
+            .'<meta property="og:description" content="A bracket.">'
+            .'<meta property="og:image" content="https://shop.test/bracket.jpg">'
+            .'</head><body></body></html>'
+        );
+
+        $this->postJson('/api/v1/admin/products/import/scrape', ['url' => 'https://shop.test/p/bracket'])
+            ->assertOk()
+            ->assertJsonPath('product.name', 'Wall Mounted 2-in-1 Charging Stand');
+    }
+
     public function test_it_refuses_an_address_inside_the_server_network(): void
     {
         $this->actingAsRole('manager');
