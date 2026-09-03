@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Shop\CategoryController;
 use App\Http\Controllers\Api\V1\Shop\CheckoutController;
 use App\Http\Controllers\Api\V1\Shop\CustomerPaymentMethodController;
 use App\Http\Controllers\Api\V1\Shop\ProductController;
+use App\Http\Controllers\Api\V1\Shop\QuestionController;
 use App\Http\Controllers\Api\V1\Shop\RewardController;
 use App\Http\Controllers\Api\V1\Shop\RewardInfoController;
 use App\Http\Controllers\Api\V1\Shop\ReviewController;
@@ -81,6 +82,16 @@ Route::get('products/{product:slug}', [ProductController::class, 'show'])
 // Approved reviews for a product, public.
 Route::get('products/{product:slug}/reviews', [ReviewController::class, 'index'])
     ->name('products.reviews.index');
+
+// Product Q&A. Both public, and asking deliberately needs no account -- the
+// question comes before the purchase, so it comes before the login too. Its
+// own limiter, for the same reason the contact form has one.
+Route::get('products/{product:slug}/questions', [QuestionController::class, 'index'])
+    ->name('products.questions.index');
+
+Route::post('products/{product:slug}/questions', [QuestionController::class, 'store'])
+    ->middleware('throttle:questions')
+    ->name('products.questions.store');
 
 /*
 | Guest-only auth.

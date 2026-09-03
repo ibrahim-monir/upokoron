@@ -87,6 +87,8 @@ final class Permissions
             'Reviews' => [
                 'reviews.view' => 'View product reviews',
                 'reviews.moderate' => 'Approve, reject or delete reviews',
+                'questions.view' => 'View questions asked about products',
+                'questions.answer' => 'Answer, approve or delete product questions',
             ],
             'Contact' => [
                 'contact.view' => 'Read messages sent from the contact page',
@@ -167,6 +169,7 @@ final class Permissions
                 'banners.manage', 'coupons.manage', 'discounts.manage',
                 'rewards.view', 'rewards.adjust', 'affiliate.view', 'affiliate.manage',
                 'reviews.view', 'reviews.moderate',
+                'questions.view', 'questions.answer',
                 'contact.view', 'contact.manage', 'faqs.manage',
                 'expenses.view', 'expenses.manage',
                 'reports.sales', 'reports.inventory',
@@ -213,6 +216,7 @@ final class Permissions
                 'customers.view', 'customers.manage',
                 'rewards.view',
                 'reviews.view', 'reviews.moderate',
+                'questions.view', 'questions.answer',
                 'contact.view', 'contact.manage',
             ],
 

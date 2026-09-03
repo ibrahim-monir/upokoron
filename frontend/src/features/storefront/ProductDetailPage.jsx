@@ -41,6 +41,7 @@ import { useAddToCart } from '../cart/useCart'
 import { TrendingSection } from './HomePage'
 import { ProductCard, ProductCardSkeleton } from './ProductCard'
 import { RailArrows, useRail } from './Rail'
+import { useAskQuestion, useProductQuestions } from './useQuestions'
 import {
   useDeleteReview,
   useMyReview,
@@ -62,6 +63,7 @@ const TABS = [
   { key: 'description', label: 'Description' },
   { key: 'additional', label: 'Additional Information' },
   { key: 'review', label: 'Review' },
+  { key: 'questions', label: 'Q&A' },
 ]
 
 function StarRating({ value, count }) {
@@ -318,6 +320,180 @@ function ReviewsPanel({ product }) {
             <ReviewItem key={review.id} review={review} />
           ))}
           <Pagination meta={reviewsQuery.data?.meta} onPage={setPage} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+const questionSchema = z.object({
+  asker_name: z.string().max(120).optional().or(z.literal('')),
+  asker_email: z.string().email('That does not look like an email address.').optional().or(z.literal('')),
+  question: z
+    .string()
+    .min(5, 'Write your question in a few words.')
+    .max(1000, 'Keep the question under 1000 characters.'),
+})
+
+/** Ask a question about this product. No account needed -- that is the point. */
+function QuestionForm({ slug }) {
+  const toast = useToast()
+  const ask = useAskQuestion(slug)
+  const user = useAuthStore((state) => state.user)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(questionSchema),
+    defaultValues: { asker_name: '', asker_email: '', question: '' },
+  })
+
+  const onSubmit = async (values) => {
+    try {
+      const result = await ask.mutateAsync(values)
+      toast.success(result?.message ?? 'Thanks for asking.')
+      reset({ asker_name: '', asker_email: '', question: '' })
+    } catch (error) {
+      if (error instanceof ApiError) {
+        applyServerErrors(error, setError, toast)
+        return
+      }
+      toast.error('Could not send your question.')
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-3 rounded-card border border-ink-200 p-4"
+      noValidate
+    >
+      <div>
+        <p className="text-sm font-medium text-ink-900">Ask about this product</p>
+        <p className="mt-0.5 text-xs text-ink-500">
+          No account needed. We publish the question here once we have answered it.
+        </p>
+      </div>
+
+      {/*
+         Only for guests. A signed-in shopper's name and email are already on
+         their account, and the server fills both in -- asking again would be
+         a form field that exists only to be ignored.
+      */}
+      {!user && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="question-name" className="text-sm font-medium text-ink-800">
+              Your name
+              <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="question-name"
+              className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 hover:border-ink-400"
+              placeholder="Rahim Uddin"
+              {...register('asker_name')}
+            />
+            {errors.asker_name?.message && <p className="text-xs text-danger-700">{errors.asker_name.message}</p>}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="question-email" className="text-sm font-medium text-ink-800">
+              Email <span className="text-ink-400">(optional)</span>
+            </label>
+            <input
+              id="question-email"
+              type="email"
+              className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 hover:border-ink-400"
+              placeholder="So we can tell you when we answer"
+              {...register('asker_email')}
+            />
+            {errors.asker_email?.message && <p className="text-xs text-danger-700">{errors.asker_email.message}</p>}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="question-body" className="text-sm font-medium text-ink-800">
+          Your question
+          <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
+        </label>
+        <Textarea
+          id="question-body"
+          placeholder="Does this work with a 12V adapter?"
+          invalid={Boolean(errors.question)}
+          {...register('question')}
+        />
+        {errors.question?.message && <p className="text-xs text-danger-700">{errors.question.message}</p>}
+      </div>
+
+      <div>
+        <Button type="submit" loading={ask.isPending}>
+          Send question
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function QuestionItem({ item }) {
+  return (
+    <div className="flex flex-col gap-2 border-b border-ink-100 py-4 last:border-0">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <Badge tone="neutral">Q</Badge>
+        <p className="min-w-0 flex-1 font-medium text-ink-900">{item.question}</p>
+      </div>
+
+      <p className="text-xs text-ink-400">
+        {item.asker_name || 'Customer'}
+        {item.created_at ? ` · ${new Date(item.created_at).toLocaleDateString()}` : ''}
+      </p>
+
+      {item.answer ? (
+        <div className="mt-1 flex flex-wrap items-baseline gap-2 rounded-card bg-ink-50 p-3">
+          <Badge tone="success">A</Badge>
+          <div className="min-w-0 flex-1">
+            <p className="whitespace-pre-line text-sm leading-relaxed text-ink-700">{item.answer}</p>
+            <p className="mt-1 text-xs text-ink-400">
+              Answered by the shop
+              {item.answered_at ? ` · ${new Date(item.answered_at).toLocaleDateString()}` : ''}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-ink-400">Waiting for an answer from the shop.</p>
+      )}
+    </div>
+  )
+}
+
+/** The Q&A tab: what other shoppers asked, what the shop said, and a form to add one. */
+function QuestionsPanel({ product }) {
+  const slug = product.slug
+  const [page, setPage] = useState(1)
+  const query = useProductQuestions(slug, { page })
+
+  const questions = query.data?.data ?? []
+
+  return (
+    <div className="flex flex-col gap-6">
+      <QuestionForm slug={slug} />
+
+      {query.isLoading ? (
+        <Spinner />
+      ) : questions.length === 0 ? (
+        <p className="text-sm text-ink-500">
+          No questions about this product yet. Ask the first one.
+        </p>
+      ) : (
+        <div>
+          {questions.map((item) => (
+            <QuestionItem key={item.id} item={item} />
+          ))}
+          <Pagination meta={query.data?.meta} onPage={setPage} />
         </div>
       )}
     </div>
@@ -973,6 +1149,8 @@ export function ProductDetailPage() {
             ))}
 
           {tab === 'review' && <ReviewsPanel product={product} />}
+
+          {tab === 'questions' && <QuestionsPanel product={product} />}
         </div>
       </div>
 

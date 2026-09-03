@@ -108,6 +108,11 @@ class Product extends Model
         return $this->hasMany(ProductReview::class);
     }
 
+    public function questions(): HasMany
+    {
+        return $this->hasMany(ProductQuestion::class);
+    }
+
     /**
      * Recompute rating_avg/rating_count from approved reviews.
      *

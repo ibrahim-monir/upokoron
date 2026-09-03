@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\Admin\ProductImportController;
 use App\Http\Controllers\Api\V1\Admin\RewardController;
 use App\Http\Controllers\Api\V1\Admin\ContactMessageController;
 use App\Http\Controllers\Api\V1\Admin\FaqController;
+use App\Http\Controllers\Api\V1\Admin\QuestionController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
@@ -141,6 +142,12 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::put('reviews/{review}/status', [ReviewController::class, 'updateStatus'])->name('reviews.status');
     Route::delete('reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
+    // Product questions: the only place an answer can be written.
+    Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
+    Route::put('questions/{question}/answer', [QuestionController::class, 'answer'])->name('questions.answer');
+    Route::put('questions/{question}/status', [QuestionController::class, 'updateStatus'])->name('questions.status');
+    Route::delete('questions/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
 
     Route::get('faqs', [FaqController::class, 'index'])->name('faqs.index');
     Route::post('faqs', [FaqController::class, 'store'])->name('faqs.store');

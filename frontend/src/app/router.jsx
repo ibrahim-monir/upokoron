@@ -270,6 +270,10 @@ export const router = createBrowserRouter([
         element: guarded('reviews.view', lazyAdmin(() => import('../features/admin/ReviewsPage'))),
       },
       {
+        path: 'questions',
+        element: guarded('questions.view', lazyAdmin(() => import('../features/admin/QuestionsPage'))),
+      },
+      {
         path: 'rewards',
         element: guarded('rewards.view', lazyAdmin(() => import('../features/admin/RewardsPage'))),
       },
