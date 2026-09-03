@@ -206,6 +206,43 @@
   }
 
   /*
+   * A card action that waits until it is wanted.
+   *
+   * Hidden until the card is hovered -- but ONLY where hovering exists. A
+   * phone has no hover state, so on touch the button simply stays put:
+   * getting that backwards would hide the buy button from most of this
+   * shop's customers, which is the whole reason this is a media query and
+   * not a `group-hover:opacity-0` on the element.
+   *
+   * The space it occupies is reserved either way, so revealing it never
+   * reflows the grid under the cursor. Keyboard users get it from
+   * :focus-within, since they never hover at all.
+   */
+  @media (hover: hover) and (pointer: fine) {
+    .cta-reveal {
+      opacity: 0;
+      transform: translateY(0.25rem);
+      pointer-events: none;
+      transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
+    }
+
+    .group:hover .cta-reveal,
+    .cta-reveal:focus-within {
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cta-reveal {
+      transition: none;
+    }
+  }
+
+  /*
    * The two handles of the price range.
    *
    * Two <input type="range"> stacked on one track, which is the only way to

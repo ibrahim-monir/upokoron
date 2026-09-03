@@ -176,8 +176,13 @@ export function ProductCard({ product }) {
           Straight into the basket for a simple product. A product with
           several variations sends the shopper to the page instead, because
           "add to cart" cannot know which colour they meant.
+
+          cta-reveal keeps it out of sight until the card is hovered, so a
+          grid of cards reads as pictures and prices rather than a wall of
+          buttons. On touch there is no hover, so it stays visible -- see
+          the rule in index.css.
         */}
-        <div className="pt-1">
+        <div className="cta-reveal pt-1">
           {(product.variations_count ?? 1) > 1 ? (
             <Link
               to={`/products/${product.slug}`}
