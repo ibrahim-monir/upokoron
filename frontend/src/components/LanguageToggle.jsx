@@ -9,11 +9,11 @@ import { useLocaleStore } from '../stores/localeStore'
  * a shopper glancing at it can tell which language is active without
  * having to click first and see what changes.
  *
- * Every colour here comes from the header tokens, which are derived from the
- * bar's own brightness (lib/theme.js). The active pill is the ink itself with
- * the bar colour as its text, so the pair is guaranteed to read whatever the
- * shop paints the header -- the white-on-white it used to be only worked
- * while that bar was navy.
+ * The idle option and the track come from the header tokens, which are
+ * derived from the bar's own brightness (lib/theme.js), so they stay legible
+ * whatever the shop paints the header. The active pill is the brand colour
+ * with white on it -- the same pairing as the search button beside it, rather
+ * than the near-black slab the header ink gave us on a pale bar.
  */
 export function LanguageToggle({ className }) {
   const locale = useLocaleStore((state) => state.locale)
@@ -36,7 +36,7 @@ export function LanguageToggle({ className }) {
         title={t('header.switchToBangla')}
         className={cx(
           'rounded-full px-2 py-1 transition-colors',
-          locale === 'bn' ? 'bg-header-ink text-header' : 'text-header-muted hover:text-header-ink',
+          locale === 'bn' ? 'bg-brand-600 text-white' : 'text-header-muted hover:text-header-ink',
         )}
       >
         বাং
@@ -48,7 +48,7 @@ export function LanguageToggle({ className }) {
         title={t('header.switchToEnglish')}
         className={cx(
           'rounded-full px-2 py-1 transition-colors',
-          locale === 'en' ? 'bg-header-ink text-header' : 'text-header-muted hover:text-header-ink',
+          locale === 'en' ? 'bg-brand-600 text-white' : 'text-header-muted hover:text-header-ink',
         )}
       >
         EN
