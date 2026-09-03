@@ -2296,6 +2296,269 @@ export default function ProductFormPage() {
                 </div>
 
                 {/*
+                   The offer and the opening stock, side by side under the
+                   price they both qualify. Each was a card of its own
+                   holding one block, which put two screens between the
+                   price of a product and how many of it there are.
+                */}
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div>
+
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
+
+                      <div className="mb-4 flex items-center gap-3">
+
+                        <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+                          <Tag className="h-4 w-4" />
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-900">
+                            Promotional offer
+                          </p>
+
+                          <p className="text-xs text-emerald-700/70">
+                            Optional temporary promotional price.
+                          </p>
+                        </div>
+
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-3">
+
+                        <Field
+                          label="Offer price"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          error={
+                            errors.special_price
+                              ?.message
+                          }
+                          {...register(
+                            'special_price',
+                          )}
+                        />
+
+                        <Field
+                          label="Start"
+                          type="datetime-local"
+                          hint="Blank = immediately."
+                          error={
+                            errors.special_starts_at
+                              ?.message
+                          }
+                          {...register(
+                            'special_starts_at',
+                          )}
+                        />
+
+                        <Field
+                          label="End"
+                          type="datetime-local"
+                          required={Boolean(
+                            specialPrice,
+                          )}
+                          hint="Required for an offer."
+                          error={
+                            errors.special_ends_at
+                              ?.message
+                          }
+                          {...register(
+                            'special_ends_at',
+                          )}
+                        />
+
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div>
+
+                    {/* Track stock */}
+
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-ink-200 bg-ink-50/50 p-4">
+
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-ink-300"
+                        {...register(
+                          'is_stock_tracked',
+                        )}
+                      />
+
+                      <span>
+                        <span className="block text-sm font-semibold text-ink-900">
+                          Track inventory
+                        </span>
+
+                        <span className="mt-1 block text-xs leading-5 text-ink-500">
+                          Enable stock tracking for this product.
+                          All stock movements are recorded in Inventory.
+                        </span>
+                      </span>
+
+                    </label>
+
+                    {/*
+                       Stock hangs off a variation, and a variable product has
+                       many. One box here could only ever be wrong, so that case
+                       is handed to Inventory, which edits each one.
+                    */}
+                    {isStockTracked &&
+                      type === 'variable' && (
+                        <div className="rounded-2xl border border-ink-200 bg-ink-50/50 p-4">
+                          <p className="text-sm font-semibold text-ink-900">
+                            Stock is held per variation
+                          </p>
+
+                          <p className="mt-1 text-xs leading-5 text-ink-500">
+                            This product has a stock level for each variation,
+                            so it is set in{' '}
+                            <span className="font-semibold text-ink-700">
+                              Inventory
+                            </span>
+                            {' '}rather than here.
+                          </p>
+                        </div>
+                      )}
+
+                    {isStockTracked &&
+                      type === 'simple' && (
+                      <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/30">
+
+                        <div className="border-b border-emerald-200 px-4 py-3">
+
+                          <div className="flex items-center gap-2">
+
+                            <Package className="h-4 w-4 text-emerald-700" />
+
+                            <div>
+                              <p className="text-sm font-semibold text-emerald-900">
+                                Stock quantity
+                              </p>
+
+                              <p className="text-[11px] text-emerald-700/70">
+                                {isEdit
+                                  ? `Inventory currently holds ${stockOnRecord}.`
+                                  : 'Posted to Inventory as opening stock.'}
+                              </p>
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                        <div className="grid gap-4 p-4 md:grid-cols-2">
+
+                          <Field
+                            label={
+                              isEdit
+                                ? 'Stock on hand'
+                                : 'Opening stock'
+                            }
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0"
+                            hint={
+                              isEdit
+                                ? 'The figure you want on hand. Leave blank to leave stock untouched.'
+                                : 'Initial stock added to inventory.'
+                            }
+                            error={
+                              errors.stock_quantity
+                                ?.message
+                            }
+                            {...register(
+                              'stock_quantity',
+                            )}
+                          />
+
+                          <Field
+                            label="Low stock alert"
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="5"
+                            hint="Warn once stock falls to this level."
+                            error={
+                              errors.low_stock_threshold
+                                ?.message
+                            }
+                            {...register(
+                              'low_stock_threshold',
+                            )}
+                          />
+
+                          {stockDelta > 0 && (
+                            <Field
+                              label="Unit cost"
+                              type="number"
+                              step="0.000001"
+                              min="0"
+                              placeholder="0.00"
+                              hint="What each incoming unit cost you. Blank uses the current average cost."
+                              error={
+                                errors.stock_unit_cost
+                                  ?.message
+                              }
+                              {...register(
+                                'stock_unit_cost',
+                              )}
+                            />
+                          )}
+
+                        </div>
+
+                        {stockDelta !== 0 && (
+                          <div className="border-t border-emerald-200 bg-white/60 px-4 py-3">
+
+                            <div className="flex items-center justify-between gap-3">
+
+                              <div>
+                                <p className="text-xs font-semibold text-ink-800">
+                                  {!currentStock.hasMovements &&
+                                  stockDelta > 0
+                                    ? 'Opening stock will be recorded'
+                                    : 'Stock movement will be recorded'}
+                                </p>
+
+                                <p className="mt-0.5 text-[11px] text-ink-500">
+                                  Saving posts this movement to the inventory
+                                  ledger and the accounts.
+                                </p>
+                              </div>
+
+                              <span
+                                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                  stockDelta > 0
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-amber-100 text-amber-700'
+                                }`}
+                              >
+                                {stockDelta > 0
+                                  ? '+'
+                                  : '−'}
+                                {Math.abs(
+                                  stockDelta,
+                                )}
+                              </span>
+
+                            </div>
+
+                          </div>
+                        )}
+
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+
+                {/*
                    Brand, unit and barcode: real fields, rarely the reason
                    someone opened this page. Folded, and unfolded by itself
                    when one of them is what the form is complaining about.
@@ -2405,94 +2668,6 @@ export default function ProductFormPage() {
             </FoldableSection>
 
 
-            {/* ===============================================================
-               04 PRICING
-               =============================================================== */}
-
-            <FoldableSection
-              icon={Tag}
-              title="Pricing"
-              description={
-                    type ===
-                    'variable'
-                      ? 'Default pricing. Individual variations may override these values.'
-                      : 'Set the normal and promotional pricing.'
-                  }
-              bodyClass="space-y-5 p-5"
-              defaultOpen={true}
-              forceOpen={sectionHasError(['selling_price', 'compare_at_price', 'special_price', 'special_starts_at', 'special_ends_at'])}
-            >
-
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
-
-                  <div className="mb-4 flex items-center gap-3">
-
-                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
-                      <Tag className="h-4 w-4" />
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold text-emerald-900">
-                        Promotional offer
-                      </p>
-
-                      <p className="text-xs text-emerald-700/70">
-                        Optional temporary promotional price.
-                      </p>
-                    </div>
-
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-3">
-
-                    <Field
-                      label="Offer price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      error={
-                        errors.special_price
-                          ?.message
-                      }
-                      {...register(
-                        'special_price',
-                      )}
-                    />
-
-                    <Field
-                      label="Start"
-                      type="datetime-local"
-                      hint="Blank = immediately."
-                      error={
-                        errors.special_starts_at
-                          ?.message
-                      }
-                      {...register(
-                        'special_starts_at',
-                      )}
-                    />
-
-                    <Field
-                      label="End"
-                      type="datetime-local"
-                      required={Boolean(
-                        specialPrice,
-                      )}
-                      hint="Required for an offer."
-                      error={
-                        errors.special_ends_at
-                          ?.message
-                      }
-                      {...register(
-                        'special_ends_at',
-                      )}
-                    />
-
-                  </div>
-                </div>
-
-            </FoldableSection>
 
             {/* ===============================================================
                05 VARIATIONS
@@ -2525,198 +2700,6 @@ export default function ProductFormPage() {
               </Card>
             )}
 
-            {/* ===============================================================
-               06 INVENTORY
-               =============================================================== */}
-
-            <FoldableSection
-              icon={Package}
-              title="Inventory"
-              description="Stock quantity is synchronized with the inventory ledger."
-              bodyClass="space-y-5 p-5"
-              defaultOpen={true}
-              forceOpen={sectionHasError(['low_stock_alert', 'unit_cost', 'opening_quantity'])}
-            >
-
-                {/* Track stock */}
-
-                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-ink-200 bg-ink-50/50 p-4">
-
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 rounded border-ink-300"
-                    {...register(
-                      'is_stock_tracked',
-                    )}
-                  />
-
-                  <span>
-                    <span className="block text-sm font-semibold text-ink-900">
-                      Track inventory
-                    </span>
-
-                    <span className="mt-1 block text-xs leading-5 text-ink-500">
-                      Enable stock tracking for this product.
-                      All stock movements are recorded in Inventory.
-                    </span>
-                  </span>
-
-                </label>
-
-                {/*
-                   Stock hangs off a variation, and a variable product has
-                   many. One box here could only ever be wrong, so that case
-                   is handed to Inventory, which edits each one.
-                */}
-                {isStockTracked &&
-                  type === 'variable' && (
-                    <div className="rounded-2xl border border-ink-200 bg-ink-50/50 p-4">
-                      <p className="text-sm font-semibold text-ink-900">
-                        Stock is held per variation
-                      </p>
-
-                      <p className="mt-1 text-xs leading-5 text-ink-500">
-                        This product has a stock level for each variation,
-                        so it is set in{' '}
-                        <span className="font-semibold text-ink-700">
-                          Inventory
-                        </span>
-                        {' '}rather than here.
-                      </p>
-                    </div>
-                  )}
-
-                {isStockTracked &&
-                  type === 'simple' && (
-                  <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/30">
-
-                    <div className="border-b border-emerald-200 px-4 py-3">
-
-                      <div className="flex items-center gap-2">
-
-                        <Package className="h-4 w-4 text-emerald-700" />
-
-                        <div>
-                          <p className="text-sm font-semibold text-emerald-900">
-                            Stock quantity
-                          </p>
-
-                          <p className="text-[11px] text-emerald-700/70">
-                            {isEdit
-                              ? `Inventory currently holds ${stockOnRecord}.`
-                              : 'Posted to Inventory as opening stock.'}
-                          </p>
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                    <div className="grid gap-4 p-4 md:grid-cols-2">
-
-                      <Field
-                        label={
-                          isEdit
-                            ? 'Stock on hand'
-                            : 'Opening stock'
-                        }
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        placeholder="0"
-                        hint={
-                          isEdit
-                            ? 'The figure you want on hand. Leave blank to leave stock untouched.'
-                            : 'Initial stock added to inventory.'
-                        }
-                        error={
-                          errors.stock_quantity
-                            ?.message
-                        }
-                        {...register(
-                          'stock_quantity',
-                        )}
-                      />
-
-                      <Field
-                        label="Low stock alert"
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        placeholder="5"
-                        hint="Warn once stock falls to this level."
-                        error={
-                          errors.low_stock_threshold
-                            ?.message
-                        }
-                        {...register(
-                          'low_stock_threshold',
-                        )}
-                      />
-
-                      {stockDelta > 0 && (
-                        <Field
-                          label="Unit cost"
-                          type="number"
-                          step="0.000001"
-                          min="0"
-                          placeholder="0.00"
-                          hint="What each incoming unit cost you. Blank uses the current average cost."
-                          error={
-                            errors.stock_unit_cost
-                              ?.message
-                          }
-                          {...register(
-                            'stock_unit_cost',
-                          )}
-                        />
-                      )}
-
-                    </div>
-
-                    {stockDelta !== 0 && (
-                      <div className="border-t border-emerald-200 bg-white/60 px-4 py-3">
-
-                        <div className="flex items-center justify-between gap-3">
-
-                          <div>
-                            <p className="text-xs font-semibold text-ink-800">
-                              {!currentStock.hasMovements &&
-                              stockDelta > 0
-                                ? 'Opening stock will be recorded'
-                                : 'Stock movement will be recorded'}
-                            </p>
-
-                            <p className="mt-0.5 text-[11px] text-ink-500">
-                              Saving posts this movement to the inventory
-                              ledger and the accounts.
-                            </p>
-                          </div>
-
-                          <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                              stockDelta > 0
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-amber-100 text-amber-700'
-                            }`}
-                          >
-                            {stockDelta > 0
-                              ? '+'
-                              : '−'}
-                            {Math.abs(
-                              stockDelta,
-                            )}
-                          </span>
-
-                        </div>
-
-                      </div>
-                    )}
-
-                  </div>
-                )}
-
-            </FoldableSection>
 
             {/* ===============================================================
                07 SHIPPING
