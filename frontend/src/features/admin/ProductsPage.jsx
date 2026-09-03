@@ -4,9 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Archive,
   CheckCircle2,
-  ChevronRight,
-  Copy,
-  Edit3,
   History,
   ImageOff,
   Package,
@@ -14,7 +11,7 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
-  Tag,
+  Star,
   TrendingDown,
   X,
   XCircle,
@@ -22,93 +19,14 @@ import {
 import { useList, useWrite } from './useResource'
 import { AdjustStockForm, StockMovements } from './StockPanels'
 import { api, get } from '../../lib/api'
-import { cx, money, quantity } from '../../lib/format'
+import { cx, date, money, quantity } from '../../lib/format'
 import { useAuthStore } from '../../stores/authStore'
-import {
-  Badge,
-  Button,
-  EmptyState,
-  ErrorState,
-  Input,
-  Pagination,
-  Select,
-  Spinner,
-  TableWrap,
-  Td,
-  Th,
-  useToast,
-} from '../../components/ui'
-
-const STATUS_TONE = { active: 'success', draft: 'neutral', archived: 'warning' }
+import { Button, EmptyState, ErrorState, Input, Pagination, Select, Spinner, TableWrap, Td, Th, useToast } from '../../components/ui'
 
 
 /* -------------------------------------------------------
    Stock cell
 ------------------------------------------------------- */
-
-/**
- * What one product's stock position is, in the space of a table cell.
- *
- * Available rather than on hand is the headline: units reserved against
- * somebody's order cannot be sold again, so on hand alone will happily tell
- * you there are ten of something you cannot sell. On hand is kept as the
- * quieter second line, since it is what a physical recount will match.
- */
-function StockCell({ product }) {
-  const stock = product.stock
-
-  if (!stock?.tracked) {
-    return <span className="text-xs text-slate-400">Not tracked</span>
-  }
-
-  const available = Number(stock.available ?? 0)
-  const onHand = Number(stock.on_hand ?? 0)
-  const reserved = onHand - available
-
-  return (
-    <div className="flex flex-col items-end">
-      <span
-        className={cx(
-          'text-sm font-semibold tabular',
-          stock.is_out ? 'text-danger-700' : stock.is_low ? 'text-warning-700' : 'text-slate-900',
-        )}
-      >
-        {quantity(available)}
-      </span>
-
-      {reserved > 0 && (
-        <span className="text-[11px] text-slate-400 tabular" title="Reserved against open orders">
-          {quantity(onHand)} on hand
-        </span>
-      )}
-    </div>
-  )
-}
-
-function StockFlag({ stock }) {
-  if (!stock?.tracked) return null
-
-  if (stock.is_out) {
-    return (
-      <Badge tone="danger" className="gap-1">
-        <XCircle className="h-3 w-3" aria-hidden="true" />
-        Out of stock
-      </Badge>
-    )
-  }
-
-  if (stock.is_low) {
-    return (
-      <Badge tone="warning" className="gap-1">
-        <TrendingDown className="h-3 w-3" aria-hidden="true" />
-        Running low
-      </Badge>
-    )
-  }
-
-  return null
-}
-
 
 /* -------------------------------------------------------
    Per-SKU drill-down
@@ -448,7 +366,7 @@ export default function ProductsPage() {
 
   // checkbox + product + category + type + variations + price + status +
   // actions, plus the two stock columns when they are shown.
-  const columnCount = seesStock ? 10 : 8
+  const columnCount = seesStock ? 10 : 9
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5">
@@ -706,15 +624,15 @@ export default function ProductsPage() {
                       className="h-4 w-4 rounded border-slate-300 text-brand-800"
                     />
                   </Th>
-                  <Th>Product</Th>
-                  <Th>Category</Th>
-                  <Th>Type</Th>
-                  <Th numeric>Variations</Th>
+                  <Th className="w-14" />
+                  <Th>Name</Th>
+                  <Th>SKU</Th>
+                  {seesStock && <Th>Stock</Th>}
                   <Th numeric>Price</Th>
-                  {seesStock && <Th numeric>Available</Th>}
-                  {seesStock && <Th numeric>Stock value</Th>}
-                  <Th>Status</Th>
-                  <Th className="w-12" />
+                  <Th>Categories</Th>
+                  <Th>Brand</Th>
+                  <Th className="w-10" />
+                  <Th>Date</Th>
                 </tr>
               </thead>
 
@@ -743,181 +661,190 @@ export default function ProductsPage() {
                         </Td>
 
                         <Td>
-                          <div className="flex min-w-[250px] items-center gap-2">
-                            {canExpand ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleExpanded(product.id)}
-                                aria-expanded={isOpen}
-                                aria-label={`${isOpen ? 'Hide' : 'Show'} stock for ${product.name}`}
-                                className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-                              >
-                                <ChevronRight
-                                  className={cx('h-4 w-4 transition-transform', isOpen && 'rotate-90')}
-                                />
-                              </button>
+                          <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded border border-slate-200 bg-slate-50">
+                            {product.primary_image ? (
+                              <img src={product.primary_image} alt="" className="h-full w-full object-cover" />
                             ) : (
-                              <span className="h-6 w-6 shrink-0" />
+                              <ImageOff className="h-4 w-4 text-slate-400" />
+                            )}
+                          </span>
+                        </Td>
+
+                        <Td>
+                          <div className="min-w-[220px]">
+                            <Link
+                              to={`/admin/products/${product.id}/edit`}
+                              className="text-sm font-semibold text-brand-800 hover:underline"
+                            >
+                              {product.name}
+                            </Link>
+
+                            {product.status !== 'active' && (
+                              <span className="ml-1.5 text-sm text-slate-500">
+                                &mdash; {product.status_label ?? product.status}
+                              </span>
                             )}
 
-                            <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                              {product.primary_image ? (
-                                <img
-                                  src={product.primary_image}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <ImageOff className="h-4 w-4 text-slate-400" />
-                              )}
-                            </span>
+                            {/*
+                               The row actions appear on hover, the way every list
+                               of this kind does it. They stay in the DOM so the
+                               keyboard still reaches them; only the eye loses them
+                               until the row is under the cursor.
+                            */}
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-slate-500 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                              <span>ID: {product.id}</span>
 
-                            <div className="min-w-0">
+                              <span aria-hidden="true">|</span>
                               <Link
                                 to={`/admin/products/${product.id}/edit`}
-                                className="block truncate text-sm font-semibold text-slate-900 hover:text-brand-800"
+                                className="text-brand-700 hover:text-brand-900 hover:underline"
                               >
-                                {product.name}
+                                Edit
                               </Link>
-                              <div className="mt-0.5 flex items-center gap-1.5">
-                                <span className="text-[11px] text-slate-400">SKU</span>
-                                <span className="truncate text-xs font-medium text-slate-500">
-                                  {product.default_variation?.sku ?? product.slug}
-                                </span>
-                              </div>
+
+                              {canExpand && seesStock && (
+                                <>
+                                  <span aria-hidden="true">|</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpanded(product.id)}
+                                    className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  >
+                                    {isOpen ? 'Hide stock' : 'Stock'}
+                                  </button>
+                                </>
+                              )}
+
+                              {can('products.create') && (
+                                <>
+                                  <span aria-hidden="true">|</span>
+                                  <button
+                                    type="button"
+                                    disabled={duplicate.isPending}
+                                    onClick={() =>
+                                      duplicate.mutate({
+                                        url: `/admin/products/${product.id}/duplicate`,
+                                      })
+                                    }
+                                    className="text-brand-700 hover:text-brand-900 hover:underline disabled:opacity-50"
+                                  >
+                                    Duplicate
+                                  </button>
+                                </>
+                              )}
+
+                              {product.status === 'active' && (
+                                <>
+                                  <span aria-hidden="true">|</span>
+                                  <a
+                                    href={`/products/${product.slug}`}
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  >
+                                    Preview
+                                  </a>
+                                </>
+                              )}
+
+                              {can('products.delete') && (
+                                <>
+                                  <span aria-hidden="true">|</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!window.confirm(`Delete ${product.name}?`)) return
+
+                                      remove.mutate({
+                                        method: 'delete',
+                                        url: `/admin/products/${product.id}`,
+                                      })
+                                    }}
+                                    className="text-danger-700 hover:text-danger-900 hover:underline"
+                                  >
+                                    Trash
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                         </Td>
 
                         <Td>
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                            <Tag className="h-3.5 w-3.5 text-slate-400" />
-                            {product.category?.name ?? 'Uncategorized'}
-                          </span>
-                        </Td>
-
-                        <Td>
-                          <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
-                            {product.type === 'variable' ? 'Variable' : 'Simple'}
-                          </span>
-                        </Td>
-
-                        <Td numeric>
-                          <span className="text-sm font-medium text-slate-700">
-                            {product.variations_count ?? 1}
-                          </span>
-                        </Td>
-
-                        <Td numeric>
-                          <span className="text-sm font-semibold text-slate-900">
-                            {money(product.default_variation?.effective_price ?? 0)}
+                          <span className="whitespace-nowrap text-xs text-slate-600">
+                            {product.default_variation?.sku ?? '-'}
                           </span>
                         </Td>
 
                         {seesStock && (
-                          <Td numeric>
-                            <StockCell product={product} />
+                          <Td>
+                            {product.default_variation?.in_stock ? (
+                              <span className="whitespace-nowrap text-xs font-semibold text-accent-700">
+                                In stock
+                                <span className="ml-1 font-normal text-slate-500">
+                                  ({quantity(product.default_variation?.available_quantity)})
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="whitespace-nowrap text-xs font-semibold text-danger-700">
+                                Out of stock
+                                <span className="ml-1 font-normal text-slate-500">(0)</span>
+                              </span>
+                            )}
                           </Td>
                         )}
 
-                        {seesStock && (
-                          <Td numeric>
-                            <span className="text-sm text-slate-700 tabular">
-                              {product.stock?.tracked ? money(product.stock.value) : '—'}
-                            </span>
-                          </Td>
-                        )}
-
-                        <Td>
-                          <div className="flex flex-col items-start gap-1">
-                            <Badge tone={STATUS_TONE[product.status] ?? 'neutral'}>
-                              {product.status_label}
-                            </Badge>
-                            {seesStock && <StockFlag stock={product.stock} />}
-                          </div>
+                        <Td numeric>
+                          <span className="tabular text-sm font-semibold text-slate-900">
+                            {money(product.default_variation?.selling_price ?? 0)}
+                          </span>
                         </Td>
 
-                        <Td className="text-right">
-                          {/*
-                             Inline icons rather than a menu behind a "...".
-                             There are only ever four of these and they are
-                             the same four on every row, so a menu charged a
-                             click and a guess for something a row of icons
-                             says outright. Each carries a title and an
-                             aria-label, because an icon on its own is a
-                             rebus -- and the label is what a screen reader
-                             has to work from.
-                          */}
-                          <div className="flex items-center justify-end gap-0.5 opacity-70 transition group-hover:opacity-100">
-                            {can('products.update') && (
-                              <Link
-                                to={`/admin/products/${product.id}/edit`}
-                                title="Edit product"
-                                aria-label={`Edit ${product.name}`}
-                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </Link>
-                            )}
+                        <Td>
+                          <span className="flex flex-wrap gap-x-1 gap-y-0.5 text-xs text-slate-600">
+                            {(product.categories ?? []).length === 0
+                              ? 'Uncategorized'
+                              : (product.categories ?? []).map((category, index) => (
+                                  <Link
+                                    key={category.id}
+                                    to={`/admin/products?category=${category.slug}`}
+                                    className="text-brand-700 hover:underline"
+                                  >
+                                    {category.name}
+                                    {index < (product.categories ?? []).length - 1 && ','}
+                                  </Link>
+                                ))}
+                          </span>
+                        </Td>
 
-                            {can('products.create') && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  duplicate.mutate({
-                                    url: `/admin/products/${product.id}/duplicate`,
-                                  })
-                                }
-                                disabled={duplicate.isPending}
-                                title="Duplicate as a draft"
-                                aria-label={`Duplicate ${product.name}`}
-                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </button>
-                            )}
+                        <Td>
+                          <span className="whitespace-nowrap text-xs text-slate-600">
+                            {product.brand?.name ?? '-'}
+                          </span>
+                        </Td>
 
-                            {canExpand && (
-                              <button
-                                type="button"
-                                onClick={() => toggleExpanded(product.id)}
-                                aria-expanded={isOpen}
-                                title={isOpen ? 'Hide stock' : 'Manage stock'}
-                                aria-label={`${isOpen ? 'Hide' : 'Manage'} stock for ${product.name}`}
-                                className={cx(
-                                  'grid h-8 w-8 place-items-center rounded-lg transition',
-                                  isOpen
-                                    ? 'bg-slate-900 text-white'
-                                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-900',
-                                )}
-                              >
-                                <Package className="h-4 w-4" />
-                              </button>
-                            )}
+                        <Td>
+                          <Star
+                            className={
+                              product.is_featured
+                                ? 'h-4 w-4 fill-warning-500 text-warning-500'
+                                : 'h-4 w-4 text-slate-300'
+                            }
+                            aria-label={product.is_featured ? 'Featured' : 'Not featured'}
+                          />
+                        </Td>
 
-                            {can('products.delete') && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      `Archive “${product.name}”? Its history is kept.`,
-                                    )
-                                  ) {
-                                    remove.mutate({
-                                      method: 'delete',
-                                      url: `/admin/products/${product.id}`,
-                                    })
-                                  }
-                                }}
-                                title="Archive product"
-                                aria-label={`Archive ${product.name}`}
-                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </button>
+                        <Td>
+                          <span className="block whitespace-nowrap text-[11px] text-slate-500">
+                            {product.status === 'active' ? 'Published' : 'Last modified'}
+                          </span>
+                          <span className="block whitespace-nowrap text-xs text-slate-700">
+                            {date(
+                              product.status === 'active'
+                                ? product.published_at ?? product.created_at
+                                : product.updated_at ?? product.created_at,
                             )}
-                          </div>
+                          </span>
                         </Td>
                       </tr>
 

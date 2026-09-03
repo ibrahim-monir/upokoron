@@ -45,7 +45,7 @@ class ProductController extends Controller
             // partial select that omits a column the resource reads is an
             // extra query per row in production, and a hard failure under the
             // strict models this project runs in dev and test.
-            ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage', 'defaultVariation'])
+            ->with(['category:id,name,slug', 'categories:id,name,slug', 'brand:id,name,slug', 'primaryImage', 'defaultVariation'])
             ->withCount('variations')
             /*
              * Stock travels with the catalogue row.

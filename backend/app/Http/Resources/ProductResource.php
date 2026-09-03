@@ -43,6 +43,19 @@ class ProductResource extends JsonResource
                 'name' => $this->category?->name,
                 'slug' => $this->category?->slug,
             ]),
+            // Every shelf it sits on, primary first. The pivot holds only the
+            // extras, so the listing puts the two together rather than showing
+            // a product filed in four places as filed in one.
+            'categories' => $this->whenLoaded('categories', fn () => collect([$this->category])
+                ->concat($this->categories)
+                ->filter()
+                ->unique('id')
+                ->map(fn ($category) => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                ])->values()),
+
             'brand' => $this->whenLoaded('brand', fn () => $this->brand === null ? null : [
                 'id' => $this->brand->id,
                 'name' => $this->brand->name,
@@ -133,6 +146,7 @@ class ProductResource extends JsonResource
             'rating_avg' => $this->rating_avg,
             'rating_count' => $this->rating_count,
             'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
             'deleted_at' => $this->deleted_at?->toIso8601String(),
         ];
     }
