@@ -53,6 +53,7 @@ class ProductPageScraper
         $this->fromMeta($xpath, $product);
         $this->fromDocument($xpath, $product);
         $this->fromSpecTables($xpath, $product);
+        $this->fromEmbeddedState($html, $product);
 
         $product->images = $this->tidyImages($product->images, $finalUrl);
         $product->name = $this->withoutSiteSuffix($product->name, $xpath, $finalUrl);
@@ -216,22 +217,27 @@ class ProductPageScraper
     {
         foreach ($this->arrayOf($offers) as $offer) {
             $price = $this->price($offer['price'] ?? $offer['lowPrice'] ?? null);
+            $availability = Str::afterLast((string) $this->text($offer['availability'] ?? null), '/') ?: null;
 
-            if ($price === null) {
+            // A priceless Offer is still worth reading. Daraz publishes one:
+            // full schema.org markup, availability and all, with the price
+            // left out on purpose. Skipping the whole block over the missing
+            // field threw away the InStock we did get.
+            if ($price === null && $availability === null) {
                 continue;
             }
 
             $found = [
                 'selling_price' => $price,
                 'currency' => $this->text($offer['priceCurrency'] ?? null),
-                'availability' => Str::afterLast((string) $this->text($offer['availability'] ?? null), '/') ?: null,
+                'availability' => $availability,
             ];
 
             // Not every shop publishes what the item used to cost, but the
             // ones that do put it here, and it is the struck-through price.
             $was = $this->price($offer['highPrice'] ?? null);
 
-            if ($was !== null && (float) $was > (float) $price) {
+            if ($was !== null && $price !== null && (float) $was > (float) $price) {
                 $found['compare_at_price'] = $was;
             }
 
@@ -466,6 +472,44 @@ class ProductPageScraper
         }
 
         return is_array($value) ? $this->text($value['name'] ?? null) : $this->text($value);
+    }
+
+    /**
+     * The price a page renders but never declares.
+     *
+     * Last resort, and only for the price: every standard source has already
+     * been tried by the time this runs, and it fills nothing that is
+     * already set.
+     *
+     * The case that forced it is Daraz -- and therefore every Lazada-platform
+     * site, which is the same code. They publish a complete schema.org
+     * Product, then omit `price` from the Offer, so the generic parser comes
+     * back with a name, a SKU, images and no number. The figure the page
+     * actually shows is in its own bootstrap JSON, under a key their template
+     * has used for years.
+     *
+     * Deliberately ONE named key rather than a hunt for anything
+     * currency-shaped. A page is full of numbers that look like prices --
+     * delivery charges, related items, instalment amounts -- and a plausible
+     * wrong price is far worse here than an empty box the importer must
+     * fill in by hand, because a product created at a guessed price sells
+     * at a guessed price.
+     */
+    private function fromEmbeddedState(string $html, ScrapedProduct $product): void
+    {
+        if ($product->selling_price !== null) {
+            return;
+        }
+
+        // The blob is JSON nested inside a JSON string, so its quotes arrive
+        // escaped as often as not. Unescaping first keeps the pattern legible.
+        $flat = str_replace('\\"', '"', $html);
+
+        if (preg_match('/"pdt_price"\s*:\s*"([^"]{1,40})/u', $flat, $match) !== 1) {
+            return;
+        }
+
+        $product->selling_price = $this->price($match[1]);
     }
 
     /**

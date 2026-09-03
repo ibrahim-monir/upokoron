@@ -102,6 +102,68 @@ class ProductImportTest extends TestCase
         $this->assertSame(0, Product::count());
     }
 
+    /**
+     * Daraz -- and so every Lazada-platform site -- publishes a complete
+     * schema.org Product and then leaves `price` out of the Offer. The page
+     * still shows a price; it is in the bootstrap JSON the template renders.
+     */
+    public function test_it_reads_a_price_a_page_shows_but_never_declares(): void
+    {
+        $this->allowFakeHosts();
+        $this->actingAsRole('manager');
+
+        $this->page(<<<'HTML'
+            <html><head>
+            <script type="application/ld+json">
+            {"@context":"https://schema.org","@type":"Product",
+             "name":"SATA to USB 3.0 Adapter","sku":"563949403_BD-2602847440",
+             "image":["https://shop.test/img/sata.jpg"],
+             "offers":{"@type":"Offer","availability":"https://schema.org/InStock",
+                       "itemCondition":"https://schema.org/NewCondition"}}
+            </script>
+            </head><body>
+            <script>window.pageData={"supplier_id":"","pdt_price":"৳ 800","extraInfo":{}};</script>
+            </body></html>
+            HTML);
+
+        $response = $this->postJson('/api/v1/admin/products/import/scrape', [
+            'url' => 'https://shop.test/products/sata-adapter',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('product.name', 'SATA to USB 3.0 Adapter')
+            ->assertJsonPath('product.selling_price', '800.00')
+            // The Offer carried no price, which used to make the whole block
+            // be skipped -- taking this with it.
+            ->assertJsonPath('product.availability', 'InStock');
+    }
+
+    /**
+     * The flip side: the fallback must never overrule a declared price, or a
+     * shop that marks its pages up properly gets the wrong number.
+     */
+    public function test_a_declared_price_wins_over_the_embedded_one(): void
+    {
+        $this->allowFakeHosts();
+        $this->actingAsRole('manager');
+
+        $this->page(<<<'HTML'
+            <html><head>
+            <script type="application/ld+json">
+            {"@context":"https://schema.org","@type":"Product","name":"Declared price wins",
+             "image":["https://shop.test/img/x.jpg"],
+             "offers":{"@type":"Offer","price":"250.00","priceCurrency":"BDT"}}
+            </script>
+            </head><body>
+            <script>window.pageData={"pdt_price":"৳ 999"};</script>
+            </body></html>
+            HTML);
+
+        $this->postJson('/api/v1/admin/products/import/scrape', [
+            'url' => 'https://shop.test/products/declared',
+        ])->assertOk()->assertJsonPath('product.selling_price', '250.00');
+    }
+
     public function test_it_falls_back_to_opengraph_when_there_is_no_json_ld(): void
     {
         $this->allowFakeHosts();
