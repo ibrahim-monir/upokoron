@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ImageIcon, LayoutGrid, List, Pencil, Search, Trash2, Upload, X } from 'lucide-react'
+import { Check, Download, ImageIcon, LayoutGrid, List, Pencil, Search, Trash2, Upload, X } from 'lucide-react'
 import { api, get } from '../../../lib/api'
 import { cx } from '../../../lib/format'
 import { useAuthStore } from '../../../stores/authStore'
@@ -58,6 +58,23 @@ function label(item) {
  * `onPick` turns it into a chooser: pass it and tiles become selectable,
  * omit it and it is a plain manager.
  */
+/**
+ * Saving the file itself, rather than the page's picture of it.
+ *
+ * A plain link with `download`: the file is served from this same origin, so
+ * the browser writes it to disk instead of navigating to it, and it never
+ * touches the API. The name it saves under is the one the file was uploaded
+ * with -- the stored name is a UUID, which is meaningless in a downloads
+ * folder.
+ *
+ * If a shop ever serves uploads from another host, `download` is ignored
+ * cross-origin and the image opens in a tab instead. That is a degradation,
+ * not a break: the picture is still one right-click from being saved.
+ */
+function downloadProps(item) {
+  return { href: item.url, download: item.original_name, target: '_blank', rel: 'noreferrer' }
+}
+
 export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, selected = [] }) {
   const can = useAuthStore((state) => state.can)
   const toast = useToast()
@@ -313,8 +330,19 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
                   </span>
                 )}
 
-                {can('media.manage') && (
-                  <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                {/* Downloading is a read, so it is not behind media.manage --
+                    anyone allowed to open the library may keep a copy. */}
+                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                  <a
+                    {...downloadProps(item)}
+                    aria-label={`Download ${label(item)}`}
+                    className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-ink-700 shadow-card transition-colors hover:bg-white"
+                  >
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+
+                  {can('media.manage') && (
+                    <>
                     <button
                       type="button"
                       onClick={() => setEditing(item)}
@@ -332,8 +360,9 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
 
                 <p className="mt-1 truncate text-xs text-ink-600" title={label(item)}>
                   {label(item)}
@@ -419,24 +448,30 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
                   </Td>
 
                   <Td className="text-right">
-                    {can('media.manage') && (
-                      <div className="flex justify-end gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setEditing(item)}
-                          className="text-sm font-medium text-brand-800 hover:underline"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => confirmDelete(item)}
-                          className="text-sm font-medium text-danger-700 hover:underline"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex justify-end gap-3">
+                      <a {...downloadProps(item)} className="text-sm font-medium text-ink-700 hover:underline">
+                        Download
+                      </a>
+
+                      {can('media.manage') && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setEditing(item)}
+                            className="text-sm font-medium text-brand-800 hover:underline"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => confirmDelete(item)}
+                            className="text-sm font-medium text-danger-700 hover:underline"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </Td>
                 </tr>
               ))}
@@ -619,6 +654,13 @@ function MediaDetailsDialog({ item, folders, saving, onSave, onClose }) {
                   <Button type="button" variant="secondary" onClick={copyUrl}>
                     Copy
                   </Button>
+                  <a
+                    {...downloadProps(item)}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-ink-300 px-3 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-50"
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    Download
+                  </a>
                 </div>
               )}
             </Field>
