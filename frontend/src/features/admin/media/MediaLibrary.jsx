@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ImageIcon, Search, Trash2, Upload, X } from 'lucide-react'
+import { Check, ImageIcon, LayoutGrid, List, Pencil, Search, Trash2, Upload, X } from 'lucide-react'
 import { api, get } from '../../../lib/api'
 import { cx } from '../../../lib/format'
 import { useAuthStore } from '../../../stores/authStore'
@@ -9,12 +9,48 @@ import {
   Button,
   EmptyState,
   ErrorState,
+  Field,
   Input,
   Pagination,
   Select,
   Spinner,
+  TableWrap,
+  Td,
+  Th,
   useToast,
 } from '../../../components/ui'
+
+const VIEW_KEY = 'upokoron.media.view'
+
+/*
+ * Grid or list, remembered.
+ *
+ * Which one someone wants is not a property of the page, it is a property of
+ * the person: a shopkeeper picking a photograph wants thumbnails, and the
+ * same person tidying alt text wants rows. Storing it means they choose once
+ * rather than on every visit. localStorage throws outright in some privacy
+ * modes, so both directions are wrapped and the grid is the fallback.
+ */
+function readView() {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'
+  } catch {
+    return 'grid'
+  }
+}
+
+function writeView(value) {
+  try {
+    localStorage.setItem(VIEW_KEY, value)
+  } catch {
+    // A preference that cannot be saved is not worth an error message.
+  }
+}
+
+/** The name a person gave it, falling back to the one the file arrived with. */
+function label(item) {
+  return item.title || item.original_name
+}
 
 /**
  * The image library, shared by the standalone page and the picker modal.
@@ -32,6 +68,8 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
   const [folder, setFolder] = useState(fixedFolder ?? '')
   const [page, setPage] = useState(1)
   const [dragging, setDragging] = useState(false)
+  const [view, setView] = useState(readView)
+  const [editing, setEditing] = useState(null)
 
   const query = useQuery({
     queryKey: ['admin', 'media', { search, folder, page }],
@@ -81,6 +119,22 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
     },
   })
 
+  const save = useMutation({
+    mutationFn: ({ id, ...body }) => api.put(`/admin/media/${id}`, body),
+    onSuccess() {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'media'] })
+      toast.success('Image details saved.')
+      setEditing(null)
+    },
+    onError(error) {
+      toast.error(error?.message ?? 'Could not save those details.')
+    },
+  })
+
+  const confirmDelete = (item) => {
+    if (window.confirm(`Delete “${label(item)}”?`)) remove.mutate(item.id)
+  }
+
   const items = query.data?.data ?? []
   const isSelected = (item) => selected.some((s) => (s?.id ?? s) === item.id)
 
@@ -120,7 +174,7 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
               setSearch(event.target.value)
               setPage(1)
             }}
-            placeholder="Search by name or description"
+            placeholder="Search by title, file name, or alt text"
             aria-label="Search images"
             className="pl-9"
           />
@@ -144,6 +198,33 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
             ))}
           </Select>
         )}
+
+        {/* Grid for choosing a picture, list for reading and fixing what is
+            written about it. Same data, two jobs. */}
+        <div className="flex rounded-lg border border-ink-300 bg-white p-0.5">
+          {[
+            { id: 'grid', icon: LayoutGrid, label: 'Grid view' },
+            { id: 'list', icon: List, label: 'List view' },
+          ].map(({ id, icon: Icon, label: viewLabel }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setView(id)
+                writeView(id)
+              }}
+              aria-pressed={view === id}
+              aria-label={viewLabel}
+              title={viewLabel}
+              className={cx(
+                'grid h-9 w-9 place-items-center rounded-md transition-colors',
+                view === id ? 'bg-brand-600 text-white' : 'text-ink-500 hover:bg-ink-100',
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ))}
+        </div>
 
         {can('media.manage') && (
           <Button onClick={() => fileInput.current?.click()} loading={upload.isPending}>
@@ -200,7 +281,7 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
                 : 'Nothing has been uploaded yet.'
             }
           />
-        ) : (
+        ) : view === 'grid' ? (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
             {items.map((item) => (
               <li key={item.id} className="group relative">
@@ -219,7 +300,7 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
                   <span className="block aspect-square">
                     <img
                       src={item.url}
-                      alt={item.alt ?? item.original_name}
+                      alt={item.alt ?? label(item)}
                       loading="lazy"
                       className="h-full w-full object-cover"
                     />
@@ -233,20 +314,29 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
                 )}
 
                 {can('media.manage') && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm(`Delete “${item.original_name}”?`)) remove.mutate(item.id)
-                    }}
-                    aria-label={`Delete ${item.original_name}`}
-                    className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-danger-700 opacity-0 shadow-card transition-opacity hover:bg-white group-hover:opacity-100 focus-visible:opacity-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
+                  <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(item)}
+                      aria-label={`Edit details of ${label(item)}`}
+                      className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-ink-700 shadow-card transition-colors hover:bg-white"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => confirmDelete(item)}
+                      aria-label={`Delete ${label(item)}`}
+                      className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-danger-700 shadow-card transition-colors hover:bg-white"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
                 )}
 
-                <p className="mt-1 truncate text-xs text-ink-600" title={item.original_name}>
-                  {item.original_name}
+                <p className="mt-1 truncate text-xs text-ink-600" title={label(item)}>
+                  {label(item)}
                 </p>
                 <p className="text-xs text-ink-400">
                   {item.width ? `${item.width}×${item.height} · ` : ''}
@@ -255,11 +345,297 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
               </li>
             ))}
           </ul>
+        ) : (
+          <TableWrap>
+            <thead>
+              <tr>
+                <Th className="w-16" />
+                <Th>Name</Th>
+                <Th>Alt text</Th>
+                <Th>Folder</Th>
+                <Th numeric>Size</Th>
+                <Th>Uploaded</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className={cx('hover:bg-ink-50', isSelected(item) && 'bg-brand-50')}>
+                  <Td>
+                    <button
+                      type="button"
+                      onClick={() => onPick?.(item)}
+                      disabled={!onPick}
+                      aria-label={onPick ? `Choose ${label(item)}` : undefined}
+                      className={cx(
+                        'block h-12 w-12 overflow-hidden rounded-lg border-2 bg-ink-50',
+                        isSelected(item) ? 'border-brand-600' : 'border-ink-200',
+                        onPick ? 'cursor-pointer hover:border-brand-400' : 'cursor-default',
+                      )}
+                    >
+                      <img
+                        src={item.url}
+                        alt={item.alt ?? label(item)}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                  </Td>
+
+                  <Td>
+                    <p className="max-w-64 truncate font-medium text-ink-900">{label(item)}</p>
+                    {/* The file's own name stays visible once a title is set:
+                        it is how someone matches a row to the file they just
+                        uploaded, and it is never editable. */}
+                    {item.title && (
+                      <p className="max-w-64 truncate text-xs text-ink-400">{item.original_name}</p>
+                    )}
+                  </Td>
+
+                  <Td>
+                    {item.alt ? (
+                      <span className="line-clamp-2 max-w-64 text-ink-600">{item.alt}</span>
+                    ) : (
+                      <span className="text-ink-400">None</span>
+                    )}
+                  </Td>
+
+                  <Td className="text-ink-600">{item.folder}</Td>
+
+                  <Td numeric className="whitespace-nowrap text-ink-600">
+                    {item.size_label}
+                    {item.width && (
+                      <span className="block text-xs text-ink-400">
+                        {item.width}×{item.height}
+                      </span>
+                    )}
+                  </Td>
+
+                  <Td className="whitespace-nowrap text-ink-600">
+                    {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
+                    {item.uploaded_by && (
+                      <span className="block text-xs text-ink-400">{item.uploaded_by}</span>
+                    )}
+                  </Td>
+
+                  <Td className="text-right">
+                    {can('media.manage') && (
+                      <div className="flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditing(item)}
+                          className="text-sm font-medium text-brand-800 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => confirmDelete(item)}
+                          className="text-sm font-medium text-danger-700 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
         )}
       </div>
 
+      {editing && (
+        <MediaDetailsDialog
+          item={editing}
+          folders={query.data?.folders ?? []}
+          saving={save.isPending}
+          onSave={(body) => save.mutate({ id: editing.id, ...body })}
+          onClose={() => setEditing(null)}
+        />
+      )}
+
       <Pagination meta={query.data?.meta} onPage={setPage} />
     </div>
+  )
+}
+
+/**
+ * Edit what is written about one image.
+ *
+ * Three editable fields and a wall of read-only facts, because those are two
+ * different things: the facts are what the file IS -- its size, its
+ * dimensions, its address, who put it here -- and no form should imply they
+ * can be typed over. The file itself is never replaced from this screen
+ * either; a different picture is a different upload, or every product using
+ * this one silently changes at once.
+ */
+function MediaDetailsDialog({ item, folders, saving, onSave, onClose }) {
+  const toast = useToast()
+
+  const [form, setForm] = useState({
+    title: item.title ?? '',
+    alt: item.alt ?? '',
+    folder: item.folder ?? 'general',
+  })
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    document.addEventListener('keydown', onKey)
+
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+
+  const copyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(item.url)
+      toast.success('Address copied.')
+    } catch {
+      // Clipboard access is refused outside a secure context, and there is
+      // nothing the person can do about that -- the address is on screen and
+      // selectable either way.
+      toast.error('Could not copy. Select the address and copy it by hand.')
+    }
+  }
+
+  const facts = [
+    ['File name', item.original_name],
+    ['Type', item.mime],
+    ['Size', item.size_label],
+    ['Dimensions', item.width ? `${item.width} × ${item.height}` : 'Unknown'],
+    ['Uploaded by', item.uploaded_by ?? 'Unknown'],
+    ['Uploaded', item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown'],
+  ]
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image details"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink-950/50 p-4"
+    >
+      <div className="mt-8 w-full max-w-3xl rounded-card bg-white shadow-raised">
+        <div className="flex items-center justify-between border-b border-ink-200 p-4">
+          <h2 className="text-base font-semibold text-ink-900">Image details</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            onSave({ title: form.title || null, alt: form.alt || null, folder: form.folder })
+          }}
+          className="grid gap-5 p-4 sm:grid-cols-[16rem_1fr]"
+        >
+          <div className="flex flex-col gap-3">
+            <span className="block overflow-hidden rounded-lg border border-ink-200 bg-ink-50">
+              <img src={item.url} alt={item.alt ?? item.original_name} className="h-full w-full object-contain" />
+            </span>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+              {facts.map(([term, value]) => (
+                <div key={term} className="col-span-2 flex justify-between gap-3">
+                  <dt className="shrink-0 text-ink-400">{term}</dt>
+                  <dd className="truncate text-right text-ink-700" title={String(value)}>
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <Field
+              label="Title"
+              hint="What this shop calls the picture. Used when searching the library."
+            >
+              {({ id }) => (
+                <Input
+                  id={id}
+                  value={form.title}
+                  onChange={set('title')}
+                  maxLength={200}
+                  placeholder={item.original_name}
+                  className="w-full"
+                />
+              )}
+            </Field>
+
+            <Field
+              label="Alt text"
+              hint="What the picture shows, for a shopper whose screen reader is reading the page to them — and for Google. Leave blank only if it is pure decoration."
+            >
+              {({ id }) => (
+                <textarea
+                  id={id}
+                  rows={3}
+                  value={form.alt}
+                  onChange={set('alt')}
+                  maxLength={200}
+                  placeholder="Blue 65W charger with three ports, seen from the front"
+                  className="rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 hover:border-ink-400"
+                />
+              )}
+            </Field>
+
+            <Field label="Folder" hint="Lowercase letters, numbers, dashes and underscores.">
+              {({ id }) => (
+                <>
+                  <Input
+                    id={id}
+                    value={form.folder}
+                    onChange={set('folder')}
+                    list="media-folders"
+                    maxLength={60}
+                    className="w-full"
+                  />
+                  {/* An existing folder in two keystrokes, a new one by
+                      typing it -- the same field either way. */}
+                  <datalist id="media-folders">
+                    {folders.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                </>
+              )}
+            </Field>
+
+            <Field label="Address">
+              {({ id }) => (
+                <div className="flex gap-2">
+                  <Input id={id} value={item.url} readOnly className="w-full" />
+                  <Button type="button" variant="secondary" onClick={copyUrl}>
+                    Copy
+                  </Button>
+                </div>
+              )}
+            </Field>
+
+            <div className="flex gap-2">
+              <Button type="submit" loading={saving}>
+                Save details
+              </Button>
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
   )
 }
 

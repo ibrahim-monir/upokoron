@@ -16,7 +16,7 @@ class Media extends Model
 
     protected $table = 'media';
 
-    protected $fillable = ['alt', 'folder'];
+    protected $fillable = ['title', 'alt', 'folder'];
 
     protected function casts(): array
     {
@@ -62,6 +62,7 @@ class Media extends Model
         $like = '%'.$term.'%';
 
         return $query->where(fn (Builder $q) => $q->where('original_name', 'like', $like)
+            ->orWhere('title', 'like', $like)
             ->orWhere('alt', 'like', $like));
     }
 }

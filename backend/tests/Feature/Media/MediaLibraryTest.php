@@ -280,6 +280,60 @@ class MediaLibraryTest extends TestCase
             ->assertJsonPath('data.alt', 'Company logo');
     }
 
+    /**
+     * The title is a name a person chose; original_name is where the file
+     * came from and stays exactly as uploaded.
+     */
+    public function test_a_title_and_folder_can_be_edited_without_touching_the_file_name(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->postJson('/api/v1/admin/media', ['files' => [$this->image('IMG_20260714_113052.jpg')]])
+            ->assertCreated();
+
+        $media = Media::sole();
+
+        $this->putJson("/api/v1/admin/media/{$media->id}", [
+            'title' => '65W charger, front',
+            'alt' => 'Blue 65W charger with three ports',
+            'folder' => 'products',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.title', '65W charger, front')
+            ->assertJsonPath('data.alt', 'Blue 65W charger with three ports')
+            ->assertJsonPath('data.folder', 'products')
+            ->assertJsonPath('data.original_name', 'IMG_20260714_113052.jpg');
+    }
+
+    public function test_a_folder_name_that_would_not_make_a_path_is_refused(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->postJson('/api/v1/admin/media', ['files' => [$this->image()]])->assertCreated();
+
+        $this->putJson('/api/v1/admin/media/'.Media::sole()->id, ['folder' => '../secrets'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('folder');
+    }
+
+    /** A camera file name is unsearchable, which is the point of the title. */
+    public function test_the_library_can_be_searched_by_title(): void
+    {
+        $this->actingAsRole('owner');
+
+        $this->postJson('/api/v1/admin/media', ['files' => [$this->image('IMG_0001.jpg')]])->assertCreated();
+        $this->postJson('/api/v1/admin/media', ['files' => [$this->image('IMG_0002.jpg', 800, 200)]])->assertCreated();
+
+        $first = Media::orderBy('id')->first();
+
+        $this->putJson("/api/v1/admin/media/{$first->id}", ['title' => 'Eid banner'])->assertOk();
+
+        $this->getJson('/api/v1/admin/media?search=eid')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Eid banner');
+    }
+
     private function fileFrom(string $bytes, string $name): UploadedFile
     {
         $path = tempnam(sys_get_temp_dir(), 'media');

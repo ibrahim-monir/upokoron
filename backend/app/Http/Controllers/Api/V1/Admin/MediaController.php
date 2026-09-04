@@ -77,8 +77,11 @@ class MediaController extends Controller
         abort_unless($request->user()?->can('media.manage'), 403);
 
         $validated = $request->validate([
+            'title' => ['nullable', 'string', 'max:200'],
             'alt' => ['nullable', 'string', 'max:200'],
             'folder' => ['sometimes', 'string', 'max:60', 'regex:/^[a-z0-9_-]+$/'],
+        ], [
+            'folder.regex' => 'Use lowercase letters, numbers, dashes, and underscores only.',
         ]);
 
         $medium->update($validated);
@@ -109,6 +112,7 @@ class MediaController extends Controller
             'url' => $item->url(),
             'path' => $item->path,
             'original_name' => $item->original_name,
+            'title' => $item->title,
             'alt' => $item->alt,
             'folder' => $item->folder,
             'mime' => $item->mime,
