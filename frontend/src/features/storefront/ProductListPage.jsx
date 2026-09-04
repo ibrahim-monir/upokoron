@@ -24,6 +24,18 @@ function useSidebarData() {
   return { settings: settings.data, categories: categories.data ?? [] }
 }
 
+/**
+ * "integrated-circuits-ic" -> "Integrated Circuits Ic".
+ *
+ * Only ever a stand-in. The catalogue's own name is the real heading, and it
+ * knows things a slug cannot spell back -- capitals inside a word, an
+ * ampersand, "(IC)". This covers the moment before that list has loaded, and
+ * a slug that matches no category at all.
+ */
+function titleFromSlug(slug) {
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
 export function ProductListPage() {
   // /category/:slug is the canonical link now; ?category= still works for
   // anything still pointing at the old /products?category= form.
@@ -76,12 +88,34 @@ export function ProductListPage() {
 
   const products = query.data?.data ?? []
 
+  /*
+   * What the shop calls this category, not what the URL spells it.
+   *
+   * The heading used to be the slug with its hyphens swapped for spaces,
+   * so a page about Components was titled "components" and Integrated
+   * Circuits (IC) would have read "integrated circuits ic". The name lives
+   * in the category list the sidebar already loads; a child is looked up
+   * too, since /category/diodes is as valid a page as its parent.
+   */
+  const categoryName = category
+    ? categories.reduce((found, parent) => {
+        if (found) return found
+        if (parent.slug === category) return parent.name
+
+        return parent.children?.find((child) => child.slug === category)?.name ?? null
+      }, null)
+    : null
+
   const grid = (
     <div className="flex flex-col gap-6">
       {/* Sort moved into the sidebar, so the heading has the row to itself. */}
       <div>
         <h1 className="text-2xl font-semibold text-ink-900">
-          {search ? `Results for “${search}”` : category ? category.replace(/-/g, ' ') : 'All products'}
+          {search
+            ? `Results for “${search}”`
+            : category
+              ? categoryName ?? titleFromSlug(category)
+              : 'All products'}
         </h1>
         {query.data?.meta && (
           <p className="mt-1 text-sm text-ink-500">{query.data.meta.total} product(s)</p>
