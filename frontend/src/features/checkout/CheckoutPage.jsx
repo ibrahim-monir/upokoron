@@ -386,6 +386,12 @@ export function CheckoutPage() {
                 <p className="text-sm text-danger-700">{t('checkout.noDeliveryOption')}</p>
               ) : (
                 <div className="grid gap-2">
+                  {options[0]?.free_by_product && (
+                    <p className="flex items-center gap-1.5 rounded-lg bg-success-50 px-3 py-2 text-sm font-medium text-success-700">
+                      <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {t('checkout.freeDeliveryByProduct')}
+                    </p>
+                  )}
                   {options.map((option) => (
                     <Choice key={option.id} selected={option.id === rateId} onSelect={() => setRateId(option.id)}>
                       <div className="flex items-baseline justify-between gap-3">

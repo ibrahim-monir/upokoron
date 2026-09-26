@@ -160,6 +160,7 @@ class OrderService
             subtotal: $subtotal,
             weightKg: $summary['weight_kg'],
             requiresCod: $requiresCod,
+            freeShipping: $summary['free_shipping'],
         );
 
         $extraCharge = Money::of($data->paymentMethod->extra_charge);

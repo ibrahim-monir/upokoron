@@ -49,6 +49,7 @@ class ShippingController extends Controller
             subtotal: $summary['subtotal'],
             weightKg: $summary['weight_kg'],
             requiresCod: (bool) ($data['cod'] ?? false),
+            freeShipping: $summary['free_shipping'],
         );
 
         return response()->json([

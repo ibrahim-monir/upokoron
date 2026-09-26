@@ -177,12 +177,12 @@ class CartService
      * nobody is buying right now should not block checkout out of lines
      * that are fine.
      *
-     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, reward_points: array<string, mixed>|null, weight_kg: Quantity, item_count: int, selected_item_count: int, has_unheld: bool}
+     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, reward_points: array<string, mixed>|null, weight_kg: Quantity, free_shipping: bool, item_count: int, selected_item_count: int, has_unheld: bool}
      */
     public function summary(Cart $cart, ?Customer $customer = null): array
     {
         $cart->loadMissing([
-            'items.variation.product:id,name,slug,status,published_at',
+            'items.variation.product:id,name,slug,status,published_at,free_shipping',
             'items.variation.image',
             'items.variation.product.primaryImage',
             'items.variation.inventory',
@@ -193,6 +193,7 @@ class CartService
         $selectedPriced = [];
         $lines = [];
         $hasUnheld = false;
+        $freeShipping = false;
 
         foreach ($cart->items as $item) {
             $variation = $item->variation;
@@ -205,6 +206,7 @@ class CartService
 
             if ($item->is_selected) {
                 $selectedPriced[] = $line;
+                $freeShipping = $freeShipping || (bool) $variation->product?->free_shipping;
             }
 
             $available = $variation->inventory?->available() ?? Quantity::zero();
@@ -240,6 +242,7 @@ class CartService
                 'available' => $available->value(),
                 'is_sellable' => $this->isSellable($variation),
                 'is_selected' => $item->is_selected,
+                'free_shipping' => (bool) $variation->product?->free_shipping,
             ];
         }
 
@@ -254,6 +257,11 @@ class CartService
             'coupon' => $this->couponSummary($cart, $subtotal, $customer),
             'reward_points' => $this->rewardPointsSummary($cart, $subtotal, $customer),
             'weight_kg' => $this->pricing->totalWeight($selectedPriced),
+
+            // One free-shipping product among the selected lines makes the
+            // whole delivery free -- the shop's call, so a product can be
+            // used as a "buy this, delivery is on us" offer.
+            'free_shipping' => $freeShipping,
             'item_count' => count($lines),
             'selected_item_count' => count($selectedPriced),
             'has_unheld' => $hasUnheld,

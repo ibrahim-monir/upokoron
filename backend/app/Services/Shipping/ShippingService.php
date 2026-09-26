@@ -95,6 +95,7 @@ class ShippingService
         Money $subtotal,
         ?Quantity $weightKg = null,
         bool $requiresCod = false,
+        bool $freeShipping = false,
     ): array {
         $rates = $zone->rates()->active()->get();
 
@@ -104,8 +105,8 @@ class ShippingService
             $rates = $rates->filter(fn (ShippingRate $rate): bool => $rate->supports_cod)->values();
         }
 
-        return $rates->map(function (ShippingRate $rate) use ($subtotal, $weightKg): array {
-            $charge = $rate->chargeFor($subtotal, $weightKg);
+        return $rates->map(function (ShippingRate $rate) use ($subtotal, $weightKg, $freeShipping): array {
+            $charge = $freeShipping ? Money::zero() : $rate->chargeFor($subtotal, $weightKg);
 
             return [
                 'id' => $rate->id,
@@ -114,6 +115,7 @@ class ShippingService
                 'description' => $rate->description,
                 'charge' => $charge->value(),
                 'is_free' => $charge->isZero(),
+                'free_by_product' => $freeShipping,
                 'free_above_subtotal' => $rate->free_above_subtotal === null
                     ? null
                     : Money::of($rate->free_above_subtotal)->value(),
@@ -135,6 +137,7 @@ class ShippingService
         Money $subtotal,
         ?Quantity $weightKg = null,
         bool $requiresCod = false,
+        bool $freeShipping = false,
     ): Money {
         if (! $rate->is_active || ! $rate->zone?->is_active) {
             throw new BusinessRuleException(
@@ -150,6 +153,12 @@ class ShippingService
                 'cod_not_supported',
                 ['shipping_rate_id' => $rate->id],
             );
+        }
+
+        // Checked after the availability rules above: a free delivery still
+        // has to be one the courier actually offers.
+        if ($freeShipping) {
+            return Money::zero();
         }
 
         return $rate->chargeFor($subtotal, $weightKg);

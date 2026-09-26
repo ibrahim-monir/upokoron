@@ -222,6 +222,7 @@ const schema = z
       .or(z.literal('')),
 
     is_featured: z.boolean(),
+    free_shipping: z.boolean(),
 
     /* SEO */
     meta_title: z
@@ -982,6 +983,7 @@ export default function ProductFormPage() {
       status: 'draft',
       published_at: '',
       is_featured: false,
+      free_shipping: false,
 
       /* SEO */
       meta_title: '',
@@ -1251,6 +1253,10 @@ export default function ProductFormPage() {
 
       is_featured:
         product.is_featured ??
+        false,
+
+      free_shipping:
+        product.free_shipping ??
         false,
 
       /* SEO */
@@ -2751,6 +2757,28 @@ export default function ProductFormPage() {
 
                     <span className="mt-0.5 block text-[11px] text-ink-500">
                       Highlight this product on the homepage.
+                    </span>
+                  </span>
+
+                </label>
+
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-200 p-3">
+
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 rounded border-ink-300"
+                    {...register(
+                      'free_shipping',
+                    )}
+                  />
+
+                  <span>
+                    <span className="block text-sm font-medium text-ink-800">
+                      Free shipping
+                    </span>
+
+                    <span className="mt-0.5 block text-[11px] text-ink-500">
+                      Any order with this product in it ships free.
                     </span>
                   </span>
 

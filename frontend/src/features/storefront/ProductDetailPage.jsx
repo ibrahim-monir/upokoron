@@ -1048,6 +1048,13 @@ export function ProductDetailPage() {
             </fieldset>
           )}
 
+          {product.free_shipping && (
+            <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-success-50 px-3 py-1 text-sm font-semibold text-success-700">
+              <Truck className="h-4 w-4" aria-hidden="true" />
+              Free delivery
+            </p>
+          )}
+
           {inStock ? (
             available <= 5 && <p className="text-sm text-ink-500">Only {available} left</p>
           ) : (

@@ -257,6 +257,10 @@ const STRINGS = {
     bn: 'এই ঠিকানা ও পেমেন্ট পদ্ধতির জন্য কোনো ডেলিভারি অপশন নেই।',
   },
   'checkout.free': { en: 'Free', bn: 'ফ্রি' },
+  'checkout.freeDeliveryByProduct': {
+    en: 'Delivery is free: your order includes a free-shipping product.',
+    bn: 'ডেলিভারি ফ্রি: আপনার অর্ডারে ফ্রি শিপিং পণ্য আছে।',
+  },
 
   'checkout.payment': { en: 'Payment', bn: 'পেমেন্ট' },
   'checkout.sendPaymentTo': { en: 'Send payment to', bn: 'যেখানে পেমেন্ট পাঠাবেন' },

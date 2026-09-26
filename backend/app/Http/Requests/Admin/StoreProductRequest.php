@@ -37,6 +37,7 @@ class StoreProductRequest extends FormRequest
 
             'status' => ['required', Rule::in(['draft', 'active', 'archived'])],
             'is_featured' => ['sometimes', 'boolean'],
+            'free_shipping' => ['sometimes', 'boolean'],
             'published_at' => ['nullable', 'date'],
 
             'weight' => ['nullable', 'numeric', 'min:0', 'max:9999999'],

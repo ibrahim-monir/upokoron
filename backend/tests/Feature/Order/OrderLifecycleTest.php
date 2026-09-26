@@ -486,4 +486,14 @@ class OrderLifecycleTest extends TestCase
             'Total debits must equal total credits.',
         );
     }
+
+    public function test_a_free_shipping_product_makes_the_delivery_free(): void
+    {
+        $this->variation->product->forceFill(['free_shipping' => true])->save();
+
+        $order = $this->placeOrder('2');
+
+        $this->assertSame('0.00', $order->shipping_charge);
+        $this->assertSame('2000.00', $order->total);
+    }
 }
