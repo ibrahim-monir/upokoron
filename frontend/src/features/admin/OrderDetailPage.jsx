@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
@@ -16,10 +16,12 @@ import {
   Save,
   ShoppingBag,
   Printer,
+  Trash2,
   Truck,
   UserRound,
 } from 'lucide-react'
-import { api, get } from '../../lib/api'
+import { api, del, get } from '../../lib/api'
+import { useAuthStore } from '../../stores/authStore'
 import { dateTime, money } from '../../lib/format'
 import {
   Badge,
@@ -866,6 +868,66 @@ function PrintInvoiceButton({ order }) {
   )
 }
 
+/*
+ * For test orders. The backend only allows it while the order has shipped
+ * nothing and has no money against it, and says why when it does not -- that
+ * reason is the button's tooltip, so a greyed-out button explains itself.
+ */
+function DeleteOrderButton({ order }) {
+  const toast = useToast()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const can = useAuthStore((state) => state.can)
+
+  const mutation = useMutation({
+    mutationFn: () => del(`/admin/orders/${order.id}`),
+    onSuccess: () => {
+      toast.success(`Order ${order.number} deleted.`)
+      queryClient.removeQueries({ queryKey: ['admin', 'orders', String(order.id)] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      navigate('/admin/orders')
+    },
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ??
+          error?.message ??
+          'Could not delete the order.',
+      )
+    },
+  })
+
+  if (!can('orders.delete')) return null
+
+  const blocked = Boolean(order.delete_blocker)
+
+  const remove = () => {
+    if (blocked || mutation.isPending) return
+
+    if (
+      !window.confirm(
+        `Delete order ${order.number} permanently? Its stock hold and coupon use are released. This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+
+    mutation.mutate()
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={remove}
+      disabled={blocked || mutation.isPending}
+      title={blocked ? order.delete_blocker : 'Delete this order (for test orders)'}
+      className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 text-xs font-semibold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+      {mutation.isPending ? 'Deleting…' : 'Delete'}
+    </button>
+  )
+}
+
 export default function AdminOrderDetailPage() {
   const { id } = useParams()
   const queryClient = useQueryClient()
@@ -966,7 +1028,7 @@ export default function AdminOrderDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge
               tone={
                 order.payment_status === 'paid'
@@ -989,6 +1051,8 @@ export default function AdminOrderDetailPage() {
               <Copy className="h-3.5 w-3.5" />
               Copy order ID
             </button>
+
+            <DeleteOrderButton order={order} />
           </div>
         </div>
 

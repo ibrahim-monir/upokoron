@@ -227,6 +227,7 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::post('orders/{order}/payments', [OrderController::class, 'recordPayment'])->name('orders.payments');
     Route::post('orders/{order}/refunds', [OrderController::class, 'refund'])->name('orders.refunds');
     Route::put('orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.note');
+    Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
 
     // Delivery zones, the places in them, and what each charges.
     Route::get('shipping/zones', [ShippingZoneController::class, 'index'])->name('shipping.zones.index');

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentMethod;
+use App\Services\Order\OrderDeletionService;
 use App\Services\Order\OrderStatusService;
 use App\Services\Order\PaymentService;
 use App\Support\Money;
@@ -29,6 +30,7 @@ class OrderController extends Controller
     public function __construct(
         private readonly OrderStatusService $statuses,
         private readonly PaymentService $payments,
+        private readonly OrderDeletionService $deletions,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -113,6 +115,9 @@ class OrderController extends Controller
                     static fn (OrderStatus $s): array => ['value' => $s->value, 'label' => $s->label()],
                     $order->status->allowedNext(),
                 ),
+
+                // Null when it may be deleted; otherwise the reason it may not.
+                'delete_blocker' => $this->deletions->blocker($order),
 
                 'customer' => $order->customer === null ? null : [
                     'id' => $order->customer->id,
@@ -292,6 +297,18 @@ class OrderController extends Controller
         $order->forceFill(['staff_note' => $data['staff_note']])->save();
 
         return response()->json(['message' => 'Note saved.']);
+    }
+
+    /**
+     * Delete an order that never shipped and was never paid -- a test order.
+     */
+    public function destroy(Request $request, Order $order): JsonResponse
+    {
+        abort_unless($request->user()?->can('orders.delete'), 403);
+
+        $this->deletions->delete($order, $request->user());
+
+        return response()->json(['message' => "Order {$order->number} deleted."]);
     }
 
     /**
