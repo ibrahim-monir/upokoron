@@ -62,6 +62,7 @@ const MULTILINE = [
   'about_notice',
   'about_notice_bangla',
   'page_privacy',
+  'page_privacy_bangla',
   'page_terms',
   'store_address',
   'store_description',
@@ -80,6 +81,10 @@ const HINTS = {
   about_notice:
     'The ownership notice, in English. It sits in a highlighted panel near the top of the About page, and both languages of it are always shown -- whichever one the reader is not on appears underneath. Emptying both hides the panel, which is the statement not being made.',
   about_notice_bangla: 'The ownership notice in Bangla.',
+  page_privacy:
+    'The Privacy policy page, in English. Blank lines separate paragraphs; start a line with "# " for a heading and "- " for a bullet point.',
+  page_privacy_bangla:
+    'The same policy in Bangla, shown when the site is switched to Bangla. Left blank, Bangla readers see the English.',
   google_site_verification:
     "From Search Console: Settings > Ownership verification > HTML tag. Paste only the tag's content value, not the whole <meta> tag.",
   google_analytics_id: 'The GA4 Measurement ID from Admin > Data streams, in the form G-XXXXXXXXXX.',

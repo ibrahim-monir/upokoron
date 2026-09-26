@@ -126,7 +126,14 @@ export const router = createBrowserRouter([
       { path: 'about', element: <AboutPage /> },
       {
         path: 'privacy',
-        element: <ContentPage title="Privacy policy" settingKey="page_privacy" />,
+        element: (
+          <ContentPage
+            title="Privacy policy"
+            banglaTitle="গোপনীয়তা নীতি"
+            settingKey="page_privacy"
+            banglaKey="page_privacy_bangla"
+          />
+        ),
       },
       {
         path: 'terms',

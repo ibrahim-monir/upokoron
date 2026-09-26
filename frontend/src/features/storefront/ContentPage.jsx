@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Clock, FileText, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { get } from '../../lib/api'
+import { useTranslation } from '../../lib/i18n'
 import { Card, PageLoader } from '../../components/ui'
 import { ContactForm } from './ContactForm'
 import { FaqSection } from './FaqSection'
@@ -22,20 +23,68 @@ function useStoreSettings() {
  * document that does not describe this shop, which is worse than an honest
  * blank.
  */
-export function ContentPage({ title, settingKey, intro }) {
+/*
+ * The owner's text, lightly formatted: blank lines separate paragraphs, a
+ * paragraph starting "# " is a heading, and lines starting "- " are bullets.
+ * Plain text with none of those reads exactly as it always did.
+ */
+function Prose({ text }) {
+  const blocks = text.replace(/\r\n/g, '\n').split(/\n\s*\n/)
+
+  return (
+    <div className="mt-6 flex flex-col gap-4 leading-relaxed text-ink-700">
+      {blocks.map((block, index) => {
+        const lines = block.split('\n').filter((line) => line.trim() !== '')
+
+        if (lines.length === 0) return null
+
+        if (lines[0].startsWith('# ')) {
+          return (
+            <h2 key={index} className="mt-4 text-lg font-semibold text-ink-900">
+              {lines[0].slice(2)}
+            </h2>
+          )
+        }
+
+        const lead = lines.filter((line) => !line.startsWith('- '))
+        const bullets = lines.filter((line) => line.startsWith('- '))
+
+        return (
+          <div key={index}>
+            {lead.length > 0 && <p className="whitespace-pre-line">{lead.join('\n')}</p>}
+            {bullets.length > 0 && (
+              <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                {bullets.map((line, bulletIndex) => (
+                  <li key={bulletIndex}>{line.slice(2)}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export function ContentPage({ title, banglaTitle, settingKey, banglaKey, intro }) {
   const { data: settings, isLoading } = useStoreSettings()
+  const { locale } = useTranslation()
 
   if (isLoading) return <PageLoader />
 
-  const body = settings?.[settingKey]
+  // The Bangla text when the reader is on Bangla and it has been written;
+  // the English otherwise, rather than an empty page.
+  const bangla = locale === 'bn' && banglaKey ? settings?.[banglaKey] : null
+  const body = bangla || settings?.[settingKey]
+  const heading = locale === 'bn' && banglaTitle ? banglaTitle : title
 
   return (
     <div className="mx-auto max-w-3xl py-4">
-      <h1 className="text-2xl font-semibold text-ink-900">{title}</h1>
+      <h1 className="text-2xl font-semibold text-ink-900">{heading}</h1>
       {intro && <p className="mt-2 text-ink-600">{intro}</p>}
 
       {body ? (
-        <div className="mt-6 whitespace-pre-line leading-relaxed text-ink-700">{body}</div>
+        <Prose text={body} />
       ) : (
         <Card className="mt-6 flex items-start gap-3 p-5">
           <FileText className="mt-0.5 h-5 w-5 shrink-0 text-ink-400" aria-hidden="true" />

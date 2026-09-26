@@ -308,6 +308,7 @@ return [
                 'কিনবেন, তার সম্পূর্ণ দায়িত্ব আমাদের।',
 
             'page_privacy' => '',
+            'page_privacy_bangla' => '',
             'page_terms' => '',
         ],
 
