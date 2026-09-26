@@ -24,6 +24,20 @@ Disallow: /sanctum/
 Disallow: /api/
 Allow: /api/v1/shop/
 
+# ...but never the parts of it that belong to one customer: who they are,
+# where they live, what they ordered, their cart, saved payment details,
+# points and own reviews. These answer nothing without the customer's login
+# or order details anyway; this makes the "not for search" explicit, and
+# being longer than the Allow above, these rules win over it.
+Disallow: /api/v1/shop/auth/
+Disallow: /api/v1/shop/addresses
+Disallow: /api/v1/shop/cart
+Disallow: /api/v1/shop/checkout
+Disallow: /api/v1/shop/orders
+Disallow: /api/v1/shop/payment-methods
+Disallow: /api/v1/shop/rewards/history
+Disallow: /api/v1/shop/*/mine
+
 # Private to one visitor.
 Disallow: /cart
 Disallow: /checkout
