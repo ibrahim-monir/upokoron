@@ -108,10 +108,20 @@ export function ProductCard({ product }) {
      * long-named ones in the same row.
      */
     <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-ink-200 bg-white transition-shadow hover:shadow-raised">
-      {discountPercent !== null && (
-        <span className="absolute left-2.5 top-2.5 z-10 rounded-full bg-sale-600 px-2 py-0.5 text-[11px] font-bold leading-5 text-white">
-          − {discountPercent}%
-        </span>
+      {(discountPercent !== null || product.free_shipping) && (
+        <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5">
+          {discountPercent !== null && (
+            <span className="rounded-full bg-sale-600 px-2 py-0.5 text-[11px] font-bold leading-5 text-white">
+              − {discountPercent}%
+            </span>
+          )}
+          {product.free_shipping && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-success-600 px-2.5 py-0.5 text-[11px] font-bold uppercase leading-5 tracking-wide text-white shadow-md ring-2 ring-white">
+              <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('product.freeDelivery')}
+            </span>
+          )}
+        </div>
       )}
 
       <button
@@ -179,12 +189,6 @@ export function ProductCard({ product }) {
           <span className="tabular text-lg font-bold text-brand-800">{money(price)}</span>
           {discount !== null && (
             <span className="tabular text-sm text-ink-400 line-through">{money(wasPrice)}</span>
-          )}
-          {product.free_shipping && (
-            <span className="ml-auto inline-flex shrink-0 items-center gap-1 self-center rounded-full bg-success-50 px-2 py-0.5 text-[11px] font-semibold text-success-700">
-              <Truck className="h-3 w-3" aria-hidden="true" />
-              {t('product.freeDelivery')}
-            </span>
           )}
         </div>
 

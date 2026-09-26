@@ -1049,10 +1049,17 @@ export function ProductDetailPage() {
           )}
 
           {product.free_shipping && (
-            <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-success-50 px-3 py-1 text-sm font-semibold text-success-700">
-              <Truck className="h-4 w-4" aria-hidden="true" />
-              Free delivery
-            </p>
+            <div className="flex items-center gap-3 rounded-xl bg-success-600 px-4 py-3 text-white shadow-md">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/20">
+                <Truck className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-base font-bold uppercase tracking-wide">Free delivery</p>
+                <p className="text-sm text-white/85">
+                  Your whole order ships free when this product is in it.
+                </p>
+              </div>
+            </div>
           )}
 
           {inStock ? (
