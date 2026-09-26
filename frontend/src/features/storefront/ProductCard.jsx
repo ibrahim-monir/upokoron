@@ -108,20 +108,10 @@ export function ProductCard({ product }) {
      * long-named ones in the same row.
      */
     <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-ink-200 bg-white transition-shadow hover:shadow-raised">
-      {(discountPercent !== null || product.free_shipping) && (
-        <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5">
-          {discountPercent !== null && (
-            <span className="rounded-full bg-sale-600 px-2 py-0.5 text-[11px] font-bold leading-5 text-white">
-              − {discountPercent}%
-            </span>
-          )}
-          {product.free_shipping && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-success-600 px-2.5 py-0.5 text-[11px] font-bold uppercase leading-5 tracking-wide text-white shadow-md ring-2 ring-white">
-              <Truck className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('product.freeDelivery')}
-            </span>
-          )}
-        </div>
+      {discountPercent !== null && (
+        <span className="absolute left-2.5 top-2.5 z-10 rounded-full bg-sale-600 px-2 py-0.5 text-[11px] font-bold leading-5 text-white">
+          − {discountPercent}%
+        </span>
       )}
 
       <button
@@ -169,6 +159,13 @@ export function ProductCard({ product }) {
            touch screen has none -- below that breakpoint the copy further
            down the card is the one that shows.
         */}
+        {product.free_shipping && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex h-8 items-center justify-center gap-1.5 bg-success-600 text-xs font-bold uppercase tracking-wide text-white transition-transform duration-200 lg:group-hover:-translate-y-8">
+            <Truck className="h-4 w-4" aria-hidden="true" />
+            {t('product.freeDelivery')}
+          </div>
+        )}
+
         <div className="cta-overlay absolute inset-x-0 bottom-0 z-10 hidden lg:block">
           {action}
         </div>
