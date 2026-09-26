@@ -4,8 +4,11 @@ import { date, money } from '../../lib/format'
 import { Badge, EmptyState, ErrorState, Spinner } from '../../components/ui'
 import { statusTone } from './orderStatus'
 import { useMyOrders } from './useCheckout'
+import { useTranslation } from '../../lib/i18n'
 
 export function OrdersPage() {
+  const { t } = useTranslation()
+
   const orders = useMyOrders()
 
   if (orders.isLoading) {
@@ -28,14 +31,14 @@ export function OrdersPage() {
       <div className="rounded-card border border-ink-200 bg-white">
         <EmptyState
           icon={PackageSearch}
-          title="This account does not place orders"
-          description="Order history belongs to customer accounts. You can still look up any order by its number."
+          title={t('orders.staffTitle')}
+          description={t('orders.staffHint')}
           action={
             <Link
               to="/track"
               className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
-              Track an order
+              {t('orders.track')}
             </Link>
           }
         />
@@ -52,14 +55,14 @@ export function OrdersPage() {
       <div className="rounded-card border border-ink-200 bg-white">
         <EmptyState
           icon={PackageOpen}
-          title="No orders yet"
-          description="Once you order something it will show up here, with where it has got to."
+          title={t('orders.emptyTitle')}
+          description={t('orders.emptyHint')}
           action={
             <Link
               to="/products"
               className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
-              Start shopping
+              {t('orders.startShopping')}
             </Link>
           }
         />
@@ -69,7 +72,7 @@ export function OrdersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-ink-900">My orders</h1>
+      <h1 className="text-xl font-semibold text-ink-900">{t('orders.title')}</h1>
 
       <ul className="flex flex-col gap-3">
         {rows.map((order) => (

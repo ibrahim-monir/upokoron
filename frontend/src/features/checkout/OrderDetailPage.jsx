@@ -7,8 +7,11 @@ import { PaymentReferenceCard } from './PaymentReferenceCard'
 import { PhoneGate } from './PhoneGate'
 import { ReturnSection } from './ReturnSection'
 import { useCancelOrder, useOrder } from './useCheckout'
+import { useTranslation } from '../../lib/i18n'
 
 export function OrderDetailPage() {
+  const { t } = useTranslation()
+
   const { number } = useParams()
   const [params, setParams] = useSearchParams()
   const toast = useToast()
@@ -35,7 +38,7 @@ export function OrderDetailPage() {
     return (
       <PhoneGate
         number={number}
-        error={phone ? 'That number does not match this order.' : null}
+        error={phone ? t('order.phoneMismatch') : null}
         onSubmit={(value) => setParams({ phone: value }, { replace: true })}
       />
     )
@@ -49,8 +52,8 @@ export function OrderDetailPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900">Order {data.number}</h1>
-          <p className="mt-0.5 text-sm text-ink-500">Placed {dateTime(data.placed_at)}</p>
+          <h1 className="text-xl font-semibold text-ink-900">{t('order.label')} {data.number}</h1>
+          <p className="mt-0.5 text-sm text-ink-500">{t('order.placed')} {dateTime(data.placed_at)}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -81,30 +84,30 @@ export function OrderDetailPage() {
 
         <dl className="flex flex-col gap-2 border-t border-ink-200 p-3 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ink-600">Subtotal</dt>
+            <dt className="text-ink-600">{t('order.subtotal')}</dt>
             <dd className="tabular text-ink-900">{money(data.subtotal)}</dd>
           </div>
 
           {Number(data.discount_total) > 0 && (
             <div className="flex justify-between">
-              <dt className="text-ink-600">Discount</dt>
+              <dt className="text-ink-600">{t('order.discount')}</dt>
               <dd className="tabular text-accent-600">− {money(data.discount_total)}</dd>
             </div>
           )}
 
           <div className="flex justify-between">
-            <dt className="text-ink-600">Delivery {data.shipping.method && `(${data.shipping.method})`}</dt>
+            <dt className="text-ink-600">{t('order.delivery')} {data.shipping.method && `(${data.shipping.method})`}</dt>
             <dd className="tabular text-ink-900">{money(data.shipping_charge)}</dd>
           </div>
 
           <div className="flex justify-between border-t border-ink-100 pt-2 text-base font-semibold">
-            <dt className="text-ink-900">Total</dt>
+            <dt className="text-ink-900">{t('order.total')}</dt>
             <dd className="tabular text-brand-800">{money(data.total)}</dd>
           </div>
 
           {Number(data.due_total) > 0 && (
             <div className="flex justify-between text-sm">
-              <dt className="text-ink-600">Still to pay</dt>
+              <dt className="text-ink-600">{t('order.due')}</dt>
               <dd className="tabular font-semibold text-ink-900">{money(data.due_total)}</dd>
             </div>
           )}
@@ -117,7 +120,7 @@ export function OrderDetailPage() {
         <div className="rounded-card border border-ink-200 bg-white p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
             <Truck className="h-4 w-4 text-brand-800" aria-hidden="true" />
-            Delivering to
+            {t('order.deliveringTo')}
           </h2>
           <p className="mt-2 text-sm text-ink-800">{data.shipping.name}</p>
           <p className="flex items-center gap-1.5 text-sm text-ink-600">
@@ -140,7 +143,7 @@ export function OrderDetailPage() {
         <div className="rounded-card border border-ink-200 bg-white p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
             <Package className="h-4 w-4 text-brand-800" aria-hidden="true" />
-            Progress
+            {t('order.progress')}
           </h2>
 
           <ol className="mt-2 flex flex-col gap-2">
@@ -162,7 +165,7 @@ export function OrderDetailPage() {
           to="/orders"
           className="rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-700 hover:border-ink-300"
         >
-          All my orders
+          {t('order.allOrders')}
         </Link>
 
         {data.can_cancel && (
@@ -170,7 +173,7 @@ export function OrderDetailPage() {
             variant="secondary"
             loading={cancel.isPending}
             onClick={() => {
-              const reason = window.prompt('Why are you cancelling? (optional)')
+              const reason = window.prompt(t('order.cancelWhy'))
 
               // prompt returns null on Cancel, '' if they pressed OK with an
               // empty box -- only the first means "changed my mind".
@@ -179,13 +182,13 @@ export function OrderDetailPage() {
               cancel.mutate(
                 { number: data.number, reason, phone },
                 {
-                  onSuccess: () => toast.success('Order cancelled.'),
-                  onError: (error) => toast.error(error?.message ?? 'Could not cancel that.'),
+                  onSuccess: () => toast.success(t('order.cancelled')),
+                  onError: (error) => toast.error(error?.message ?? t('order.cancelFailed')),
                 },
               )
             }}
           >
-            Cancel order
+            {t('order.cancel')}
           </Button>
         )}
       </div>

@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Field, useToast } from '../../components/ui'
 import { applyServerErrors } from './applyServerErrors'
+import { useTranslation } from '../../lib/i18n'
 
 // Mirrors the Laravel FormRequest. Client validation is for fast feedback;
 // the server's rules are the ones that count.
@@ -16,6 +17,8 @@ const schema = z.object({
 })
 
 export function LoginPage() {
+  const { t } = useTranslation()
+
   const login = useAuthStore((state) => state.login)
   const navigate = useNavigate()
   const location = useLocation()
@@ -35,7 +38,7 @@ export function LoginPage() {
     try {
       const user = await login(values)
 
-      toast.success(`Welcome back, ${user.name.split(' ')[0]}.`)
+      toast.success(t('login.welcome', { v0: user.name.split(' ')[0] }))
 
       // Finish the journey they were on before the guard interrupted.
       navigate(location.state?.from?.pathname ?? '/', { replace: true })
@@ -45,19 +48,19 @@ export function LoginPage() {
         return
       }
 
-      toast.error('Could not sign in. Please try again.')
+      toast.error(t('login.failed'))
     }
   }
 
   return (
     <div className="mx-auto w-full max-w-md py-6">
       <Card className="p-6">
-        <h1 className="text-xl font-semibold text-ink-900">Sign in</h1>
-        <p className="mt-1 text-sm text-ink-500">Use your mobile number or email address.</p>
+        <h1 className="text-xl font-semibold text-ink-900">{t('login.title')}</h1>
+        <p className="mt-1 text-sm text-ink-500">{t('login.intro')}</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
           <Field
-            label="Mobile or email"
+            label={t('login.identifier')}
             required
             error={errors.identifier?.message}
             autoComplete="username"
@@ -66,7 +69,7 @@ export function LoginPage() {
           />
 
           <Field
-            label="Password"
+            label={t('login.password')}
             required
             type="password"
             autoComplete="current-password"
@@ -77,23 +80,23 @@ export function LoginPage() {
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-sm text-ink-700">
               <input type="checkbox" className="h-4 w-4 rounded border-ink-300" {...register('remember')} />
-              Keep me signed in
+              {t('login.remember')}
             </label>
 
             <Link to="/forgot-password" className="text-sm font-medium text-brand-800 underline underline-offset-4">
-              Forgot password?
+              {t('login.forgot')}
             </Link>
           </div>
 
           <Button type="submit" loading={isSubmitting} className="w-full justify-center">
-            Sign in
+            {t('login.title')}
           </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-ink-600">
-          New here?{' '}
+          {t('login.newHere')}{' '}
           <Link to="/register" className="font-medium text-brand-800 underline underline-offset-4">
-            Create an account
+            {t('login.create')}
           </Link>
         </p>
       </Card>

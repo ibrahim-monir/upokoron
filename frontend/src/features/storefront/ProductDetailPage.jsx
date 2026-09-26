@@ -58,21 +58,22 @@ import {
   useSubmitReview,
   useUpdateReview,
 } from './useReviews'
+import { useTranslation } from '../../lib/i18n'
 
 // Same claims HomePage makes, not new ones -- a product page inventing its
 // own "24/7 support" or "free shipping" would contradict whatever this shop
 // actually promises everywhere else.
 const TRUST = [
-  { icon: Truck, title: 'Cash on delivery', body: 'Pay when your order reaches your door.' },
-  { icon: ShieldCheck, title: 'Genuine with warranty', body: 'Straight from the brand or its distributor.' },
-  { icon: PackageOpen, title: 'Easy returns', body: 'Something wrong? Send it back.' },
+  { icon: Truck, key: 'cod' },
+  { icon: ShieldCheck, key: 'genuine' },
+  { icon: PackageOpen, key: 'returns' },
 ]
 
 const TABS = [
-  { key: 'description', label: 'Description' },
-  { key: 'additional', label: 'Additional Information' },
-  { key: 'review', label: 'Review' },
-  { key: 'questions', label: 'Q&A' },
+  { key: 'description' },
+  { key: 'additional' },
+  { key: 'review' },
+  { key: 'questions' },
 ]
 
 function StarRating({ value, count }) {
@@ -102,10 +103,12 @@ const reviewSchema = z.object({
 })
 
 function RatingInput({ value, onChange, error }) {
+  const { t } = useTranslation()
+
   return (
     <div>
       <label className="text-sm font-medium text-ink-800">
-        Your rating
+        {t('pdp.yourRating')}
         <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
       </label>
       <div className="mt-1.5 flex gap-1">
@@ -131,6 +134,8 @@ function RatingInput({ value, onChange, error }) {
 
 /** Write a new review, or edit the customer's existing one. */
 function ReviewForm({ slug, existing, onDone }) {
+  const { t } = useTranslation()
+
   const toast = useToast()
   const submit = useSubmitReview(slug)
   const update = useUpdateReview(slug)
@@ -159,14 +164,14 @@ function ReviewForm({ slug, existing, onDone }) {
 
     try {
       await mutation.mutateAsync(isEditing ? { reviewId: existing.id, rating, ...values } : { rating, ...values })
-      toast.success(isEditing ? 'Review updated. It will show once approved again.' : 'Thanks! Your review will show once approved.')
+      toast.success(isEditing ? t('pdp.reviewUpdated') : t('pdp.reviewThanks'))
       onDone?.()
     } catch (error) {
       if (error instanceof ApiError) {
         applyServerErrors(error, setError, toast)
         return
       }
-      toast.error('Could not save your review.')
+      toast.error(t('pdp.reviewFailed'))
     }
   }
 
@@ -175,11 +180,11 @@ function ReviewForm({ slug, existing, onDone }) {
       <RatingInput value={rating} onChange={setRating} error={ratingError} />
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="review-title" className="text-sm font-medium text-ink-800">Title</label>
+        <label htmlFor="review-title" className="text-sm font-medium text-ink-800">{t('pdp.reviewTitle')}</label>
         <input
           id="review-title"
           className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 hover:border-ink-400"
-          placeholder="Sum up your review"
+          placeholder={t('pdp.reviewTitlePlaceholder')}
           {...register('title')}
         />
         {errors.title?.message && <p className="text-xs text-danger-700">{errors.title.message}</p>}
@@ -187,7 +192,7 @@ function ReviewForm({ slug, existing, onDone }) {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="review-comment" className="text-sm font-medium text-ink-800">
-          Your review
+          {t('pdp.yourReview')}
           <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
         </label>
         <Textarea id="review-comment" invalid={Boolean(errors.comment)} {...register('comment')} />
@@ -196,11 +201,11 @@ function ReviewForm({ slug, existing, onDone }) {
 
       <div className="flex gap-2">
         <Button type="submit" loading={mutation.isPending}>
-          {isEditing ? 'Update review' : 'Submit review'}
+          {isEditing ? t('pdp.updateReview') : t('pdp.submitReview')}
         </Button>
         {isEditing && (
           <Button type="button" variant="secondary" onClick={onDone}>
-            Cancel
+            {t('pdp.cancel')}
           </Button>
         )}
       </div>
@@ -209,6 +214,8 @@ function ReviewForm({ slug, existing, onDone }) {
 }
 
 function ReviewItem({ review, isMine, onEdit, onDelete, deleting }) {
+  const { t } = useTranslation()
+
   return (
     <div className="flex flex-col gap-2 border-b border-ink-100 py-4 last:border-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -223,7 +230,7 @@ function ReviewItem({ review, isMine, onEdit, onDelete, deleting }) {
             ))}
           </div>
 
-          {review.is_verified_purchase && <Badge tone="success">Verified Purchase</Badge>}
+          {review.is_verified_purchase && <Badge tone="success">{t('pdp.verified')}</Badge>}
 
           {review.status_label && review.status !== 'approved' && (
             <Badge tone={review.status === 'rejected' ? 'danger' : 'warning'}>{review.status_label}</Badge>
@@ -233,7 +240,7 @@ function ReviewItem({ review, isMine, onEdit, onDelete, deleting }) {
         {isMine && (
           <div className="flex gap-3 text-xs">
             <button type="button" onClick={onEdit} className="font-medium text-brand-700 hover:underline">
-              Edit
+              {t('pdp.edit')}
             </button>
             <button
               type="button"
@@ -241,7 +248,7 @@ function ReviewItem({ review, isMine, onEdit, onDelete, deleting }) {
               disabled={deleting}
               className="font-medium text-danger-700 hover:underline disabled:opacity-50"
             >
-              Delete
+              {t('pdp.delete')}
             </button>
           </div>
         )}
@@ -259,6 +266,8 @@ function ReviewItem({ review, isMine, onEdit, onDelete, deleting }) {
 
 /** The Review tab: the rating summary, the customer's own review (or a form to write one), and the approved review list. */
 function ReviewsPanel({ product }) {
+  const { t } = useTranslation()
+
   const slug = product.slug
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const toast = useToast()
@@ -275,11 +284,11 @@ function ReviewsPanel({ product }) {
 
   const handleDelete = () => {
     if (!myReview) return
-    if (!window.confirm('Delete your review?')) return
+    if (!window.confirm(t('pdp.deleteReviewConfirm'))) return
 
     deleteReview.mutate(myReview.id, {
-      onSuccess: () => toast.success('Review removed.'),
-      onError: (error) => toast.error(error?.message ?? 'Could not delete your review.'),
+      onSuccess: () => toast.success(t('pdp.reviewRemoved')),
+      onError: (error) => toast.error(error?.message ?? t('pdp.reviewDeleteFailed')),
     })
   }
 
@@ -290,7 +299,7 @@ function ReviewsPanel({ product }) {
       {isAuthenticated ? (
         myReview && !editing ? (
           <div>
-            <p className="mb-2 text-sm font-medium text-ink-800">Your review</p>
+            <p className="mb-2 text-sm font-medium text-ink-800">{t('pdp.yourReview')}</p>
             <div className="rounded-card border border-ink-200 px-4">
               <ReviewItem
                 review={myReview}
@@ -307,22 +316,22 @@ function ReviewsPanel({ product }) {
           <ReviewForm slug={slug} />
         ) : (
           !myReviewQuery.isLoading && (
-            <p className="text-sm text-ink-500">You can review this product once it has been delivered to you.</p>
+            <p className="text-sm text-ink-500">{t('pdp.reviewAfterDelivery')}</p>
           )
         )
       ) : (
         <p className="text-sm text-ink-500">
           <Link to="/login" className="font-medium text-brand-700 underline underline-offset-4">
-            Sign in
+            {t('pdp.signIn')}
           </Link>{' '}
-          to write a review.
+          {t('pdp.toWriteReview')}
         </p>
       )}
 
       {reviewsQuery.isLoading ? (
         <Spinner />
       ) : reviews.length === 0 ? (
-        <p className="text-sm text-ink-500">No reviews yet.</p>
+        <p className="text-sm text-ink-500">{t('pdp.noReviews')}</p>
       ) : (
         <div>
           {reviews.map((review) => (
@@ -351,6 +360,8 @@ const questionSchema = z.object({
  * it: a form that simply emptied itself would read as having done nothing.
  */
 function QuestionForm({ slug, onSent, onCancel }) {
+  const { t } = useTranslation()
+
   const toast = useToast()
   const ask = useAskQuestion(slug)
   const user = useAuthStore((state) => state.user)
@@ -368,13 +379,13 @@ function QuestionForm({ slug, onSent, onCancel }) {
   const onSubmit = async (values) => {
     try {
       const result = await ask.mutateAsync(values)
-      onSent?.(result?.message ?? 'Thanks for asking.')
+      onSent?.(result?.message ?? t('pdp.questionThanks'))
     } catch (error) {
       if (error instanceof ApiError) {
         applyServerErrors(error, setError, toast)
         return
       }
-      toast.error('Could not send your question.')
+      toast.error(t('pdp.questionFailed'))
     }
   }
 
@@ -393,7 +404,7 @@ function QuestionForm({ slug, onSent, onCancel }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="question-name" className="text-sm font-medium text-ink-800">
-              Your name
+              {t('pdp.yourName')}
               <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
             </label>
             <input
@@ -407,13 +418,13 @@ function QuestionForm({ slug, onSent, onCancel }) {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="question-email" className="text-sm font-medium text-ink-800">
-              Email <span className="font-normal text-ink-400">(optional)</span>
+              {t('pdp.email')} <span className="font-normal text-ink-400">{t('pdp.optional')}</span>
             </label>
             <input
               id="question-email"
               type="email"
               className="h-10 rounded-lg border border-ink-300 bg-white px-3 text-sm text-ink-900 transition-colors hover:border-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-              placeholder="So we can tell you when we answer"
+              placeholder={t('pdp.emailHint')}
               {...register('asker_email')}
             />
             {errors.asker_email?.message && <p className="text-xs text-danger-700">{errors.asker_email.message}</p>}
@@ -423,13 +434,13 @@ function QuestionForm({ slug, onSent, onCancel }) {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="question-body" className="text-sm font-medium text-ink-800">
-          Your question
+          {t('pdp.yourQuestion')}
           <span className="ml-0.5 text-danger-500" aria-hidden="true">*</span>
         </label>
         <Textarea
           id="question-body"
           rows={3}
-          placeholder="Does this work with a 12V adapter?"
+          placeholder={t('pdp.questionPlaceholder')}
           invalid={Boolean(errors.question)}
           {...register('question')}
         />
@@ -439,13 +450,13 @@ function QuestionForm({ slug, onSent, onCancel }) {
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" loading={ask.isPending}>
           <Send className="h-4 w-4" aria-hidden="true" />
-          Send question
+          {t('pdp.sendQuestion')}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('pdp.cancel')}
         </Button>
         <p className="w-full text-xs text-ink-400 sm:w-auto sm:flex-1 sm:text-right">
-          We publish it here with our answer.
+          {t('pdp.questionPublish')}
         </p>
       </div>
     </form>
@@ -461,6 +472,8 @@ function QuestionForm({ slug, onSent, onCancel }) {
  * two voices is a customer's.
  */
 function QuestionItem({ item, shopName }) {
+  const { t } = useTranslation()
+
   const asked = item.created_at ? new Date(item.created_at).toLocaleDateString() : null
   const answered = item.answered_at ? new Date(item.answered_at).toLocaleDateString() : null
 
@@ -502,7 +515,7 @@ function QuestionItem({ item, shopName }) {
       ) : (
         <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-warning-50 px-2.5 py-1 text-xs font-medium text-warning-800 sm:ml-10">
           <Clock className="h-3 w-3" aria-hidden="true" />
-          Waiting for the shop to answer
+          {t('pdp.awaitingAnswer')}
         </p>
       )}
     </article>
@@ -518,6 +531,8 @@ function QuestionItem({ item, shopName }) {
  * for below the fold.
  */
 function QuestionsPanel({ product, shopName }) {
+  const { t } = useTranslation()
+
   const slug = product.slug
   const [page, setPage] = useState(1)
   const [asking, setAsking] = useState(false)
@@ -542,10 +557,10 @@ function QuestionsPanel({ product, shopName }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-ink-900">Questions &amp; Answers</h2>
+          <h2 className="text-base font-semibold text-ink-900">{t('pdp.qaTitle')}</h2>
           <p className="mt-0.5 text-sm text-ink-500">
             {total === 0
-              ? 'Ask us anything about this product.'
+              ? t('pdp.qaIntro')
               : `${total} question${total === 1 ? '' : 's'} answered about this product.`}
           </p>
         </div>
@@ -553,7 +568,7 @@ function QuestionsPanel({ product, shopName }) {
         {!asking && (
           <Button type="button" variant="secondary" onClick={openForm}>
             <MessageCircleQuestion className="h-4 w-4" aria-hidden="true" />
-            Ask a question
+            {t('pdp.ask')}
           </Button>
         )}
       </div>
@@ -579,15 +594,14 @@ function QuestionsPanel({ product, shopName }) {
       ) : questions.length === 0 ? (
         <div className="rounded-card border border-dashed border-ink-300 px-4 py-10 text-center">
           <MessagesSquare className="mx-auto h-8 w-8 text-ink-300" aria-hidden="true" />
-          <p className="mt-3 font-medium text-ink-800">No questions yet</p>
+          <p className="mt-3 font-medium text-ink-800">{t('pdp.noQuestions')}</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
-            Be the first to ask. You do not need an account, and we answer here so the next shopper
-            can read it too.
+            {t('pdp.noQuestionsHint')}
           </p>
           {!asking && (
             <Button type="button" className="mt-4" onClick={openForm}>
               <MessageCircleQuestion className="h-4 w-4" aria-hidden="true" />
-              Ask a question
+              {t('pdp.ask')}
             </Button>
           )}
         </div>
@@ -611,6 +625,8 @@ function QuestionsPanel({ product, shopName }) {
  * type. Nothing shown if there is no category or nothing else in it.
  */
 function RelatedProducts({ categorySlug, excludeId }) {
+  const { t } = useTranslation()
+
   const query = useQuery({
     queryKey: ['shop', 'products', 'related', categorySlug],
     // More than fits on one row, so there is something to slide to -- the
@@ -631,21 +647,21 @@ function RelatedProducts({ categorySlug, excludeId }) {
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-ink-900">
           <Layers className="h-5 w-5 text-brand-600" aria-hidden="true" />
-          Related Products
+          {t('pdp.related')}
         </h2>
 
         <Link
           to={`/category/${categorySlug}`}
           className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
         >
-          See More
+          {t('pdp.seeMore')}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
 
       {/* Positioned parent for the overlaid arrows. */}
       <div className="relative">
-        <RailArrows rail={rail} label="related products" />
+        <RailArrows rail={rail} label={t('pdp.relatedAria')} />
 
         <div ref={rail.ref} className="rail flex snap-x snap-mandatory gap-3 scroll-smooth pb-1">
           {(query.isLoading ? Array.from({ length: 5 }) : products).map((product, index) => (
@@ -779,6 +795,8 @@ function RelatedProductsSidebar({ products, title }) {
 }
 
 export function ProductDetailPage() {
+  const { t } = useTranslation()
+
   const { slug } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
@@ -814,14 +832,14 @@ export function ProductDetailPage() {
       : null,
   )
 
-  if (query.isLoading) return <PageLoader label="Loading product" />
+  if (query.isLoading) return <PageLoader label={t('pdp.loading')} />
 
   if (query.isError) {
     return (
       <div className="mx-auto max-w-lg">
         <ErrorState error={query.error} onRetry={query.refetch} />
         <Link to="/products" className="mt-4 inline-block text-sm text-brand-800 underline">
-          Back to all products
+          {t('pdp.backToAll')}
         </Link>
       </div>
     )
@@ -855,7 +873,7 @@ export function ProductDetailPage() {
       {
         onSuccess: onDone,
         onError(error) {
-          toast.error(error?.message ?? 'Could not add that to your cart.')
+          toast.error(error?.message ?? t('pdp.addFailed'))
         },
       },
     )
@@ -902,10 +920,10 @@ export function ProductDetailPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-ink-500">
-        <Link to="/" className="hover:text-ink-900">Home</Link>
+      <nav aria-label={t('pdp.breadcrumb')} className="flex items-center gap-1 text-sm text-ink-500">
+        <Link to="/" className="hover:text-ink-900">{t('pdp.home')}</Link>
         <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-        <Link to="/products" className="hover:text-ink-900">Products</Link>
+        <Link to="/products" className="hover:text-ink-900">{t('pdp.products')}</Link>
         {product.category?.name && (
           <>
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -955,7 +973,7 @@ export function ProductDetailPage() {
                 <button
                   type="button"
                   onClick={() => setActiveImage((i) => (i - 1 + slideCount) % slideCount)}
-                  aria-label="Previous image"
+                  aria-label={t('pdp.prevImage')}
                   className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink-700 shadow-card hover:bg-white"
                 >
                   <ChevronLeft className="h-5 w-5" aria-hidden="true" />
@@ -963,7 +981,7 @@ export function ProductDetailPage() {
                 <button
                   type="button"
                   onClick={() => setActiveImage((i) => (i + 1) % slideCount)}
-                  aria-label="Next image"
+                  aria-label={t('pdp.nextImage')}
                   className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink-700 shadow-card hover:bg-white"
                 >
                   <ChevronRight className="h-5 w-5" aria-hidden="true" />
@@ -979,7 +997,7 @@ export function ProductDetailPage() {
                   key={image.id}
                   type="button"
                   onClick={() => setActiveImage(index)}
-                  aria-label={`View image ${index + 1}`}
+                  aria-label={t('pdp.viewImage', { v0: index + 1 })}
                   aria-current={index === activeImage}
                   className={cx(
                     'h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2',
@@ -994,7 +1012,7 @@ export function ProductDetailPage() {
                 <button
                   type="button"
                   onClick={() => setActiveImage(images.length)}
-                  aria-label="Play the product video"
+                  aria-label={t('pdp.playVideo')}
                   aria-current={showingVideo}
                   className={cx(
                     'relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-ink-900',
@@ -1039,7 +1057,7 @@ export function ProductDetailPage() {
               className="flex w-fit items-center gap-1.5 text-sm font-medium text-accent-600 hover:text-accent-700 hover:underline"
             >
               <Gift className="h-4 w-4" aria-hidden="true" />
-              Earn {selected.reward_points} reward points on this purchase
+              {t('pdp.earnPoints', { points: selected.reward_points })}
             </Link>
           )}
 
@@ -1059,7 +1077,7 @@ export function ProductDetailPage() {
           {variations.length > 1 && (
             <fieldset className="flex flex-col gap-2">
               <legend className="text-sm font-medium text-ink-800">
-                {variations.some((v) => v.attributes?.some((a) => a.color_hex)) ? 'Colour' : 'Choose an option'}
+                {variations.some((v) => v.attributes?.some((a) => a.color_hex)) ? 'Colour' : t('pdp.chooseOption')}
               </legend>
               <div className="flex flex-wrap items-center gap-2">
                 {variations.map((variation) => {
@@ -1110,18 +1128,18 @@ export function ProductDetailPage() {
                 <Truck className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-base font-bold uppercase tracking-wide">Free delivery</p>
+                <p className="text-base font-bold uppercase tracking-wide">{t('pdp.freeDelivery')}</p>
                 <p className="text-sm text-white/85">
-                  Your whole order ships free when this product is in it.
+                  {t('pdp.freeDeliveryBody')}
                 </p>
               </div>
             </div>
           )}
 
           {inStock ? (
-            available <= 5 && <p className="text-sm text-ink-500">Only {available} left</p>
+            available <= 5 && <p className="text-sm text-ink-500">{t('pdp.onlyLeft', { n: available })}</p>
           ) : (
-            <p className="text-sm font-semibold text-danger-700">Out of stock</p>
+            <p className="text-sm font-semibold text-danger-700">{t('pdp.outOfStock')}</p>
           )}
 
           <div className="flex flex-wrap items-center gap-3">
@@ -1130,7 +1148,7 @@ export function ProductDetailPage() {
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 disabled={quantity <= 1 || !inStock}
-                aria-label="Reduce quantity"
+                aria-label={t('pdp.reduce')}
                 className="grid h-11 w-11 place-items-center rounded-l-lg text-ink-600 enabled:hover:bg-ink-50 disabled:opacity-40"
               >
                 <Minus className="h-4 w-4" aria-hidden="true" />
@@ -1142,7 +1160,7 @@ export function ProductDetailPage() {
                 type="button"
                 onClick={() => setQuantity((q) => Math.min(available, q + 1))}
                 disabled={quantity >= available || !inStock}
-                aria-label="Increase quantity"
+                aria-label={t('pdp.increase')}
                 className="grid h-11 w-11 place-items-center rounded-r-lg text-ink-600 enabled:hover:bg-ink-50 disabled:opacity-40"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
@@ -1164,12 +1182,12 @@ export function ProductDetailPage() {
             <Button
               variant="primary"
               size="lg"
-              onClick={() => addItem(() => toast.success('Added to cart.'))}
+              onClick={() => addItem(() => toast.success(t('pdp.added')))}
               disabled={!canBuy}
               loading={addToCart.isPending}
             >
               <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-              Add To Cart
+              {t('pdp.addToCart')}
             </Button>
 
             <Button
@@ -1179,7 +1197,7 @@ export function ProductDetailPage() {
               disabled={!canBuy}
               loading={addToCart.isPending}
             >
-              Buy Now
+              {t('pdp.buyNow')}
             </Button>
 
             <button
@@ -1188,10 +1206,10 @@ export function ProductDetailPage() {
               aria-pressed={saved}
               aria-label={
                 saved
-                  ? `Remove ${product.name} from your wishlist`
-                  : `Save ${product.name} to your wishlist`
+                  ? t('pdp.unsave', { v0: product.name })
+                  : t('pdp.save', { v0: product.name })
               }
-              title={saved ? 'Saved to your wishlist' : 'Save to your wishlist'}
+              title={saved ? t('pdp.saved') : t('pdp.saveShort')}
               className={cx(
                 'grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition-colors',
                 saved
@@ -1208,19 +1226,19 @@ export function ProductDetailPage() {
           </div>
 
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-y border-ink-200 py-4 text-sm">
-            <dt className="text-ink-500">SKU</dt>
+            <dt className="text-ink-500">{t('pdp.sku')}</dt>
             <dd className="tabular text-ink-800">{selected?.sku ?? '—'}</dd>
 
             {product.unit?.name && (
               <>
-                <dt className="text-ink-500">Sold by</dt>
+                <dt className="text-ink-500">{t('pdp.soldBy')}</dt>
                 <dd className="text-ink-800">{product.unit.name}</dd>
               </>
             )}
 
             {product.warranty && (
               <>
-                <dt className="text-ink-500">Warranty</dt>
+                <dt className="text-ink-500">{t('pdp.warranty')}</dt>
                 <dd className="text-ink-800">{product.warranty}</dd>
               </>
             )}
@@ -1230,19 +1248,19 @@ export function ProductDetailPage() {
             <p className="text-sm text-ink-600">
               {product.category?.name && (
                 <>
-                  Category:{' '}
+                  {t('pdp.category')}{' '}
                   <Link to={`/category/${product.category.slug}`} className="text-brand-800 hover:underline">
                     {product.category.name}
                   </Link>
                 </>
               )}
               {product.category?.name && product.brand?.name && ' · '}
-              {product.brand?.name && <>Brand: {product.brand.name}</>}
+              {product.brand?.name && <>{t('pdp.brand')} {product.brand.name}</>}
             </p>
           )}
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-ink-500">Share:</span>
+            <span className="text-sm text-ink-500">{t('pdp.share')}</span>
             {shareLinks.map(({ label, icon: Icon, href }) => (
               <a
                 key={label}
@@ -1260,7 +1278,7 @@ export function ProductDetailPage() {
 
         {/* ---------------------------------------------- related sidebar */}
         {goesWith.length > 0 && (
-          <RelatedProductsSidebar products={goesWith} title={settings?.product_pairs_title || 'People Buy It With'} />
+          <RelatedProductsSidebar products={goesWith} title={settings?.product_pairs_title || t('pdp.goesWith')} />
         )}
       </div>
 
@@ -1281,7 +1299,7 @@ export function ProductDetailPage() {
                   : 'border-transparent text-ink-500 hover:text-ink-800',
               )}
             >
-              {item.label}
+              {t(`pdp.tab.${item.key}`)}
             </button>
           ))}
         </div>
@@ -1301,7 +1319,7 @@ export function ProductDetailPage() {
                 <p className="whitespace-pre-line leading-relaxed text-ink-700">{product.description}</p>
               )
             ) : (
-              <p className="text-sm text-ink-500">No description has been written for this product yet.</p>
+              <p className="text-sm text-ink-500">{t('pdp.noDescription')}</p>
             ))}
 
           {tab === 'additional' &&
@@ -1310,8 +1328,8 @@ export function ProductDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-brand-600 text-left text-white">
-                      <th scope="col" className="px-4 py-2.5 font-semibold">Feature</th>
-                      <th scope="col" className="px-4 py-2.5 font-semibold">Description</th>
+                      <th scope="col" className="px-4 py-2.5 font-semibold">{t('pdp.feature')}</th>
+                      <th scope="col" className="px-4 py-2.5 font-semibold">{t('pdp.descriptionCol')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1325,7 +1343,7 @@ export function ProductDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-ink-500">No additional information for this product.</p>
+              <p className="text-sm text-ink-500">{t('pdp.noAdditional')}</p>
             ))}
 
           {tab === 'review' && <ReviewsPanel product={product} />}
@@ -1341,14 +1359,14 @@ export function ProductDetailPage() {
       <TrendingSection />
 
       <section className="grid gap-3 border-t border-ink-200 pt-6 sm:grid-cols-3">
-        {TRUST.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="flex items-start gap-3">
+        {TRUST.map(({ icon: Icon, key }) => (
+          <div key={key} className="flex items-start gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-brand-50 text-brand-800">
               <Icon className="h-4 w-4" aria-hidden="true" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-ink-900">{title}</p>
-              <p className="mt-0.5 text-sm text-ink-500">{body}</p>
+              <p className="text-sm font-semibold text-ink-900">{t(`pdp.trust.${key}.title`)}</p>
+              <p className="mt-0.5 text-sm text-ink-500">{t(`pdp.trust.${key}.body`)}</p>
             </div>
           </div>
         ))}

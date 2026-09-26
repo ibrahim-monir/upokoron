@@ -8,6 +8,7 @@ import { money } from '../../lib/format'
 import { useWishlistStore } from '../../stores/wishlistStore'
 import { useAddToCart } from '../cart/useCart'
 import { Button, EmptyState, useToast } from '../../components/ui'
+import { useTranslation } from '../../lib/i18n'
 
 /** The variation a wishlist row buys: the default one the API marks. */
 function buyableVariation(product) {
@@ -15,16 +16,20 @@ function buyableVariation(product) {
 }
 
 function StockLabel({ variation }) {
+  const { t } = useTranslation()
+
   const available = Number(variation?.available_quantity ?? 0)
 
   return available > 0 ? (
-    <span className="text-sm font-medium text-success-700">In stock</span>
+    <span className="text-sm font-medium text-success-700">{t('wishlist.inStock')}</span>
   ) : (
-    <span className="text-sm font-medium text-danger-700">Out of stock</span>
+    <span className="text-sm font-medium text-danger-700">{t('wishlist.outOfStock')}</span>
   )
 }
 
 function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
+  const { t } = useTranslation()
+
   const toast = useToast()
   const addToCart = useAddToCart()
   const [added, setAdded] = useState(false)
@@ -44,7 +49,7 @@ function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
           setTimeout(() => setAdded(false), 2000)
         },
         onError(error) {
-          toast.error(error?.message ?? 'Could not add that to your cart.')
+          toast.error(error?.message ?? t('wishlist.addFailed'))
         },
       },
     )
@@ -71,13 +76,13 @@ function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
         <button
           type="button"
           onClick={() => onRemove(entry.id)}
-          aria-label="Remove from wishlist"
+          aria-label={t('wishlist.remove')}
           className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        <p className="text-sm text-ink-500">This product is no longer available.</p>
+        <p className="text-sm text-ink-500">{t('wishlist.unavailable')}</p>
       </li>
     )
   }
@@ -89,14 +94,14 @@ function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
           type="checkbox"
           checked={selected}
           onChange={() => onToggleSelect(entry.id)}
-          aria-label={`Select ${product.name}`}
+          aria-label={t('wishlist.select', { v0: product.name })}
           className="h-4 w-4 rounded border-ink-300"
         />
 
         <button
           type="button"
           onClick={() => onRemove(entry.id)}
-          aria-label={`Remove ${product.name} from your wishlist`}
+          aria-label={t('wishlist.removeNamed', { v0: product.name })}
           className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
         >
           <X className="h-4 w-4" aria-hidden="true" />
@@ -137,14 +142,14 @@ function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
       </div>
 
       <div>
-        <span className="text-xs uppercase tracking-wide text-ink-500 sm:hidden">Price: </span>
+        <span className="text-xs uppercase tracking-wide text-ink-500 sm:hidden">{t('wishlist.priceLabel')} </span>
         <span className="font-semibold text-ink-900">
           {money(variation?.effective_price ?? variation?.selling_price ?? 0)}
         </span>
       </div>
 
       <div className="text-sm text-ink-600">
-        <span className="text-xs uppercase tracking-wide text-ink-500 sm:hidden">Added: </span>
+        <span className="text-xs uppercase tracking-wide text-ink-500 sm:hidden">{t('wishlist.addedLabel')} </span>
         {new Date(entry.addedAt).toLocaleDateString('en-GB', {
           day: '2-digit',
           month: 'long',
@@ -167,10 +172,10 @@ function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
           {added ? (
             <>
               <Check className="h-4 w-4" aria-hidden="true" />
-              Added
+              {t('wishlist.added')}
             </>
           ) : (
-            'Add to Cart'
+            t('wishlist.addToCart')
           )}
         </Button>
       </div>
@@ -179,6 +184,8 @@ function Row({ entry, product, loading, onRemove, selected, onToggleSelect }) {
 }
 
 export function WishlistPage() {
+  const { t } = useTranslation()
+
   const toast = useToast()
   const items = useWishlistStore((state) => state.items)
   const remove = useWishlistStore((state) => state.remove)
@@ -267,7 +274,7 @@ export function WishlistPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error('Could not copy the link.')
+      toast.error(t('wishlist.copyFailed'))
     }
   }
 
@@ -297,7 +304,7 @@ export function WishlistPage() {
 
     if (failed === 0) {
       toast.success(
-        `Added ${targets.length} item${targets.length === 1 ? '' : 's'} to your cart.`,
+        t('wishlist.addedMany', { v0: targets.length, v1: targets.length === 1 ? '' : 's' }),
       )
     } else {
       toast.error(`${failed} of ${targets.length} could not be added.`)
@@ -305,28 +312,28 @@ export function WishlistPage() {
   }
 
   const clearAll = () => {
-    if (!window.confirm('Remove everything from your wishlist?')) return
+    if (!window.confirm(t('wishlist.clearConfirm'))) return
 
     clear()
     setSelected(new Set())
-    toast.success('Wishlist cleared.')
+    toast.success(t('wishlist.cleared'))
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-ink-500">
+      <nav aria-label={t('wishlist.breadcrumb')} className="flex items-center gap-1 text-sm text-ink-500">
         <Link to="/" className="hover:text-ink-900">
-          Home
+          {t('wishlist.home')}
         </Link>
         <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-        <span className="text-ink-900">Wishlist</span>
+        <span className="text-ink-900">{t('wishlist.title')}</span>
       </nav>
 
       <div>
-        <h1 className="text-2xl font-semibold text-ink-900">Wishlist</h1>
+        <h1 className="text-2xl font-semibold text-ink-900">{t('wishlist.title')}</h1>
         <p className="mt-1 text-sm text-ink-600">
           {items.length === 0
-            ? 'Nothing saved yet.'
+            ? t('wishlist.nothingSaved')
             : `${items.length} item${items.length === 1 ? '' : 's'} saved for later.`}
         </p>
       </div>
@@ -334,14 +341,14 @@ export function WishlistPage() {
       {items.length === 0 ? (
         <EmptyState
           icon={Heart}
-          title="Your wishlist is empty"
-          description="Tap the heart on any product to save it here for later."
+          title={t('wishlist.emptyTitle')}
+          description={t('wishlist.emptyHint')}
           action={
             <Link
               to="/products"
               className="inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
             >
-              Browse products
+              {t('wishlist.browse')}
             </Link>
           }
         />
@@ -356,15 +363,15 @@ export function WishlistPage() {
                     type="checkbox"
                     checked={allSelected}
                     onChange={toggleSelectAll}
-                    aria-label="Select all"
+                    aria-label={t('wishlist.selectAll')}
                     className="h-4 w-4 rounded border-white/60 bg-transparent"
                   />
                 )}
               </span>
-              <span>Product</span>
-              <span>Price</span>
-              <span>Date Added</span>
-              <span>Stock Status</span>
+              <span>{t('wishlist.colProduct')}</span>
+              <span>{t('wishlist.colPrice')}</span>
+              <span>{t('wishlist.colDate')}</span>
+              <span>{t('wishlist.colStock')}</span>
               <span />
             </div>
 
@@ -385,7 +392,7 @@ export function WishlistPage() {
 
           <div className="flex flex-col gap-4 rounded-card border border-ink-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-ink-700">Wishlist link:</span>
+              <span className="text-sm font-medium text-ink-700">{t('wishlist.linkLabel')}</span>
 
               <input
                 readOnly
@@ -398,12 +405,12 @@ export function WishlistPage() {
                 {copied ? (
                   <>
                     <Check className="h-4 w-4" aria-hidden="true" />
-                    Copied
+                    {t('wishlist.copied')}
                   </>
                 ) : (
                   <>
                     <Copy className="h-4 w-4" aria-hidden="true" />
-                    Copy Link
+                    {t('wishlist.copyLink')}
                   </>
                 )}
               </Button>
@@ -415,11 +422,11 @@ export function WishlistPage() {
                 onClick={clearAll}
                 className="text-sm font-medium text-ink-600 underline underline-offset-4 transition-colors hover:text-danger-700"
               >
-                Clear Wishlist
+                {t('wishlist.clear')}
               </button>
 
               <Button onClick={addAll} disabled={targets.length === 0 || addingAll} loading={addingAll}>
-                {hasSelection ? `Add Selected to Cart (${targets.length})` : 'Add All to Cart'}
+                {hasSelection ? t('wishlist.addSelected', { v0: targets.length }) : t('wishlist.addAll')}
               </Button>
             </div>
           </div>

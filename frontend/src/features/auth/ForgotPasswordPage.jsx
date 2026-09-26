@@ -7,12 +7,15 @@ import { MailCheck } from 'lucide-react'
 import { ApiError, post } from '../../lib/api'
 import { Button, Card, Field, useToast } from '../../components/ui'
 import { applyServerErrors } from './applyServerErrors'
+import { useTranslation } from '../../lib/i18n'
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address.'),
 })
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation()
+
   const toast = useToast()
   const [sentTo, setSentTo] = useState(null)
 
@@ -36,7 +39,7 @@ export function ForgotPasswordPage() {
         return
       }
 
-      toast.error('Could not send the reset link. Please try again.')
+      toast.error(t('forgot.failed'))
     }
   }
 
@@ -48,18 +51,16 @@ export function ForgotPasswordPage() {
             <MailCheck className="h-6 w-6" aria-hidden="true" />
           </span>
 
-          <h1 className="mt-4 text-xl font-semibold text-ink-900">Check your email</h1>
+          <h1 className="mt-4 text-xl font-semibold text-ink-900">{t('forgot.checkTitle')}</h1>
           <p className="mt-1 text-sm text-ink-500">
-            If <span className="font-medium text-ink-700">{sentTo}</span> has an account, a reset link is on
-            its way. It expires after a while, so use it soon. Check spam if it does not show up in a few
-            minutes.
+            {t('forgot.if')} <span className="font-medium text-ink-700">{sentTo}</span> {t('forgot.sent')}
           </p>
 
           <Link
             to="/login"
             className="mt-5 inline-block text-sm font-medium text-brand-800 underline underline-offset-4"
           >
-            Back to sign in
+            {t('forgot.back')}
           </Link>
         </Card>
       </div>
@@ -69,14 +70,14 @@ export function ForgotPasswordPage() {
   return (
     <div className="mx-auto w-full max-w-md py-6">
       <Card className="p-6">
-        <h1 className="text-xl font-semibold text-ink-900">Forgot your password?</h1>
+        <h1 className="text-xl font-semibold text-ink-900">{t('forgot.title')}</h1>
         <p className="mt-1 text-sm text-ink-500">
-          Enter the email on your account and we will send you a reset link.
+          {t('forgot.intro')}
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
           <Field
-            label="Email address"
+            label={t('forgot.email')}
             type="email"
             required
             autoComplete="email"
@@ -85,14 +86,14 @@ export function ForgotPasswordPage() {
           />
 
           <Button type="submit" loading={isSubmitting} className="w-full justify-center">
-            Send reset link
+            {t('forgot.submit')}
           </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-ink-600">
-          Remembered it?{' '}
+          {t('forgot.remembered')}{' '}
           <Link to="/login" className="font-medium text-brand-800 underline underline-offset-4">
-            Back to sign in
+            {t('forgot.back')}
           </Link>
         </p>
       </Card>

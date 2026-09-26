@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Field, useToast } from '../../components/ui'
 import { applyServerErrors } from './applyServerErrors'
+import { useTranslation } from '../../lib/i18n'
 
 /*
  * Mirrors RegisterRequest on the server, including the rule that at least
@@ -37,6 +38,8 @@ const schema = z
   })
 
 export function RegisterPage() {
+  const { t } = useTranslation()
+
   const registerCustomer = useAuthStore((state) => state.register)
   const navigate = useNavigate()
   const toast = useToast()
@@ -59,7 +62,7 @@ export function RegisterPage() {
         email: values.email || null,
       })
 
-      toast.success('Account created. Welcome to Upokoron.')
+      toast.success(t('register.created'))
       navigate('/', { replace: true })
     } catch (error) {
       if (error instanceof ApiError) {
@@ -67,19 +70,19 @@ export function RegisterPage() {
         return
       }
 
-      toast.error('Could not create the account. Please try again.')
+      toast.error(t('register.failed'))
     }
   }
 
   return (
     <div className="mx-auto w-full max-w-md py-6">
       <Card className="p-6">
-        <h1 className="text-xl font-semibold text-ink-900">Create an account</h1>
-        <p className="mt-1 text-sm text-ink-500">A mobile number is enough to get started.</p>
+        <h1 className="text-xl font-semibold text-ink-900">{t('register.title')}</h1>
+        <p className="mt-1 text-sm text-ink-500">{t('register.intro')}</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
           <Field
-            label="Full name"
+            label={t('register.name')}
             required
             autoComplete="name"
             error={errors.name?.message}
@@ -87,7 +90,7 @@ export function RegisterPage() {
           />
 
           <Field
-            label="Mobile number"
+            label={t('register.phone')}
             placeholder="01712345678"
             inputMode="numeric"
             autoComplete="tel"
@@ -96,26 +99,26 @@ export function RegisterPage() {
           />
 
           <Field
-            label="Email address"
+            label={t('register.email')}
             type="email"
             autoComplete="email"
-            hint="Optional, but needed if you ever want to reset your password."
+            hint={t('register.emailHint')}
             error={errors.email?.message}
             {...register('email')}
           />
 
           <Field
-            label="Password"
+            label={t('register.password')}
             required
             type="password"
             autoComplete="new-password"
-            hint="At least 8 characters, with a letter and a number."
+            hint={t('register.passwordHint')}
             error={errors.password?.message}
             {...register('password')}
           />
 
           <Field
-            label="Confirm password"
+            label={t('register.confirm')}
             required
             type="password"
             autoComplete="new-password"
@@ -124,14 +127,14 @@ export function RegisterPage() {
           />
 
           <Button type="submit" loading={isSubmitting} className="w-full justify-center">
-            Create account
+            {t('register.submit')}
           </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-ink-600">
-          Already have an account?{' '}
+          {t('register.haveAccount')}{' '}
           <Link to="/login" className="font-medium text-brand-800 underline underline-offset-4">
-            Sign in
+            {t('register.signIn')}
           </Link>
         </p>
       </Card>

@@ -9,6 +9,7 @@ import { ApiError, post } from '../../lib/api'
 import { cx } from '../../lib/format'
 import { Button, Card, useToast } from '../../components/ui'
 import { applyServerErrors } from '../auth/applyServerErrors'
+import { useTranslation } from '../../lib/i18n'
 
 /*
  * Mirrors the server's rules rather than inventing its own, so a message
@@ -54,6 +55,8 @@ function FormField({ label, htmlFor, error, children }) {
 }
 
 export function ContactForm() {
+  const { t } = useTranslation()
+
   const toast = useToast()
   const [sent, setSent] = useState(false)
 
@@ -119,14 +122,13 @@ export function ContactForm() {
           <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
         </span>
 
-        <p className="text-lg font-semibold text-ink-900">Your message has reached us</p>
+        <p className="text-lg font-semibold text-ink-900">{t('contactForm.sentTitle')}</p>
         <p className="max-w-sm text-sm text-ink-600">
-          We read everything that comes in and will get back to you on the number or address you
-          left.
+          {t('contactForm.sentBody')}
         </p>
 
         <Button variant="secondary" size="sm" onClick={() => setSent(false)}>
-          Send another
+          {t('contactForm.another')}
         </Button>
       </Card>
     )
@@ -134,24 +136,24 @@ export function ContactForm() {
 
   return (
     <Card className="rise h-full p-5 sm:p-6" style={{ animationDelay: '140ms' }}>
-      <h2 className="text-base font-semibold text-ink-900">Send us a message</h2>
+      <h2 className="text-base font-semibold text-ink-900">{t('contactForm.title')}</h2>
       <p className="mt-0.5 text-sm text-ink-600">
-        We usually reply the same day.
+        {t('contactForm.intro')}
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Your name" htmlFor="name" error={errors.name?.message}>
+          <FormField label={t('contactForm.name')} htmlFor="name" error={errors.name?.message}>
             <input id="name" className={fieldClass} placeholder="Rahim Uddin" {...register('name')} />
           </FormField>
 
-          <FormField label="Mobile number" htmlFor="phone" error={errors.phone?.message}>
+          <FormField label={t('contactForm.phone')} htmlFor="phone" error={errors.phone?.message}>
             <input id="phone" className={fieldClass} placeholder="01712345678" {...register('phone')} />
           </FormField>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Email" htmlFor="email" error={errors.email?.message}>
+          <FormField label={t('contactForm.email')} htmlFor="email" error={errors.email?.message}>
             <input
               id="email"
               type="email"
@@ -161,22 +163,22 @@ export function ContactForm() {
             />
           </FormField>
 
-          <FormField label="Subject" htmlFor="subject" error={errors.subject?.message}>
+          <FormField label={t('contactForm.subject')} htmlFor="subject" error={errors.subject?.message}>
             <input
               id="subject"
               className={fieldClass}
-              placeholder="Warranty, delivery, a product…"
+              placeholder={t('contactForm.subjectPlaceholder')}
               {...register('subject')}
             />
           </FormField>
         </div>
 
-        <FormField label="Message" htmlFor="message" error={errors.message?.message}>
+        <FormField label={t('contactForm.message')} htmlFor="message" error={errors.message?.message}>
           <textarea
             id="message"
             rows={5}
             className={cx(fieldClass, 'h-auto py-2.5 leading-6')}
-            placeholder="What can we help with?"
+            placeholder={t('contactForm.messagePlaceholder')}
             {...register('message')}
           />
         </FormField>
@@ -191,7 +193,7 @@ export function ContactForm() {
               className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"
             />
-            Send message
+            {t('contactForm.submit')}
           </Button>
         </div>
       </form>

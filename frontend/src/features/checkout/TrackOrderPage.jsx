@@ -4,6 +4,7 @@ import { PackageSearch } from 'lucide-react'
 
 import { Button } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
+import { useTranslation } from '../../lib/i18n'
 
 /**
  * Look up one order by its number.
@@ -18,6 +19,8 @@ import { useAuthStore } from '../../stores/authStore'
  * is displayed rather than two that can drift apart.
  */
 export function TrackOrderPage() {
+  const { t } = useTranslation()
+
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
 
@@ -49,10 +52,9 @@ export function TrackOrderPage() {
           <PackageSearch className="h-5 w-5" aria-hidden="true" />
         </div>
 
-        <h1 className="mt-4 text-xl font-semibold text-ink-900">Track your order</h1>
+        <h1 className="mt-4 text-xl font-semibold text-ink-900">{t('track.title')}</h1>
         <p className="mt-1 text-sm text-ink-600">
-          Enter the order number from your confirmation and we will show you where it has got
-          to.
+          {t('track.intro')}
         </p>
 
         <form className="mt-5 flex flex-col gap-4" onSubmit={submit}>
@@ -61,7 +63,7 @@ export function TrackOrderPage() {
               htmlFor="track-number"
               className="mb-1 block text-sm font-medium text-ink-800"
             >
-              Order number
+              {t('track.orderNumber')}
             </label>
             <input
               id="track-number"
@@ -76,7 +78,7 @@ export function TrackOrderPage() {
 
           <div>
             <label htmlFor="track-phone" className="mb-1 block text-sm font-medium text-ink-800">
-              Mobile number
+              {t('track.mobile')}
               <span className="ml-1 font-normal text-ink-400">
                 {user ? '(if it was not your account)' : ''}
               </span>
@@ -91,21 +93,20 @@ export function TrackOrderPage() {
               className="h-11 w-full rounded-lg border border-ink-200 px-3 text-sm text-ink-900 placeholder:text-ink-400"
             />
             <p className="mt-1 text-xs text-ink-500">
-              The number the order was placed with. We ask because an order number on its own
-              would let anyone read someone else&rsquo;s name and address.
+              {t('track.mobileHint')}
             </p>
           </div>
 
           <Button type="submit" disabled={!number.trim()} className="h-11 justify-center">
-            Track order
+            {t('track.submit')}
           </Button>
         </form>
 
         {user && (
           <p className="mt-4 border-t border-ink-100 pt-4 text-sm text-ink-600">
-            Signed in?{' '}
+            {t('track.signedIn')}{' '}
             <Link to="/orders" className="font-medium text-brand-800 hover:underline">
-              See every order on your account
+              {t('track.seeAll')}
             </Link>
             .
           </p>

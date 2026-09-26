@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, post } from '../../lib/api'
 import { Button, Card, Field, useToast } from '../../components/ui'
 import { applyServerErrors } from './applyServerErrors'
+import { useTranslation } from '../../lib/i18n'
 
 const schema = z
   .object({
@@ -21,6 +22,8 @@ const schema = z
   })
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation()
+
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const toast = useToast()
@@ -42,7 +45,7 @@ export function ResetPasswordPage() {
     try {
       await post('/shop/auth/reset-password', { ...values, token, email })
 
-      toast.success('Password reset. You can sign in now.')
+      toast.success(t('reset.done'))
       navigate('/login', { replace: true })
     } catch (error) {
       if (error instanceof ApiError) {
@@ -50,7 +53,7 @@ export function ResetPasswordPage() {
         return
       }
 
-      toast.error('Could not reset the password. Please try again.')
+      toast.error(t('reset.failed'))
     }
   }
 
@@ -58,16 +61,16 @@ export function ResetPasswordPage() {
     return (
       <div className="mx-auto w-full max-w-md py-6">
         <Card className="p-6 text-center">
-          <h1 className="text-xl font-semibold text-ink-900">Link incomplete</h1>
+          <h1 className="text-xl font-semibold text-ink-900">{t('reset.incompleteTitle')}</h1>
           <p className="mt-1 text-sm text-ink-500">
-            This reset link is missing its token. Request a new one from the sign-in page.
+            {t('reset.incomplete')}
           </p>
 
           <Link
             to="/forgot-password"
             className="mt-5 inline-block text-sm font-medium text-brand-800 underline underline-offset-4"
           >
-            Request a new link
+            {t('reset.requestNew')}
           </Link>
         </Card>
       </div>
@@ -77,22 +80,22 @@ export function ResetPasswordPage() {
   return (
     <div className="mx-auto w-full max-w-md py-6">
       <Card className="p-6">
-        <h1 className="text-xl font-semibold text-ink-900">Choose a new password</h1>
-        <p className="mt-1 text-sm text-ink-500">Resetting the password for {email}.</p>
+        <h1 className="text-xl font-semibold text-ink-900">{t('reset.title')}</h1>
+        <p className="mt-1 text-sm text-ink-500">{t('reset.for')} {email}.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
           <Field
-            label="New password"
+            label={t('reset.password')}
             required
             type="password"
             autoComplete="new-password"
-            hint="At least 8 characters, with a letter and a number."
+            hint={t('reset.passwordHint')}
             error={errors.password?.message}
             {...register('password')}
           />
 
           <Field
-            label="Confirm new password"
+            label={t('reset.confirm')}
             required
             type="password"
             autoComplete="new-password"
@@ -101,7 +104,7 @@ export function ResetPasswordPage() {
           />
 
           <Button type="submit" loading={isSubmitting} className="w-full justify-center">
-            Reset password
+            {t('reset.submit')}
           </Button>
         </form>
       </Card>

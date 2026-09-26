@@ -68,6 +68,8 @@ function Prose({ text }) {
 }
 
 export function ContentPage({ title, banglaTitle, settingKey, banglaKey, intro }) {
+  const { t } = useTranslation()
+
   const { data: settings, isLoading } = useStoreSettings()
   const { locale } = useTranslation()
 
@@ -92,7 +94,7 @@ export function ContentPage({ title, banglaTitle, settingKey, banglaKey, intro }
         <Card className="mt-6 flex items-start gap-3 p-5">
           <FileText className="mt-0.5 h-5 w-5 shrink-0 text-ink-400" aria-hidden="true" />
           <div>
-            <p className="font-medium text-ink-800">This page has not been written yet.</p>
+            <p className="font-medium text-ink-800">{t('content.notWritten')}</p>
             <p className="mt-1 text-sm text-ink-600">
               The store owner can add it under{' '}
               <span className="font-medium">Admin → Settings → Pages</span>. It is left blank on
@@ -110,26 +112,28 @@ export function ContentPage({ title, banglaTitle, settingKey, banglaKey, intro }
  * from the moment the owner fills in their address and phone number.
  */
 export function ContactPage() {
+  const { t } = useTranslation()
+
   const { data: settings, isLoading } = useStoreSettings()
 
   usePageMeta({
-    title: pageTitle('Contact us'),
+    title: pageTitle(t('contact.title')),
     description: 'Call, email or message Upokoron.com about an order, a product or a return.',
   })
 
   if (isLoading) return <PageLoader />
 
   const rows = [
-    { icon: MapPin, label: 'Address', value: settings?.store_address, href: null },
-    { icon: Phone, label: 'Phone', value: settings?.store_phone, href: `tel:${settings?.store_phone}` },
+    { icon: MapPin, label: t('contact.address'), value: settings?.store_address, href: null },
+    { icon: Phone, label: t('contact.phone'), value: settings?.store_phone, href: `tel:${settings?.store_phone}` },
     {
       icon: Phone,
-      label: 'Alternate phone',
+      label: t('contact.phoneAlt'),
       value: settings?.store_phone_alt,
       href: `tel:${settings?.store_phone_alt}`,
     },
-    { icon: Mail, label: 'Email', value: settings?.store_email, href: `mailto:${settings?.store_email}` },
-    { icon: Clock, label: 'Hours', value: settings?.store_support_hours, href: null },
+    { icon: Mail, label: t('contact.email'), value: settings?.store_email, href: `mailto:${settings?.store_email}` },
+    { icon: Clock, label: t('contact.hours'), value: settings?.store_support_hours, href: null },
   ].filter((row) => row.value)
 
   return (
@@ -157,14 +161,13 @@ export function ContactPage() {
         <div className="relative max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
             <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-            We are listening
+            {t('contact.badge')}
           </span>
 
-          <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">Contact us</h1>
+          <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">{t('contact.title')}</h1>
 
           <p className="mt-3 text-white/85">
-            A question about an order, a product, or a return — call us, write to us, or leave a
-            message below and we will come back to you.
+            {t('contact.intro')}
           </p>
         </div>
       </section>
@@ -173,7 +176,7 @@ export function ContactPage() {
         <div className="flex h-full flex-col gap-3">
           {rows.length === 0 ? (
             <Card className="rise flex-1 p-5">
-              <p className="font-medium text-ink-800">No contact details have been added yet.</p>
+              <p className="font-medium text-ink-800">{t('contact.none')}</p>
               <p className="mt-1 text-sm text-ink-600">
                 The store owner can add them under{' '}
                 <span className="font-medium">Admin → Settings → Store</span>.
@@ -229,7 +232,7 @@ export function ContactPage() {
       </div>
 
       <FaqSection
-        title={settings?.faq_title || 'Frequently asked questions'}
+        title={settings?.faq_title || t('contact.faq')}
         intro={settings?.faq_intro}
       />
     </div>

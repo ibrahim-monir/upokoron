@@ -7,8 +7,11 @@ import { cx, money } from '../../lib/format'
 import { Spinner } from '../../components/ui'
 import { useCart, useRemoveCartItem, useUpdateCartItem } from './useCart'
 import { useCartDrawer } from './useCartDrawer'
+import { useTranslation } from '../../lib/i18n'
 
 function QuantityStepper({ value, onChange, disabled }) {
+  const { t } = useTranslation()
+
   const quantity = Number(value)
 
   return (
@@ -17,7 +20,7 @@ function QuantityStepper({ value, onChange, disabled }) {
         type="button"
         onClick={() => onChange(quantity - 1)}
         disabled={disabled || quantity <= 1}
-        aria-label="Reduce quantity"
+        aria-label={t('drawer.reduce')}
         className="grid h-8 w-8 place-items-center rounded-l-lg text-ink-600 transition-colors enabled:hover:bg-ink-50 disabled:opacity-40"
       >
         <Minus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -31,7 +34,7 @@ function QuantityStepper({ value, onChange, disabled }) {
         type="button"
         onClick={() => onChange(quantity + 1)}
         disabled={disabled}
-        aria-label="Increase quantity"
+        aria-label={t('drawer.increase')}
         className="grid h-8 w-8 place-items-center rounded-r-lg text-ink-600 transition-colors enabled:hover:bg-ink-50 disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -41,6 +44,8 @@ function QuantityStepper({ value, onChange, disabled }) {
 }
 
 function Line({ line, busy, onQuantity, onRemove }) {
+  const { t } = useTranslation()
+
   return (
     <li className="flex gap-3 px-4 py-3.5">
       <Link
@@ -73,7 +78,7 @@ function Line({ line, busy, onQuantity, onRemove }) {
             type="button"
             onClick={() => onRemove(line.id)}
             disabled={busy}
-            aria-label={`Remove ${line.name}`}
+            aria-label={t('drawer.remove', { v0: line.name })}
             className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ink-400 transition-colors hover:bg-danger-50 hover:text-danger-700 disabled:opacity-40"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -87,10 +92,10 @@ function Line({ line, busy, onQuantity, onRemove }) {
         */}
         {!line.is_held && (
           <p className="text-xs font-medium text-warning-700">
-            No longer reserved
+            {t('drawer.notReserved')}
             {Number(line.available) > 0
-              ? ` — ${Number(line.available)} left`
-              : ' — out of stock'}
+              ? t('drawer.left', { v0: Number(line.available) })
+              : t('drawer.outOfStock')}
           </p>
         )}
 
@@ -119,6 +124,8 @@ function Line({ line, busy, onQuantity, onRemove }) {
  * that into a 26rem panel would make both worse.
  */
 export function CartDrawer() {
+  const { t } = useTranslation()
+
   const open = useCartDrawer((state) => state.open)
   const hide = useCartDrawer((state) => state.hide)
   const { pathname } = useLocation()
@@ -173,7 +180,7 @@ export function CartDrawer() {
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Shopping cart"
+        aria-label={t('drawer.ariaLabel')}
         className={cx(
           'absolute inset-y-0 right-0 flex w-full max-w-[26rem] flex-col bg-white shadow-raised',
           'transition-transform duration-300 ease-out',
@@ -182,7 +189,7 @@ export function CartDrawer() {
       >
         <div className="flex shrink-0 items-center justify-between gap-3 bg-brand-600 px-4 py-3.5 text-white">
           <h2 className="flex items-center gap-2 text-base font-semibold text-white">
-            Shopping Cart
+            {t('drawer.title')}
             {lines.length > 0 && (
               <span className="tabular rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold text-white">
                 {data?.item_count}
@@ -193,7 +200,7 @@ export function CartDrawer() {
           <button
             type="button"
             onClick={hide}
-            aria-label="Close cart"
+            aria-label={t('drawer.close')}
             className="grid h-8 w-8 place-items-center rounded-lg text-white transition-colors hover:bg-white/20"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -210,15 +217,15 @@ export function CartDrawer() {
               <ShoppingBag className="h-6 w-6" aria-hidden="true" />
             </span>
 
-            <p className="font-medium text-ink-900">No items in your cart</p>
-            <p className="text-sm text-ink-500">Anything you add will show up here.</p>
+            <p className="font-medium text-ink-900">{t('drawer.empty')}</p>
+            <p className="text-sm text-ink-500">{t('drawer.emptyHint')}</p>
 
             <Link
               to="/products"
               onClick={hide}
               className="mt-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
             >
-              Browse products
+              {t('drawer.browse')}
             </Link>
           </div>
         ) : (
@@ -238,7 +245,7 @@ export function CartDrawer() {
             <div className="shrink-0 border-t border-ink-200 p-4">
               {Number(data?.discount) > 0 && (
                 <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                  <span className="text-ink-600">You save</span>
+                  <span className="text-ink-600">{t('drawer.youSave')}</span>
                   <span className="tabular font-medium text-accent-600">
                     − {money(data.discount)}
                   </span>
@@ -246,14 +253,14 @@ export function CartDrawer() {
               )}
 
               <div className="flex items-baseline justify-between">
-                <span className="text-sm font-medium text-ink-700">Subtotal</span>
+                <span className="text-sm font-medium text-ink-700">{t('drawer.subtotal')}</span>
                 <span className="tabular text-lg font-bold text-ink-900">
                   {money(data?.subtotal)}
                 </span>
               </div>
 
               <p className="mt-1 text-xs text-ink-500">
-                Delivery is worked out at checkout.
+                {t('drawer.deliveryNote')}
               </p>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -262,7 +269,7 @@ export function CartDrawer() {
                   onClick={hide}
                   className="flex h-10 items-center justify-center rounded-lg border border-ink-200 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-50"
                 >
-                  View cart
+                  {t('drawer.viewCart')}
                 </Link>
 
                 <Link
@@ -270,7 +277,7 @@ export function CartDrawer() {
                   onClick={hide}
                   className="flex h-10 items-center justify-center rounded-lg bg-brand-600 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
                 >
-                  Checkout
+                  {t('drawer.checkout')}
                 </Link>
               </div>
             </div>
