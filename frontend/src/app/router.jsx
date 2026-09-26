@@ -137,7 +137,14 @@ export const router = createBrowserRouter([
       },
       {
         path: 'terms',
-        element: <ContentPage title="Terms & conditions" settingKey="page_terms" />,
+        element: (
+          <ContentPage
+            title="Terms & conditions"
+            banglaTitle="শর্তাবলি"
+            settingKey="page_terms"
+            banglaKey="page_terms_bangla"
+          />
+        ),
       },
 
       {

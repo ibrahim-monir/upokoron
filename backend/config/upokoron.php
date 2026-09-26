@@ -310,6 +310,7 @@ return [
             'page_privacy' => '',
             'page_privacy_bangla' => '',
             'page_terms' => '',
+            'page_terms_bangla' => '',
         ],
 
         /*

@@ -64,6 +64,7 @@ const MULTILINE = [
   'page_privacy',
   'page_privacy_bangla',
   'page_terms',
+  'page_terms_bangla',
   'store_address',
   'store_description',
   'store_ticker_text',
@@ -83,6 +84,10 @@ const HINTS = {
   about_notice_bangla: 'The ownership notice in Bangla.',
   page_privacy:
     'The Privacy policy page, in English. Blank lines separate paragraphs; start a line with "# " for a heading and "- " for a bullet point.',
+  page_terms:
+    'The Terms & conditions page, in English. Same format as the privacy policy: "# " for a heading, "- " for a bullet.',
+  page_terms_bangla:
+    'The same terms in Bangla, shown when the site is switched to Bangla. Left blank, Bangla readers see the English.',
   page_privacy_bangla:
     'The same policy in Bangla, shown when the site is switched to Bangla. Left blank, Bangla readers see the English.',
   google_site_verification:
