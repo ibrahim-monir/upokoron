@@ -21,11 +21,14 @@ import {
   ShoppingBag,
   Tag,
   Trash2,
+  Play,
+  Video,
 } from 'lucide-react'
 
 import { get, post, put } from '../../lib/api'
 import { ApiError } from '../../lib/api'
 import { cx, datetimeLocalValue } from '../../lib/format'
+import { parseVideo } from '../../lib/video'
 import { applyServerErrors } from '../auth/applyServerErrors'
 
 import {
@@ -223,6 +226,14 @@ const schema = z
 
     is_featured: z.boolean(),
     free_shipping: z.boolean(),
+    video_url: z
+      .string()
+      .max(500)
+      .refine((value) => !value || parseVideo(value) !== null, {
+        message: 'Paste a YouTube link, or a direct link to an .mp4 or .webm file.',
+      })
+      .optional()
+      .or(z.literal('')),
     shipping_class_id: z
       .union([
         z.coerce.number().int().positive(),
@@ -1001,6 +1012,7 @@ export default function ProductFormPage() {
       published_at: '',
       is_featured: false,
       free_shipping: false,
+      video_url: '',
       shipping_class_id: '',
 
       /* SEO */
@@ -1014,6 +1026,11 @@ export default function ProductFormPage() {
   const type = useWatch({
     control,
     name: 'type',
+  })
+
+  const videoLink = useWatch({
+    control,
+    name: 'video_url',
   })
 
   const status = useWatch({
@@ -1276,6 +1293,10 @@ export default function ProductFormPage() {
       free_shipping:
         product.free_shipping ??
         false,
+
+      video_url:
+        product.video_url ??
+        '',
 
       shipping_class_id:
         product.shipping_class_id
@@ -2997,6 +3018,39 @@ export default function ProductFormPage() {
                 }
               />
 
+            </SidebarSection>
+
+            {/* ===============================================================
+               PRODUCT VIDEO
+               =============================================================== */}
+
+            <SidebarSection
+              icon={Video}
+              title="Product video"
+              description="Upload the video to YouTube, then paste its link here. It plays after the images on the product page."
+            >
+              <Field
+                label="Video link"
+                placeholder="https://www.youtube.com/watch?v=..."
+                hint="YouTube (including Shorts), or a direct .mp4 / .webm link. Leave blank for no video."
+                error={errors.video_url?.message}
+                {...register('video_url')}
+              />
+
+              {parseVideo(videoLink)?.thumbnail && (
+                <div className="relative mt-3 overflow-hidden rounded-xl border border-ink-200">
+                  <img
+                    src={parseVideo(videoLink).thumbnail}
+                    alt="Video preview"
+                    className="aspect-video w-full object-cover"
+                  />
+                  <span className="absolute inset-0 grid place-items-center">
+                    <span className="grid h-12 w-12 place-items-center rounded-full bg-black/60 text-white">
+                      <Play className="h-6 w-6 translate-x-0.5" aria-hidden="true" />
+                    </span>
+                  </span>
+                </div>
+              )}
             </SidebarSection>
 
             {/* ===============================================================

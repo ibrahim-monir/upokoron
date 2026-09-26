@@ -30,6 +30,7 @@ class ProductResource extends JsonResource
             'is_featured' => $this->is_featured,
             'free_shipping' => (bool) $this->free_shipping,
             'shipping_class_id' => $this->shipping_class_id,
+            'video_url' => $this->video_url,
             'is_stock_tracked' => $this->is_stock_tracked,
             'published_at' => $this->published_at?->toIso8601String(),
 

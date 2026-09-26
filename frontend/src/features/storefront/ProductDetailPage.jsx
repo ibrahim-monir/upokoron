@@ -18,6 +18,7 @@ import {
   MessagesSquare,
   Minus,
   PackageOpen,
+  Play,
   Plus,
   Send,
   ShieldCheck,
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react'
 import { ApiError, get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
+import { parseVideo } from '../../lib/video'
 import { useWishlistStore } from '../../stores/wishlistStore'
 import {
   Badge,
@@ -816,6 +818,12 @@ export function ProductDetailPage() {
   const variations = product.variations ?? []
   const selected = variations.find((v) => v.id === variationId) ?? product.default_variation ?? variations[0]
   const images = product.images ?? []
+
+  // The video, when there is one, is the last slide of the gallery: one more
+  // stop for the arrows and one more thumbnail, after every photo.
+  const video = parseVideo(product.video_url)
+  const slideCount = images.length + (video ? 1 : 0)
+  const showingVideo = video !== null && activeImage === images.length
   const price = selected?.effective_price ?? selected?.selling_price
   const wasPrice = selected?.is_on_sale ? selected.selling_price : selected?.compare_at_price
   const hasDiscount = wasPrice != null && Number(wasPrice) > Number(price)
@@ -904,7 +912,19 @@ export function ProductDetailPage() {
               </span>
             )}
 
-            {images[activeImage] ? (
+            {showingVideo ? (
+              video.kind === 'youtube' ? (
+                <iframe
+                  src={`${video.embed}&autoplay=1`}
+                  title={`${product.name} video`}
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  className="h-full w-full bg-black"
+                />
+              ) : (
+                <video src={video.src} controls autoPlay playsInline className="h-full w-full bg-black object-contain" />
+              )
+            ) : images[activeImage] ? (
               <img
                 src={images[activeImage].url}
                 alt={images[activeImage].alt ?? product.name}
@@ -916,11 +936,11 @@ export function ProductDetailPage() {
               </div>
             )}
 
-            {images.length > 1 && (
+            {slideCount > 1 && (
               <>
                 <button
                   type="button"
-                  onClick={() => setActiveImage((i) => (i - 1 + images.length) % images.length)}
+                  onClick={() => setActiveImage((i) => (i - 1 + slideCount) % slideCount)}
                   aria-label="Previous image"
                   className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink-700 shadow-card hover:bg-white"
                 >
@@ -928,7 +948,7 @@ export function ProductDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveImage((i) => (i + 1) % images.length)}
+                  onClick={() => setActiveImage((i) => (i + 1) % slideCount)}
                   aria-label="Next image"
                   className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink-700 shadow-card hover:bg-white"
                 >
@@ -938,7 +958,7 @@ export function ProductDetailPage() {
             )}
           </div>
 
-          {images.length > 1 && (
+          {slideCount > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {images.map((image, index) => (
                 <button
@@ -955,6 +975,28 @@ export function ProductDetailPage() {
                   <img src={image.url} alt="" className="h-full w-full object-contain" />
                 </button>
               ))}
+
+              {video && (
+                <button
+                  type="button"
+                  onClick={() => setActiveImage(images.length)}
+                  aria-label="Play the product video"
+                  aria-current={showingVideo}
+                  className={cx(
+                    'relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-ink-900',
+                    showingVideo ? 'border-brand-600' : 'border-ink-200',
+                  )}
+                >
+                  {video.thumbnail && (
+                    <img src={video.thumbnail} alt="" className="h-full w-full object-cover opacity-80" />
+                  )}
+                  <span className="absolute inset-0 grid place-items-center">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white">
+                      <Play className="h-3.5 w-3.5 translate-x-px" aria-hidden="true" />
+                    </span>
+                  </span>
+                </button>
+              )}
             </div>
           )}
         </div>

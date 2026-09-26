@@ -439,7 +439,7 @@ class ProductService
         $attributes = collect($data)->only([
             'name', 'slug', 'category_id', 'brand_id', 'unit_id', 'type',
             'short_description', 'short_description_style', 'description', 'is_stock_tracked',
-            'status', 'is_featured', 'free_shipping', 'shipping_class_id', 'published_at',
+            'status', 'is_featured', 'free_shipping', 'shipping_class_id', 'video_url', 'published_at',
             'weight', 'length', 'width', 'height', 'warranty', 'additional_info',
             'meta_title', 'meta_description', 'meta_keywords', 'canonical_url',
         ])->all();

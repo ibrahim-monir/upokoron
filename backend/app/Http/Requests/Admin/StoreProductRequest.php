@@ -39,6 +39,14 @@ class StoreProductRequest extends FormRequest
             'is_featured' => ['sometimes', 'boolean'],
             'free_shipping' => ['sometimes', 'boolean'],
             'shipping_class_id' => ['nullable', 'integer', Rule::exists('shipping_classes', 'id')],
+
+            // A YouTube link or a direct video file. Anything else would be
+            // turned into nothing by the storefront, so refuse it here where
+            // the owner can see why.
+            'video_url' => [
+                'nullable', 'url', 'max:500',
+                'regex:~^https?://((www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)/|[^?#]+\.(mp4|webm)([?#]|$))~i',
+            ],
             'published_at' => ['nullable', 'date'],
 
             'weight' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
