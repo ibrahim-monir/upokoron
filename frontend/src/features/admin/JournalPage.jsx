@@ -178,9 +178,10 @@ export default function JournalPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900">Journal</h1>
+          <h1 className="text-xl font-semibold text-ink-900">Transactions</h1>
           <p className="mt-0.5 text-sm text-ink-500">
-            Posted entries are immutable. A correction is a reversing entry, and both stay visible.
+            Every money movement the shop has recorded (the journal). Entries cannot be edited: a
+            mistake is fixed with a reversing entry, and both stay visible.
           </p>
         </div>
 

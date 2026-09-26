@@ -17,10 +17,10 @@ export default function TrialBalancePage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900">Trial balance</h1>
+          <h1 className="text-xl font-semibold text-ink-900">Account balances</h1>
           <p className="mt-0.5 text-sm text-ink-500">
-            Total debits must equal total credits. If they ever do not, something wrote to the ledger
-            outside the journal service.
+            How much is in each account right now (the trial balance). The two totals at the bottom
+            should always match.
           </p>
         </div>
 

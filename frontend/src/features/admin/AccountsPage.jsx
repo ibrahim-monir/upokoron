@@ -46,10 +46,10 @@ export default function AccountsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-ink-900">Chart of accounts</h1>
+        <h1 className="text-xl font-semibold text-ink-900">Accounts setup</h1>
         <p className="mt-0.5 text-sm text-ink-500">
-          Accounts marked with a lock are wired into posting rules. They can be renamed, but not
-          retyped or deleted.
+          The list of accounts money is sorted into (the chart of accounts). Ones with a lock are
+          used automatically by orders and payments: they can be renamed, but not deleted.
         </p>
       </div>
 

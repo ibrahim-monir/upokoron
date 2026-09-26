@@ -59,9 +59,9 @@ export default function ProfitLossPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900">Profit and loss</h1>
+          <h1 className="text-xl font-semibold text-ink-900">Profit &amp; loss</h1>
           <p className="mt-0.5 text-sm text-ink-500">
-            Derived from the same ledger as the trial balance, so the two cannot disagree.
+            What the shop earned, what it spent, and what is left over for the dates you pick.
           </p>
         </div>
 

@@ -118,13 +118,19 @@ const SECTIONS = [
     ],
   },
   {
+    /*
+     * In the order a shop owner reaches for them, not the order an
+     * accounting textbook lists them: "am I making money" first, the setup
+     * screen that is touched once a year last. Plain names, with the
+     * accountant's term kept on each page's subtitle.
+     */
     label: 'Finance',
     icon: Wallet,
     items: [
-      { to: '/admin/accounts', icon: BookOpen, label: 'Chart of accounts', can: 'accounting.view' },
-      { to: '/admin/journal', icon: ScrollText, label: 'Journal', can: 'accounting.view' },
-      { to: '/admin/reports/trial-balance', icon: FileText, label: 'Trial balance', can: 'accounting.view' },
       { to: '/admin/reports/profit-loss', icon: BarChart3, label: 'Profit & loss', can: 'accounting.view' },
+      { to: '/admin/journal', icon: ScrollText, label: 'Transactions', can: 'accounting.view' },
+      { to: '/admin/reports/trial-balance', icon: FileText, label: 'Account balances', can: 'accounting.view' },
+      { to: '/admin/accounts', icon: BookOpen, label: 'Accounts setup', can: 'accounting.view' },
     ],
   },
   {
