@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { del, get, post } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
-import { cx, dateTime, money } from '../../lib/format'
+import { cx, dateTime, listDate, money } from '../../lib/format'
 import { OrderQuickView, OrderStatusControl } from './OrderQuickView'
 import {
   EmptyState,
@@ -233,11 +233,23 @@ function OrderRow({ order, onQuickView }) {
                 <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-100" />
               </Link>
             )}
-            <p className="mt-0.5 text-xs text-ink-400">
-              {trashed ? `Trashed ${dateTime(order.deleted_at)}` : dateTime(order.placed_at)}
-            </p>
+            {trashed && (
+              <p className="mt-0.5 text-xs text-ink-400">
+                Trashed {listDate(order.deleted_at)}
+              </p>
+            )}
           </div>
         </div>
+      </Td>
+
+      <Td className="py-4">
+        <time
+          dateTime={order.placed_at ?? undefined}
+          title={dateTime(order.placed_at)}
+          className="whitespace-nowrap text-sm text-ink-600"
+        >
+          {listDate(order.placed_at)}
+        </time>
       </Td>
 
       <Td className="py-4">
@@ -525,10 +537,11 @@ export default function AdminOrdersPage() {
 
             <div className="overflow-x-auto">
               <TableWrap>
-                <table className="w-full min-w-[1050px] text-sm">
+                <table className="w-full min-w-[1150px] text-sm">
                   <thead className="bg-ink-50/70">
                     <tr>
                       <Th>Order</Th>
+                      <Th>Date</Th>
                       <Th>Customer</Th>
                       <Th>Destination</Th>
                       <Th>Payment</Th>

@@ -125,6 +125,32 @@ export function relativeTime(value) {
   return date(value)
 }
 
+/**
+ * A list date the way WooCommerce shows one: "3 minutes ago" or "7 hours
+ * ago" within the last day, where the gap is what matters, and a plain
+ * "Aug 16, 2026" after that, where the day is.
+ */
+export function listDate(value) {
+  if (!value) return '—'
+
+  const minutes = Math.floor((Date.now() - new Date(value).getTime()) / 60_000)
+
+  if (minutes >= 0 && minutes < 24 * 60) {
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+
+    const hours = Math.floor(minutes / 60)
+    return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  }
+
+  return new Date(value).toLocaleDateString('en-US', {
+    timeZone: TZ,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 export function initials(name = '') {
   return name
     .split(' ')
