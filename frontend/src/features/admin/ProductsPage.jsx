@@ -799,17 +799,31 @@ export default function ProductsPage() {
 
                       {seesStock && (
                         <Td>
-                          {product.default_variation?.in_stock ? (
-                            <span className="whitespace-nowrap text-xs font-semibold text-accent-700">
-                              In stock
-                              <span className="ml-1 font-normal text-slate-500">
-                                ({quantity(product.default_variation?.available_quantity)})
-                              </span>
-                            </span>
-                          ) : (
+                          {/*
+                            Read from the product's own stock sums, the same
+                            figures the tiles above count. The default
+                            variation's `in_stock` is not loaded on this list,
+                            so reading it here called every product out of
+                            stock, whatever was on the shelf.
+                          */}
+                          {!product.stock?.tracked ? (
+                            <span className="whitespace-nowrap text-xs text-slate-500">Not tracked</span>
+                          ) : product.stock.is_out ? (
                             <span className="whitespace-nowrap text-xs font-semibold text-danger-700">
                               Out of stock
                               <span className="ml-1 font-normal text-slate-500">(0)</span>
+                            </span>
+                          ) : (
+                            <span
+                              className={cx(
+                                'whitespace-nowrap text-xs font-semibold',
+                                product.stock.is_low ? 'text-warning-700' : 'text-accent-700',
+                              )}
+                            >
+                              {product.stock.is_low ? 'Low stock' : 'In stock'}
+                              <span className="ml-1 font-normal text-slate-500">
+                                ({quantity(product.stock.available)})
+                              </span>
                             </span>
                           )}
                         </Td>
