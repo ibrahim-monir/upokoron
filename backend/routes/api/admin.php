@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\Admin\QuestionController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
+use App\Http\Controllers\Api\V1\Admin\NotificationTestController;
 use App\Http\Controllers\Api\V1\Admin\ShippingClassController;
 use App\Http\Controllers\Api\V1\Admin\ShippingZoneController;
 use App\Http\Controllers\Api\V1\Admin\SitemapController;
@@ -236,6 +237,7 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
         ->name('orders.force-destroy')->withTrashed();
 
     // Delivery zones, the places in them, and what each charges.
+    Route::post('notifications/test-sms', [NotificationTestController::class, 'sms'])->name('notifications.test-sms');
     Route::get('shipping/zones', [ShippingZoneController::class, 'index'])->name('shipping.zones.index');
     Route::get('shipping/classes', [ShippingClassController::class, 'index'])->name('shipping.classes.index');
     Route::post('shipping/classes', [ShippingClassController::class, 'store'])->name('shipping.classes.store');

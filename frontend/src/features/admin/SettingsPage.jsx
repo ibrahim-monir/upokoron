@@ -10,6 +10,7 @@ import { parseHex } from '../../lib/theme'
 import { MediaPicker } from './media/MediaLibrary'
 import { Button, Card, ErrorState, Field, Select, Spinner, Textarea } from '../../components/ui'
 import { cx } from '../../lib/format'
+import { api } from '../../lib/api'
 
 /*
  * Only keys the backend declares in config can be written, so this screen is
@@ -25,6 +26,7 @@ const GROUP_LABELS = {
   home: 'Home page',
   product: 'Product page',
   marketing: 'Analytics & search console',
+  notifications: 'Notifications (email & SMS)',
   sitemap: 'Sitemap',
   audit: 'Audit log',
 }
@@ -76,7 +78,25 @@ const MULTILINE = [
 const CODE_KEYS = ['custom_header_scripts', 'custom_footer_scripts']
 
 /** Plain-text settings whose expected format is not obvious from the label alone. */
+/** Secrets: typed into a password box so they are not on screen for anyone looking over a shoulder. */
+const SECRET_KEYS = ['sms_api_key']
+
 const HINTS = {
+  notify_admin_new_order: 'Email you every new order, with its items and address.',
+  notify_admin_email: 'Where new-order emails go. Blank uses the store email.',
+  notify_customer_email:
+    'Email customers whose account has an email address when their order is placed and when it moves. Guests give no email, so they get SMS only.',
+  sms_enabled: 'Master switch for SMS to customers. Needs the gateway details below.',
+  sms_api_url:
+    'Your SMS gateway\'s send address. The default is BulkSMSBD; most Bangladeshi gateways take the same api_key / number / senderid / message fields.',
+  sms_api_key: 'From your SMS gateway account.',
+  sms_sender_id: 'The approved sender ID or number from your gateway. Leave blank if your gateway assigns one.',
+  sms_on_placed: 'SMS when an order is placed.',
+  sms_on_confirmed: 'SMS when you confirm an order.',
+  sms_on_shipped: 'SMS when the order is handed to the courier, with the amount to keep ready for COD.',
+  sms_on_out_for_delivery: 'SMS when the order is out for delivery.',
+  sms_on_delivered: 'SMS thanking the customer after delivery.',
+  sms_on_cancelled: 'SMS when an order is cancelled.',
   about_intro: 'The About page body, in English. Blank lines separate paragraphs.',
   about_intro_bangla: 'The same story in Bangla. Readers switch between the two on the page itself.',
   about_notice:
@@ -137,6 +157,56 @@ const CHOICES = {
 
 function humanise(key) {
   return key.replace(/_/g, ' ').replace(/^./, (char) => char.toUpperCase())
+}
+
+
+/*
+ * Sends one real SMS through the saved gateway settings and shows what the
+ * gateway said -- so a wrong key, an empty balance or an unapproved sender
+ * ID is found here, not by a customer who never got their message.
+ */
+function SmsTestBox() {
+  const [phone, setPhone] = useState('')
+  const [result, setResult] = useState(null)
+  const [sending, setSending] = useState(false)
+
+  const send = async () => {
+    setSending(true)
+    setResult(null)
+
+    try {
+      const { data } = await api.post('/admin/notifications/test-sms', { phone })
+      setResult({ ok: true, message: data?.message ?? 'Sent.' })
+    } catch (error) {
+      setResult({ ok: false, message: error?.response?.data?.message ?? error?.message ?? 'Not sent.' })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="border-t border-ink-100 p-4">
+      <p className="text-sm font-semibold text-ink-900">Send a test SMS</p>
+      <p className="mt-0.5 text-xs text-ink-500">
+        Save the settings above first. This sends one real message and uses one SMS of credit.
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <input
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
+          placeholder="01XXXXXXXXX"
+          aria-label="Phone number for the test SMS"
+          className="h-10 w-48 rounded-lg border border-ink-300 px-3 text-sm"
+        />
+        <Button type="button" variant="secondary" onClick={send} loading={sending} disabled={!phone.trim()}>
+          Send test
+        </Button>
+      </div>
+      {result && (
+        <p className={cx('mt-2 text-sm', result.ok ? 'text-success-700' : 'text-danger-700')}>{result.message}</p>
+      )}
+    </div>
+  )
 }
 
 export default function SettingsPage() {
@@ -205,6 +275,7 @@ export default function SettingsPage() {
       if (group === 'product') return key.startsWith('product_')
       if (group === 'marketing') return key.startsWith('google_') || key.startsWith('custom_')
       if (group === 'inventory') return key === 'allow_negative_stock' || key === 'low_stock_alert'
+      if (group === 'notifications') return key.startsWith('notify_') || key.startsWith('sms_')
       return (
         key.startsWith('revenue_') ||
         key.startsWith('reservation_') ||
@@ -422,7 +493,8 @@ export default function SettingsPage() {
                 key={key}
                 label={humanise(key)}
                 hint={HINTS[key]}
-                type={typeof value === 'number' ? 'number' : 'text'}
+                type={typeof value === 'number' ? 'number' : SECRET_KEYS.includes(key) ? 'password' : 'text'}
+                autoComplete={SECRET_KEYS.includes(key) ? 'off' : undefined}
                 value={value ?? ''}
                 onChange={(event) =>
                   set(key, typeof value === 'number' ? Number(event.target.value) : event.target.value)
@@ -431,6 +503,8 @@ export default function SettingsPage() {
             )
           })}
         </div>
+
+        {currentGroup === 'notifications' && <SmsTestBox />}
       </Card>
     </form>
   )

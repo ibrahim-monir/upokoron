@@ -510,4 +510,21 @@ class OrderLifecycleTest extends TestCase
 
         $this->assertSame('160.00', $order->shipping_charge);
     }
+
+    public function test_placing_and_moving_an_order_queues_notifications(): void
+    {
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\SendOrderNotifications::class]);
+
+        $order = $this->placeOrder();
+        app(OrderStatusService::class)->transition($order, OrderStatus::Confirmed);
+
+        \Illuminate\Support\Facades\Bus::assertDispatched(
+            \App\Jobs\SendOrderNotifications::class,
+            fn ($job) => $job->orderId === $order->id && $job->event === 'placed',
+        );
+        \Illuminate\Support\Facades\Bus::assertDispatched(
+            \App\Jobs\SendOrderNotifications::class,
+            fn ($job) => $job->orderId === $order->id && $job->event === 'confirmed',
+        );
+    }
 }

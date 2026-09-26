@@ -428,6 +428,10 @@ function Sidebar({ onNavigate }) {
   const unreadChats = useUnreadChatCount(can('chat.view'))
   const unreadMessages = useUnreadMessageCount(can('contact.view'))
 
+  useAnnounceIncrease(pendingOrders, (n) =>
+    n === 1 ? 'New order received.' : `${n} new orders received.`,
+  )
+
   useAnnounceIncrease(unreadMessages, (n) =>
     n === 1 ? 'New message from the contact page.' : `${n} new messages from the contact page.`,
   )

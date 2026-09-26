@@ -9,6 +9,7 @@ use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Jobs\SendOrderNotifications;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\Order;
@@ -281,6 +282,10 @@ class OrderService
                 'user_id' => $placedBy?->getKey(),
                 'created_at' => now(),
             ])->save();
+
+            // Sent once the transaction commits; a rolled-back order tells
+            // nobody anything.
+            SendOrderNotifications::dispatch($order->id, 'placed');
 
             return $order->refresh();
         });

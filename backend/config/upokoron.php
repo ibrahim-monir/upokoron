@@ -238,6 +238,33 @@ return [
         ],
 
         /*
+         * Who hears about an order, and how. NOT public: the SMS key is a
+         * secret, so this group never reaches the storefront.
+         *
+         * Emails go out through the mail settings in .env. SMS goes through
+         * a BulkSMSBD-style gateway (see SmsService) and stays off until a
+         * key is entered and SMS is switched on. SMS is sent per event, so a
+         * shop can text only the moments a customer needs to act on.
+         */
+        'notifications' => [
+            'notify_admin_new_order' => true,
+            'notify_admin_email' => '',
+            'notify_customer_email' => true,
+
+            'sms_enabled' => false,
+            'sms_api_url' => 'https://bulksmsbd.net/api/smsapi',
+            'sms_api_key' => '',
+            'sms_sender_id' => '',
+
+            'sms_on_placed' => true,
+            'sms_on_confirmed' => true,
+            'sms_on_shipped' => true,
+            'sms_on_out_for_delivery' => false,
+            'sms_on_delivered' => false,
+            'sms_on_cancelled' => true,
+        ],
+
+        /*
          * The product page.
          *
          * Public, because the storefront renders it for visitors who have

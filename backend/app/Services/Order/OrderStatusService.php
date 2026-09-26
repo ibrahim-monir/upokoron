@@ -7,6 +7,7 @@ namespace App\Services\Order;
 use App\Enums\InventoryTransactionType;
 use App\Enums\OrderStatus;
 use App\Exceptions\BusinessRuleException;
+use App\Jobs\SendOrderNotifications;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
@@ -117,6 +118,10 @@ class OrderStatusService
                 'user_id' => $by?->id,
                 'created_at' => now(),
             ])->save();
+
+            // The customer hears about the moves that matter to them; the
+            // job ignores the purely internal ones (packed, on hold...).
+            SendOrderNotifications::dispatch($order->id, $to->value);
 
             return $order->refresh();
         });
