@@ -133,7 +133,7 @@ function StatusOverview({ summary, active, onPick }) {
   }))
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-8">
       {tiles.map((tile) => {
         const meta = STATUS_META[tile.key]
         const Icon = meta.icon
@@ -145,7 +145,7 @@ function StatusOverview({ summary, active, onPick }) {
             type="button"
             onClick={() => onPick(selected ? '' : tile.key)}
             className={cx(
-              'group relative overflow-hidden rounded-2xl border bg-gradient-to-br p-4 text-left shadow-sm transition duration-200',
+              'group relative min-w-0 overflow-hidden rounded-2xl border bg-gradient-to-br p-3 text-left shadow-sm transition duration-200',
               'hover:-translate-y-0.5 hover:shadow-md',
               meta.shell,
               selected && 'ring-2 ring-brand-500 ring-offset-2',
@@ -154,8 +154,8 @@ function StatusOverview({ summary, active, onPick }) {
             <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/60 blur-xl" />
 
             <div className="relative flex items-start justify-between">
-              <div className={cx('grid h-10 w-10 place-items-center rounded-xl', meta.iconShell)}>
-                <Icon className="h-5 w-5" />
+              <div className={cx('grid h-8 w-8 place-items-center rounded-lg', meta.iconShell)}>
+                <Icon className="h-4 w-4" />
               </div>
 
               <ChevronRight
@@ -166,15 +166,15 @@ function StatusOverview({ summary, active, onPick }) {
               />
             </div>
 
-            <div className="relative mt-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-500">
+            <div className="relative mt-3">
+              <p className="text-[11px] font-semibold uppercase leading-tight tracking-wider text-ink-500">
                 {tile.label}
               </p>
-              <p className={cx('mt-1 text-2xl font-bold tabular', meta.value)}>
+              <p className={cx('mt-1 text-xl font-bold tabular', meta.value)}>
                 {tile.orders ?? 0}
               </p>
-              <p className="mt-0.5 text-xs font-medium tabular text-ink-500">
-                {money(tile.value ?? 0)} order value
+              <p className="mt-0.5 truncate text-[11px] font-medium tabular text-ink-500">
+                {money(tile.value ?? 0)}
               </p>
             </div>
           </button>
