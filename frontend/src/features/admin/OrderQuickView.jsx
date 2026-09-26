@@ -243,7 +243,7 @@ export function OrderQuickView({ orderId, onClose }) {
   const order = query.data
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close quick view"
@@ -255,7 +255,7 @@ export function OrderQuickView({ orderId, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Order quick view"
-        className="relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl sm:max-w-lg"
+        className="rise relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
       >
         <header className="flex items-start gap-3 border-b border-ink-200 px-5 py-4">
           <div className="min-w-0 flex-1">
