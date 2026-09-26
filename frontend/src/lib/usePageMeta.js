@@ -27,7 +27,8 @@ function plain(text, limit = 160) {
   if (!text) return ''
 
   const div = document.createElement('div')
-  div.innerHTML = text
+  // Tags become spaces first, so neighbouring paragraphs do not run together.
+  div.innerHTML = String(text).replace(/<[^>]*>/g, ' ')
   const flat = (div.textContent ?? '').replace(/\s+/g, ' ').trim()
 
   return flat.length > limit ? `${flat.slice(0, limit - 1)}…` : flat

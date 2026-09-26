@@ -242,7 +242,10 @@ class PageMetaController extends Controller
     /** Text for a meta tag: no HTML, no runs of whitespace, about 160 characters. */
     private function plain(?string $text): string
     {
-        $text = trim((string) preg_replace('/\s+/u', ' ', strip_tags(html_entity_decode((string) $text))));
+        // Tags become spaces first, so "<p>One</p><p>Two</p>" reads "One Two"
+        // rather than "OneTwo".
+        $text = (string) preg_replace('/<[^>]*>/', ' ', (string) $text);
+        $text = trim((string) preg_replace('/\s+/u', ' ', html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
 
         return Str::limit($text, 160, '…');
     }
