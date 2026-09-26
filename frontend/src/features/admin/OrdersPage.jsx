@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -62,62 +62,14 @@ const STATUSES = [
  * reachable through the filter beneath.
  */
 const STATUS_META = {
-  pending: {
-    icon: Clock3,
-    label: 'Pending',
-    shell: 'from-amber-50 to-white border-amber-200',
-    iconShell: 'bg-amber-100 text-amber-700',
-    value: 'text-amber-900',
-  },
-  on_hold: {
-    icon: PauseCircle,
-    label: 'On hold',
-    shell: 'from-rose-50 to-white border-rose-200',
-    iconShell: 'bg-rose-100 text-rose-700',
-    value: 'text-rose-900',
-  },
-  confirmed: {
-    icon: CheckCircle2,
-    label: 'Confirmed',
-    shell: 'from-sky-50 to-white border-sky-200',
-    iconShell: 'bg-sky-100 text-sky-700',
-    value: 'text-sky-900',
-  },
-  processing: {
-    icon: Cog,
-    label: 'Processing',
-    shell: 'from-indigo-50 to-white border-indigo-200',
-    iconShell: 'bg-indigo-100 text-indigo-700',
-    value: 'text-indigo-900',
-  },
-  packed: {
-    icon: PackageCheck,
-    label: 'Packed',
-    shell: 'from-violet-50 to-white border-violet-200',
-    iconShell: 'bg-violet-100 text-violet-700',
-    value: 'text-violet-900',
-  },
-  ready_to_ship: {
-    icon: Boxes,
-    label: 'Ready to ship',
-    shell: 'from-teal-50 to-white border-teal-200',
-    iconShell: 'bg-teal-100 text-teal-700',
-    value: 'text-teal-900',
-  },
-  shipped: {
-    icon: Truck,
-    label: 'Shipped',
-    shell: 'from-cyan-50 to-white border-cyan-200',
-    iconShell: 'bg-cyan-100 text-cyan-700',
-    value: 'text-cyan-900',
-  },
-  out_for_delivery: {
-    icon: Navigation,
-    label: 'Out for delivery',
-    shell: 'from-emerald-50 to-white border-emerald-200',
-    iconShell: 'bg-emerald-100 text-emerald-700',
-    value: 'text-emerald-900',
-  },
+  pending: { icon: Clock3, label: 'Pending', iconShell: 'bg-amber-400/15 text-amber-300', value: 'text-amber-200' },
+  on_hold: { icon: PauseCircle, label: 'On hold', iconShell: 'bg-rose-400/15 text-rose-300', value: 'text-rose-200' },
+  confirmed: { icon: CheckCircle2, label: 'Confirmed', iconShell: 'bg-sky-400/15 text-sky-300', value: 'text-sky-200' },
+  processing: { icon: Cog, label: 'Processing', iconShell: 'bg-indigo-400/15 text-indigo-300', value: 'text-indigo-200' },
+  packed: { icon: PackageCheck, label: 'Packed', iconShell: 'bg-violet-400/15 text-violet-300', value: 'text-violet-200' },
+  ready_to_ship: { icon: Boxes, label: 'Ready to ship', iconShell: 'bg-teal-400/15 text-teal-300', value: 'text-teal-200' },
+  shipped: { icon: Truck, label: 'Shipped', iconShell: 'bg-cyan-400/15 text-cyan-300', value: 'text-cyan-200' },
+  out_for_delivery: { icon: Navigation, label: 'Out for delivery', iconShell: 'bg-emerald-400/15 text-emerald-300', value: 'text-emerald-200' },
 }
 
 function StatusOverview({ summary, active, onPick }) {
@@ -145,14 +97,11 @@ function StatusOverview({ summary, active, onPick }) {
             type="button"
             onClick={() => onPick(selected ? '' : tile.key)}
             className={cx(
-              'group relative min-w-0 overflow-hidden rounded-2xl border bg-gradient-to-br p-3 text-left shadow-sm transition duration-200',
-              'hover:-translate-y-0.5 hover:shadow-md',
-              meta.shell,
-              selected && 'ring-2 ring-brand-500 ring-offset-2',
+              'group relative min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-3 text-left backdrop-blur transition duration-200',
+              'hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10',
+              selected && 'border-white/40 bg-white/15 ring-1 ring-white/40',
             )}
           >
-            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/60 blur-xl" />
-
             <div className="relative flex items-start justify-between">
               <div className={cx('grid h-8 w-8 place-items-center rounded-lg', meta.iconShell)}>
                 <Icon className="h-4 w-4" />
@@ -161,19 +110,19 @@ function StatusOverview({ summary, active, onPick }) {
               <ChevronRight
                 className={cx(
                   'h-4 w-4 transition-transform',
-                  selected ? 'text-brand-800 rotate-90' : 'text-ink-300 group-hover:translate-x-0.5',
+                  selected ? 'rotate-90 text-white' : 'text-white/30 group-hover:translate-x-0.5',
                 )}
               />
             </div>
 
             <div className="relative mt-3">
-              <p className="text-[11px] font-semibold uppercase leading-tight tracking-wider text-ink-500">
+              <p className="text-[11px] font-semibold uppercase leading-tight tracking-wider text-white/60">
                 {tile.label}
               </p>
               <p className={cx('mt-1 text-xl font-bold tabular', meta.value)}>
                 {tile.orders ?? 0}
               </p>
-              <p className="mt-0.5 truncate text-[11px] font-medium tabular text-ink-500">
+              <p className="mt-0.5 truncate text-[11px] font-medium tabular text-white/45">
                 {money(tile.value ?? 0)}
               </p>
             </div>
@@ -395,15 +344,6 @@ export default function AdminOrdersPage() {
   const rows = query.data?.data ?? []
   const trashedCount = query.data?.trashed_count ?? 0
 
-  const totalOrders = useMemo(
-    () =>
-      Object.values(query.data?.summary?.by_status ?? {}).reduce(
-        (sum, item) => sum + Number(item?.orders ?? 0),
-        0,
-      ),
-    [query.data?.summary],
-  )
-
   const clearFilters = () => {
     setSearch('')
     setStatus('')
@@ -414,61 +354,34 @@ export default function AdminOrdersPage() {
     <div className="min-h-full bg-ink-50/40 pb-8">
       <div className="space-y-5">
 
-        {/* Hero */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 p-5 text-white shadow-xl sm:p-7">
+        {/* Status board */}
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 p-4 text-white shadow-xl sm:p-5">
           <div className="absolute -right-20 -top-28 h-64 w-64 rounded-full bg-brand-500/25 blur-3xl" />
           <div className="absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl" />
 
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 backdrop-blur">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Order Management
-              </div>
-
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                Orders
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">
-                Monitor every online order, track fulfillment progress and manage
-                customer payments from one place.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:flex">
-              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
-                  Total orders
-                </p>
-                <p className="mt-1 text-2xl font-bold tabular">
-                  {totalOrders}
+          <div className="relative">
+            {trashed ? (
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Trash</h1>
+                <p className="mt-1 text-sm text-white/60">
+                  Orders moved to trash. Restore one to bring it back, or delete it permanently.
                 </p>
               </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
-                  Showing
-                </p>
-                <p className="mt-1 text-2xl font-bold tabular">
-                  {rows.length}
-                </p>
-              </div>
-            </div>
+            ) : (
+              <>
+              <h1 className="sr-only">Orders</h1>
+              <StatusOverview
+                summary={query.data?.summary}
+                active={status}
+                onPick={(next) => {
+                  setStatus(next)
+                  setPage(1)
+                }}
+              />
+              </>
+            )}
           </div>
         </section>
-
-        {/* Status cards */}
-        {!trashed && (
-          <StatusOverview
-            summary={query.data?.summary}
-            active={status}
-            onPick={(next) => {
-              setStatus(next)
-              setPage(1)
-            }}
-          />
-        )}
 
         {/* Search/filter toolbar */}
         <section className="rounded-2xl border border-ink-200 bg-white p-3 shadow-sm sm:p-4">
