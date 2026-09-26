@@ -299,7 +299,7 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
             }
           />
         ) : view === 'grid' ? (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 2xl:grid-cols-10">
             {items.map((item) => (
               <li key={item.id} className="group relative">
                 <button
@@ -325,14 +325,14 @@ export function MediaLibrary({ onPick, folder: fixedFolder, multiple = false, se
                 </button>
 
                 {isSelected(item) && (
-                  <span className="pointer-events-none absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-white">
+                  <span className="pointer-events-none absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-white">
                     <Check className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
                 )}
 
                 {/* Downloading is a read, so it is not behind media.manage --
                     anyone allowed to open the library may keep a copy. */}
-                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
                   <a
                     {...downloadProps(item)}
                     aria-label={`Download ${label(item)}`}
