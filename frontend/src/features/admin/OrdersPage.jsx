@@ -21,7 +21,7 @@ import {
   Truck,
   Undo2,
 } from 'lucide-react'
-import { del, get, post } from '../../lib/api'
+import { del, get, post, put } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { cx, dateTime, listDate, money } from '../../lib/format'
 import { OrderQuickView, OrderStatusControl } from './OrderQuickView'
@@ -209,7 +209,126 @@ function TrashActions({ order }) {
   )
 }
 
-function OrderRow({ order, onQuickView }) {
+/*
+ * The statuses a batch of orders can be pushed to. Each order still goes
+ * through its own transition rules on the server, so a batch that mixes
+ * orders at different stages simply reports the ones that could not move.
+ */
+const BULK_STATUSES = STATUSES.filter((option) => option.value && option.value !== 'pending')
+
+const BULK_CONFIRM = {
+  'status:delivered': (n) => `Mark ${n} order(s) delivered? This records the sale and its accounting entries.`,
+  'status:cancelled': (n) => `Cancel ${n} order(s)? Their stock is released.`,
+  trash: (n) => `Move ${n} order(s) to trash? Their stock is released. You can restore them from the trash.`,
+  force: (n) => `Delete ${n} order(s) permanently? This cannot be undone.`,
+}
+
+function requestFor(action, id) {
+  if (action.startsWith('status:')) {
+    return put(`/admin/orders/${id}/status`, { status: action.slice('status:'.length) })
+  }
+
+  if (action === 'trash') return del(`/admin/orders/${id}`)
+  if (action === 'restore') return post(`/admin/orders/${id}/restore`)
+
+  return del(`/admin/orders/${id}/force`)
+}
+
+function BulkActions({ trashed, rows, selected, onDone }) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const can = useAuthStore((state) => state.can)
+  const [action, setAction] = useState('')
+  const [running, setRunning] = useState(false)
+
+  const options = trashed
+    ? can('orders.delete')
+      ? [
+          { value: 'restore', label: 'Restore' },
+          { value: 'force', label: 'Delete permanently' },
+        ]
+      : []
+    : [
+        ...(can('orders.status')
+          ? BULK_STATUSES.map((option) => ({
+              value: `status:${option.value}`,
+              label: `Change status to ${option.label.toLowerCase()}`,
+            }))
+          : []),
+        ...(can('orders.delete') ? [{ value: 'trash', label: 'Move to trash' }] : []),
+      ]
+
+  if (options.length === 0) return null
+
+  const apply = async () => {
+    const orders = rows.filter((order) => selected.has(order.id))
+
+    if (!action || orders.length === 0 || running) return
+    if (BULK_CONFIRM[action] && !window.confirm(BULK_CONFIRM[action](orders.length))) return
+
+    setRunning(true)
+
+    // One at a time: each order locks its own row and inventory on the
+    // server, and a burst of parallel writes would only queue there anyway.
+    const failures = []
+
+    for (const order of orders) {
+      try {
+        await requestFor(action, order.id)
+      } catch (error) {
+        failures.push(`${order.number}: ${error?.response?.data?.message ?? error?.message ?? 'failed'}`)
+      }
+    }
+
+    setRunning(false)
+    setAction('')
+    queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
+    onDone()
+
+    const done = orders.length - failures.length
+
+    if (done > 0) toast.success(`${done} order${done === 1 ? '' : 's'} updated.`)
+    if (failures.length > 0) {
+      toast.error(
+        `${failures.length} order${failures.length === 1 ? '' : 's'} could not be changed. ${failures.slice(0, 3).join(' ')}`,
+      )
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Select
+        value={action}
+        onChange={(event) => setAction(event.target.value)}
+        aria-label="Bulk actions"
+        className="h-9 w-56 rounded-xl text-sm"
+        disabled={running}
+      >
+        <option value="">Bulk actions</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </Select>
+
+      <button
+        type="button"
+        onClick={apply}
+        disabled={!action || selected.size === 0 || running}
+        className="inline-flex h-9 items-center rounded-xl border border-brand-200 bg-brand-50 px-3.5 text-xs font-bold text-brand-800 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {running ? 'Applying…' : 'Apply'}
+      </button>
+
+      {selected.size > 0 && (
+        <span className="text-xs font-semibold text-ink-500">{selected.size} selected</span>
+      )}
+    </div>
+  )
+}
+
+function OrderRow({ order, onQuickView, checked, onToggle }) {
   const trashed = Boolean(order.deleted_at)
   const profit = order.gross_profit === null ? null : Number(order.gross_profit)
 
@@ -217,9 +336,13 @@ function OrderRow({ order, onQuickView }) {
     <tr className="group border-t border-ink-100 transition-colors hover:bg-brand-50/35">
       <Td className="py-4">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-50 to-cyan-50 text-brand-800 ring-1 ring-inset ring-brand-100">
-            <ReceiptText className="h-4 w-4" />
-          </div>
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => onToggle(order.id)}
+            aria-label={`Select order ${order.number}`}
+            className="h-4 w-4 cursor-pointer rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+          />
 
           <div className="min-w-0">
             {trashed ? (
@@ -337,6 +460,7 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1)
   const [quickViewId, setQuickViewId] = useState(null)
   const [trashed, setTrashed] = useState(false)
+  const [selected, setSelected] = useState(() => new Set())
   const can = useAuthStore((state) => state.can)
 
   const query = useQuery({
@@ -354,6 +478,28 @@ export default function AdminOrdersPage() {
   })
 
   const rows = query.data?.data ?? []
+
+  // A selection belongs to the rows on screen; a new page, filter or view
+  // starts empty rather than acting on orders nobody can see.
+  const viewKey = JSON.stringify({ search, status, page, trashed })
+  const [selectionView, setSelectionView] = useState(viewKey)
+
+  if (selectionView !== viewKey) {
+    setSelectionView(viewKey)
+    setSelected(new Set())
+  }
+
+  const allSelected = rows.length > 0 && rows.every((order) => selected.has(order.id))
+
+  const toggle = (id) =>
+    setSelected((current) => {
+      const next = new Set(current)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(rows.map((order) => order.id)))
   const trashedCount = query.data?.trashed_count ?? 0
 
   const clearFilters = () => {
@@ -528,7 +674,13 @@ export default function AdminOrdersPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <BulkActions
+                  trashed={trashed}
+                  rows={rows}
+                  selected={selected}
+                  onDone={() => setSelected(new Set())}
+                />
                 <span className="rounded-full bg-ink-50 px-3 py-1.5 text-xs font-semibold text-ink-500">
                   {rows.length} results
                 </span>
@@ -540,7 +692,21 @@ export default function AdminOrdersPage() {
                 <table className="w-full min-w-[1150px] text-sm">
                   <thead className="bg-ink-50/70">
                     <tr>
-                      <Th>Order</Th>
+                      <Th>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={(element) => {
+                              if (element) element.indeterminate = selected.size > 0 && !allSelected
+                            }}
+                            onChange={toggleAll}
+                            aria-label="Select all orders on this page"
+                            className="h-4 w-4 cursor-pointer rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+                          />
+                          Order
+                        </div>
+                      </Th>
                       <Th>Date</Th>
                       <Th>Customer</Th>
                       <Th>Destination</Th>
@@ -554,7 +720,13 @@ export default function AdminOrdersPage() {
 
                   <tbody>
                     {rows.map((order) => (
-                      <OrderRow key={order.id} order={order} onQuickView={setQuickViewId} />
+                      <OrderRow
+                        key={order.id}
+                        order={order}
+                        onQuickView={setQuickViewId}
+                        checked={selected.has(order.id)}
+                        onToggle={toggle}
+                      />
                     ))}
                   </tbody>
                 </table>
