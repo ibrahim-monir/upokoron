@@ -39,6 +39,7 @@ class OrderController extends Controller
 
         $orders = Order::query()
             ->with(['customer:id,name,phone', 'paymentMethod:id,name,code'])
+            ->when($request->boolean('trashed'), fn ($q) => $q->onlyTrashed())
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('payment_status'), fn ($q) => $q->where('payment_status', $request->string('payment_status')))
             ->when($request->string('filter')->value() === 'open', fn ($q) => $q->open())
@@ -75,6 +76,7 @@ class OrderController extends Controller
                 'gross_profit' => $order->status->hasShipped() ? $order->grossProfit()->value() : null,
 
                 'placed_at' => $order->placed_at?->toIso8601String(),
+                'deleted_at' => $order->deleted_at?->toIso8601String(),
                 'next_statuses' => array_map(
                     static fn (OrderStatus $s): array => ['value' => $s->value, 'label' => $s->label()],
                     $order->status->allowedNext(),
@@ -87,6 +89,7 @@ class OrderController extends Controller
                 'total' => $orders->total(),
             ],
             'summary' => $this->summary(),
+            'trashed_count' => Order::onlyTrashed()->count(),
         ]);
     }
 
@@ -300,15 +303,35 @@ class OrderController extends Controller
     }
 
     /**
-     * Delete an order that never shipped and was never paid -- a test order.
+     * Move an order that never shipped and was never paid -- a test order --
+     * to the trash, from where it can be restored.
      */
     public function destroy(Request $request, Order $order): JsonResponse
     {
         abort_unless($request->user()?->can('orders.delete'), 403);
 
-        $this->deletions->delete($order, $request->user());
+        $this->deletions->trash($order);
 
-        return response()->json(['message' => "Order {$order->number} deleted."]);
+        return response()->json(['message' => "Order {$order->number} moved to trash."]);
+    }
+
+    public function restore(Request $request, Order $order): JsonResponse
+    {
+        abort_unless($request->user()?->can('orders.delete'), 403);
+
+        $this->deletions->restore($order);
+
+        return response()->json(['message' => "Order {$order->number} restored."]);
+    }
+
+    /** Delete a trashed order for good. There is no undo. */
+    public function forceDestroy(Request $request, Order $order): JsonResponse
+    {
+        abort_unless($request->user()?->can('orders.delete'), 403);
+
+        $this->deletions->forceDelete($order, $request->user());
+
+        return response()->json(['message' => "Order {$order->number} deleted permanently."]);
     }
 
     /**

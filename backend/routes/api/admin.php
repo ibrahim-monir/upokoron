@@ -228,6 +228,11 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::post('orders/{order}/refunds', [OrderController::class, 'refund'])->name('orders.refunds');
     Route::put('orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.note');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+    // Trash: restore and permanent delete look up orders that are already binned.
+    Route::post('orders/{order}/restore', [OrderController::class, 'restore'])
+        ->name('orders.restore')->withTrashed();
+    Route::delete('orders/{order}/force', [OrderController::class, 'forceDestroy'])
+        ->name('orders.force-destroy')->withTrashed();
 
     // Delivery zones, the places in them, and what each charges.
     Route::get('shipping/zones', [ShippingZoneController::class, 'index'])->name('shipping.zones.index');

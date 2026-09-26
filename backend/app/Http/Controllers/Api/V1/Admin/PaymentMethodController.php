@@ -61,7 +61,7 @@ class PaymentMethodController extends Controller
         // payment method on every past order that used it -- an invoice
         // should still say how it was paid. Turning it off keeps that intact
         // and simply stops offering it at checkout.
-        if (Order::where('payment_method_id', $paymentMethod->id)->exists()) {
+        if (Order::withTrashed()->where('payment_method_id', $paymentMethod->id)->exists()) {
             throw new BusinessRuleException(
                 "\"{$paymentMethod->name}\" has been used on past orders and cannot be deleted. Turn it off instead.",
                 'payment_method_in_use',

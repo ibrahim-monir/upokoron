@@ -67,7 +67,9 @@ class CouponService
         }
 
         if ($coupon->usage_limit_per_customer !== null && $customer !== null) {
-            $used = Order::where('customer_id', $customer->id)
+            // Trashed orders count: their coupon use is only handed back
+            // when the order is deleted for good.
+            $used = Order::withTrashed()->where('customer_id', $customer->id)
                 ->where('coupon_id', $coupon->id)
                 ->count();
 

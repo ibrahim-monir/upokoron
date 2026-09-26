@@ -67,7 +67,7 @@ class CouponController extends Controller
     {
         abort_unless($request->user()?->can('coupons.manage'), 403);
 
-        if (Order::where('coupon_id', $coupon->id)->exists()) {
+        if (Order::withTrashed()->where('coupon_id', $coupon->id)->exists()) {
             throw new BusinessRuleException(
                 "\"{$coupon->code}\" has been redeemed on past orders and cannot be deleted. Turn it off instead.",
                 'coupon_in_use',

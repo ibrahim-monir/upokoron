@@ -869,9 +869,10 @@ function PrintInvoiceButton({ order }) {
 }
 
 /*
- * For test orders. The backend only allows it while the order has shipped
- * nothing and has no money against it, and says why when it does not -- that
- * reason is the button's tooltip, so a greyed-out button explains itself.
+ * For test orders: moves it to the trash, where it can be restored or deleted
+ * for good. The backend only allows it while the order has shipped nothing
+ * and has no money against it, and says why when it does not -- that reason
+ * is the button's tooltip, so a greyed-out button explains itself.
  */
 function DeleteOrderButton({ order }) {
   const toast = useToast()
@@ -882,7 +883,7 @@ function DeleteOrderButton({ order }) {
   const mutation = useMutation({
     mutationFn: () => del(`/admin/orders/${order.id}`),
     onSuccess: () => {
-      toast.success(`Order ${order.number} deleted.`)
+      toast.success(`Order ${order.number} moved to trash.`)
       queryClient.removeQueries({ queryKey: ['admin', 'orders', String(order.id)] })
       queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
       navigate('/admin/orders')
@@ -891,7 +892,7 @@ function DeleteOrderButton({ order }) {
       toast.error(
         error?.response?.data?.message ??
           error?.message ??
-          'Could not delete the order.',
+          'Could not move the order to trash.',
       )
     },
   })
@@ -905,7 +906,7 @@ function DeleteOrderButton({ order }) {
 
     if (
       !window.confirm(
-        `Delete order ${order.number} permanently? Its stock hold and coupon use are released. This cannot be undone.`,
+        `Move order ${order.number} to trash? Its stock is released. You can restore it from the trash on the Orders page.`,
       )
     ) {
       return
@@ -919,11 +920,11 @@ function DeleteOrderButton({ order }) {
       type="button"
       onClick={remove}
       disabled={blocked || mutation.isPending}
-      title={blocked ? order.delete_blocker : 'Delete this order (for test orders)'}
+      title={blocked ? order.delete_blocker : 'Move this order to trash (for test orders)'}
       className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 text-xs font-semibold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <Trash2 className="h-3.5 w-3.5" />
-      {mutation.isPending ? 'Deleting…' : 'Delete'}
+      {mutation.isPending ? 'Moving…' : 'Move to trash'}
     </button>
   )
 }

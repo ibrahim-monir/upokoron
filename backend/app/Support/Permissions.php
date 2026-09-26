@@ -64,7 +64,7 @@ final class Permissions
                 'orders.update' => 'Edit orders',
                 'orders.status' => 'Change order status',
                 'orders.cancel' => 'Cancel orders',
-                'orders.delete' => 'Delete orders that never shipped (test orders)',
+                'orders.delete' => 'Trash, restore and delete orders that never shipped (test orders)',
                 'orders.payment' => 'Record order payments',
                 'returns.view' => 'View returns',
                 'returns.manage' => 'Approve and receive returns',

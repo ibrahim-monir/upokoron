@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowUpRight,
   Boxes,
@@ -17,9 +17,12 @@ import {
   ReceiptText,
   RotateCcw,
   Search,
+  Trash2,
   Truck,
+  Undo2,
 } from 'lucide-react'
-import { get } from '../../lib/api'
+import { del, get, post } from '../../lib/api'
+import { useAuthStore } from '../../stores/authStore'
 import { cx, dateTime, money } from '../../lib/format'
 import { OrderQuickView, OrderStatusControl } from './OrderQuickView'
 import {
@@ -32,6 +35,7 @@ import {
   TableWrap,
   Td,
   Th,
+  useToast,
 } from '../../components/ui'
 
 const STATUSES = [
@@ -200,7 +204,64 @@ function PaymentBadge({ order }) {
   )
 }
 
+/*
+ * What a trashed order can do instead of moving along: come back, or go for
+ * good. Restoring takes its stock back and is refused if that stock has sold
+ * in the meantime; deleting permanently has no undo, so it asks first.
+ */
+function TrashActions({ order }) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+
+  const mutation = useMutation({
+    mutationFn: (action) =>
+      action === 'restore'
+        ? post(`/admin/orders/${order.id}/restore`)
+        : del(`/admin/orders/${order.id}/force`),
+    onSuccess: (response) => {
+      toast.success(response?.message ?? 'Done.')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message ?? error?.message ?? 'That did not work.')
+    },
+  })
+
+  const forceDelete = () => {
+    if (!window.confirm(`Delete order ${order.number} permanently? This cannot be undone.`)) {
+      return
+    }
+
+    mutation.mutate('force')
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => mutation.mutate('restore')}
+        disabled={mutation.isPending}
+        className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-2 text-xs font-bold text-ink-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 disabled:opacity-50"
+      >
+        <Undo2 className="h-3.5 w-3.5" />
+        Restore
+      </button>
+
+      <button
+        type="button"
+        onClick={forceDelete}
+        disabled={mutation.isPending}
+        className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:opacity-50"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Delete permanently
+      </button>
+    </div>
+  )
+}
+
 function OrderRow({ order, onQuickView }) {
+  const trashed = Boolean(order.deleted_at)
   const profit = order.gross_profit === null ? null : Number(order.gross_profit)
 
   return (
@@ -212,14 +273,20 @@ function OrderRow({ order, onQuickView }) {
           </div>
 
           <div className="min-w-0">
-            <Link
-              to={`/admin/orders/${order.id}`}
-              className="inline-flex items-center gap-1 font-bold text-brand-800 hover:text-brand-800"
-            >
-              {order.number}
-              <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-100" />
-            </Link>
-            <p className="mt-0.5 text-xs text-ink-400">{dateTime(order.placed_at)}</p>
+            {trashed ? (
+              <span className="font-bold text-ink-700">{order.number}</span>
+            ) : (
+              <Link
+                to={`/admin/orders/${order.id}`}
+                className="inline-flex items-center gap-1 font-bold text-brand-800 hover:text-brand-800"
+              >
+                {order.number}
+                <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-100" />
+              </Link>
+            )}
+            <p className="mt-0.5 text-xs text-ink-400">
+              {trashed ? `Trashed ${dateTime(order.deleted_at)}` : dateTime(order.placed_at)}
+            </p>
           </div>
         </div>
       </Td>
@@ -265,10 +332,19 @@ function OrderRow({ order, onQuickView }) {
       </Td>
 
       <Td className="py-4">
-        <OrderStatusControl order={order} />
+        {trashed ? (
+          <span className="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-semibold text-ink-600">
+            {order.status_label}
+          </span>
+        ) : (
+          <OrderStatusControl order={order} />
+        )}
       </Td>
 
       <Td className="py-4">
+        {trashed ? (
+          <TrashActions order={order} />
+        ) : (
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -288,6 +364,7 @@ function OrderRow({ order, onQuickView }) {
             <span className="sr-only">Manage {order.number}</span>
           </Link>
         </div>
+        )}
       </Td>
     </tr>
   )
@@ -298,14 +375,17 @@ export default function AdminOrdersPage() {
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const [quickViewId, setQuickViewId] = useState(null)
+  const [trashed, setTrashed] = useState(false)
+  const can = useAuthStore((state) => state.can)
 
   const query = useQuery({
-    queryKey: ['admin', 'orders', { search, status, page }],
+    queryKey: ['admin', 'orders', { search, status, page, trashed }],
     queryFn: () =>
       get('/admin/orders', {
         params: {
           search: search || undefined,
           status: status || undefined,
+          trashed: trashed ? 1 : undefined,
           page,
         },
       }),
@@ -313,6 +393,7 @@ export default function AdminOrdersPage() {
   })
 
   const rows = query.data?.data ?? []
+  const trashedCount = query.data?.trashed_count ?? 0
 
   const totalOrders = useMemo(
     () =>
@@ -378,14 +459,16 @@ export default function AdminOrdersPage() {
         </section>
 
         {/* Status cards */}
-        <StatusOverview
-          summary={query.data?.summary}
-          active={status}
-          onPick={(next) => {
-            setStatus(next)
-            setPage(1)
-          }}
-        />
+        {!trashed && (
+          <StatusOverview
+            summary={query.data?.summary}
+            active={status}
+            onPick={(next) => {
+              setStatus(next)
+              setPage(1)
+            }}
+          />
+        )}
 
         {/* Search/filter toolbar */}
         <section className="rounded-2xl border border-ink-200 bg-white p-3 shadow-sm sm:p-4">
@@ -426,6 +509,26 @@ export default function AdminOrdersPage() {
                   ))}
                 </Select>
               </div>
+
+              {can('orders.delete') && (trashed || trashedCount > 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTrashed((value) => !value)
+                    setPage(1)
+                  }}
+                  aria-pressed={trashed}
+                  className={cx(
+                    'inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold',
+                    trashed
+                      ? 'border-red-300 bg-red-50 text-red-700'
+                      : 'border-ink-200 bg-white text-ink-600 hover:bg-ink-50',
+                  )}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {trashed ? 'Back to orders' : `Trash (${trashedCount})`}
+                </button>
+              )}
 
               {(search || status) && (
                 <button
@@ -469,12 +572,20 @@ export default function AdminOrdersPage() {
         ) : rows.length === 0 ? (
           <div className="rounded-2xl border border-ink-200 bg-white shadow-sm">
             <EmptyState
-              icon={search || status ? Search : ReceiptText}
-              title={search || status ? 'No orders match your filters' : 'No orders yet'}
+              icon={search || status ? Search : trashed ? Trash2 : ReceiptText}
+              title={
+                search || status
+                  ? 'No orders match your filters'
+                  : trashed
+                    ? 'Trash is empty'
+                    : 'No orders yet'
+              }
               description={
                 search || status
                   ? 'Try a different search or clear the active filters.'
-                  : 'Orders placed on the shop will appear here.'
+                  : trashed
+                    ? 'Orders you move to trash appear here until you restore or delete them.'
+                    : 'Orders placed on the shop will appear here.'
               }
             />
           </div>
@@ -483,10 +594,12 @@ export default function AdminOrdersPage() {
             <div className="flex flex-col gap-2 border-b border-ink-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
               <div>
                 <h2 className="text-sm font-bold text-ink-900">
-                  Recent orders
+                  {trashed ? 'Trash' : 'Recent orders'}
                 </h2>
                 <p className="mt-0.5 text-xs text-ink-400">
-                  Click an order to view details and update its workflow.
+                  {trashed
+                    ? 'Restore an order to bring it back, or delete it permanently.'
+                    : 'Click an order to view details and update its workflow.'}
                 </p>
               </div>
 

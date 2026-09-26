@@ -262,6 +262,7 @@ class ProductController extends Controller
 
         $ranked = DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->whereNull('o.deleted_at')
             ->join('product_variations as v', 'v.id', '=', 'oi.product_variation_id')
             ->where('o.created_at', '>=', now()->subDays($days))
             ->whereNotIn('o.status', [OrderStatus::Cancelled->value, OrderStatus::Returned->value])

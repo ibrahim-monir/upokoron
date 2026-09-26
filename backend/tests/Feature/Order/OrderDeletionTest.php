@@ -32,8 +32,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Deleting test orders: allowed only while an order has touched neither the
- * stock records nor the ledger, and everything it held is handed back.
+ * Test orders: to the trash and back, or out for good -- allowed only while
+ * an order has touched neither the stock records nor the ledger.
  */
 class OrderDeletionTest extends TestCase
 {
@@ -131,12 +131,14 @@ class OrderDeletionTest extends TestCase
         );
     }
 
-    public function test_an_unshipped_order_can_be_deleted_and_its_stock_and_coupon_come_back(): void
+    private function reserved(): string
+    {
+        return Inventory::where('product_variation_id', $this->variation->id)->sole()->reserved_quantity;
+    }
+
+    public function test_trashing_hides_the_order_and_frees_its_stock(): void
     {
         $order = $this->placeOrder('3');
-        $coupon = new \App\Models\Coupon;
-        $coupon->forceFill(['code' => 'TEST10', 'type' => 'fixed', 'value' => '10.00', 'used_count' => 1])->save();
-        $order->forceFill(['coupon_id' => $coupon->id])->save();
 
         $this->actingAsRole('owner');
 
@@ -146,14 +148,66 @@ class OrderDeletionTest extends TestCase
 
         $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertOk();
 
+        $this->assertSoftDeleted('orders', ['id' => $order->id]);
+        $this->assertSame('0.000', $this->reserved());
+
+        $this->getJson('/api/v1/admin/orders')->assertJsonCount(0, 'data')->assertJsonPath('trashed_count', 1);
+        $this->getJson('/api/v1/admin/orders?trashed=1')->assertJsonPath('data.0.id', $order->id);
+        $this->getJson("/api/v1/admin/orders/{$order->id}")->assertNotFound();
+    }
+
+    public function test_restoring_brings_the_order_back_holding_its_stock_again(): void
+    {
+        $order = $this->placeOrder('3');
+
+        $this->actingAsRole('owner');
+        $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertOk();
+
+        $this->postJson("/api/v1/admin/orders/{$order->id}/restore")->assertOk();
+
+        $this->assertNotSoftDeleted('orders', ['id' => $order->id]);
+        $this->assertSame('3.000', $this->reserved());
+        $this->assertSame('pending', $order->refresh()->status->value);
+    }
+
+    public function test_restoring_is_refused_when_the_stock_has_gone(): void
+    {
+        $order = $this->placeOrder('3');
+
+        $this->actingAsRole('owner');
+        $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertOk();
+
+        // Someone else takes all but one unit while it sits in the trash.
+        $this->placeOrder('9');
+
+        $this->postJson("/api/v1/admin/orders/{$order->id}/restore")->assertStatus(409);
+        $this->assertSoftDeleted('orders', ['id' => $order->id]);
+    }
+
+    public function test_a_trashed_order_can_be_deleted_for_good_and_hands_back_its_coupon_use(): void
+    {
+        $order = $this->placeOrder();
+        $coupon = new \App\Models\Coupon;
+        $coupon->forceFill(['code' => 'TEST10', 'type' => 'fixed', 'value' => '10.00', 'used_count' => 1])->save();
+        $order->forceFill(['coupon_id' => $coupon->id])->save();
+
+        $this->actingAsRole('owner');
+
+        // Only from the trash.
+        $this->deleteJson("/api/v1/admin/orders/{$order->id}/force")->assertNotFound();
+
+        $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertOk();
+        $this->assertSame(1, $coupon->refresh()->used_count);
+
+        $this->deleteJson("/api/v1/admin/orders/{$order->id}/force")->assertOk();
+
         $this->assertDatabaseMissing('orders', ['id' => $order->id]);
         $this->assertDatabaseMissing('order_items', ['order_id' => $order->id]);
         $this->assertDatabaseMissing('stock_reservations', ['order_id' => $order->id]);
-        $this->assertSame('0.000', Inventory::where('product_variation_id', $this->variation->id)->sole()->reserved_quantity);
         $this->assertSame(0, $coupon->refresh()->used_count);
     }
 
-    public function test_a_cancelled_order_can_be_deleted(): void
+    public function test_a_cancelled_order_can_be_trashed(): void
     {
         $order = $this->placeOrder();
         app(OrderStatusService::class)->transition($order, OrderStatus::Cancelled);
@@ -161,10 +215,11 @@ class OrderDeletionTest extends TestCase
         $this->actingAsRole('owner');
 
         $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertOk();
-        $this->assertDatabaseMissing('orders', ['id' => $order->id]);
+        $this->postJson("/api/v1/admin/orders/{$order->id}/restore")->assertOk();
+        $this->assertSame('0.000', $this->reserved());
     }
 
-    public function test_a_shipped_order_cannot_be_deleted(): void
+    public function test_a_shipped_order_cannot_be_trashed(): void
     {
         $order = $this->advanceTo($this->placeOrder(), OrderStatus::Shipped);
 
@@ -174,10 +229,10 @@ class OrderDeletionTest extends TestCase
             ->assertJsonPath('data.delete_blocker', fn ($reason) => is_string($reason));
 
         $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertStatus(409);
-        $this->assertDatabaseHas('orders', ['id' => $order->id]);
+        $this->assertNotSoftDeleted('orders', ['id' => $order->id]);
     }
 
-    public function test_an_order_with_money_recorded_cannot_be_deleted(): void
+    public function test_an_order_with_money_recorded_cannot_be_trashed(): void
     {
         $order = $this->placeOrder();
         app(PaymentService::class)->record($order, '100.00');
@@ -185,16 +240,16 @@ class OrderDeletionTest extends TestCase
         $this->actingAsRole('owner');
 
         $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertStatus(409);
-        $this->assertDatabaseHas('orders', ['id' => $order->id]);
+        $this->assertNotSoftDeleted('orders', ['id' => $order->id]);
     }
 
-    public function test_deleting_needs_its_own_permission(): void
+    public function test_the_trash_needs_its_own_permission(): void
     {
         $order = $this->placeOrder();
 
         $this->actingAsRole('manager');
 
         $this->deleteJson("/api/v1/admin/orders/{$order->id}")->assertForbidden();
-        $this->assertDatabaseHas('orders', ['id' => $order->id]);
+        $this->assertNotSoftDeleted('orders', ['id' => $order->id]);
     }
 }
