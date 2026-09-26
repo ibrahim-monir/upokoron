@@ -214,3 +214,21 @@ jobs:
             exit 1
           }
           echo "Confirmed: production is now running ${{ steps.assemble.outputs.commit }}."
+
+      # The commit check above only proves update.php and the Laravel side
+      # are current. React routes live or die by public_html/.htaccess, and
+      # that file has gone missing on the server before, leaving / working
+      # while /admin/login, /sanctum/csrf-cookie and /sitemap.xml all 404'd.
+      - name: Verify client-side routes and root rewrites still resolve
+        run: |
+          set -euo pipefail
+          FAILED=0
+          for path in /admin/login /sanctum/csrf-cookie /sitemap.xml; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "${DOMAIN}${path}")
+            echo "${path} -> ${CODE}"
+            if [ "$CODE" -ge 400 ]; then FAILED=1; fi
+          done
+          if [ "$FAILED" -ne 0 ]; then
+            echo "::error::A root rewrite is not in effect -- public_html/.htaccess is missing or overwritten on the server."
+            exit 1
+          fi
