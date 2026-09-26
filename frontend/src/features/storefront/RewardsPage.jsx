@@ -2,6 +2,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Cake, Gift, ShoppingBag, Star, Timer, UserCheck, Wallet } from 'lucide-react'
 
 import { money } from '../../lib/format'
+import { useTranslation } from '../../lib/i18n'
 import { useRewardInfo } from './useRewardInfo'
 import { Card, PageLoader } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
@@ -26,6 +27,23 @@ function EarnCard({ icon: Icon, points, title, body, delay }) {
   )
 }
 
+/*
+ * A translated sentence with one figure set in bold. The sentence stays whole
+ * in the string table, with `{n}` where the figure goes, because Bangla puts
+ * the number somewhere else in the sentence than English does.
+ */
+function Emphasised({ text, value }) {
+  const [before, after = ''] = text.split('{n}')
+
+  return (
+    <>
+      {before}
+      <strong className="font-semibold text-ink-900">{value}</strong>
+      {after}
+    </>
+  )
+}
+
 /**
  * What the points are worth.
  *
@@ -36,6 +54,7 @@ function EarnCard({ icon: Icon, points, title, body, delay }) {
  */
 export function RewardsPage() {
   const user = useAuthStore((state) => state.user)
+  const { t } = useTranslation()
 
   const query = useRewardInfo()
 
@@ -47,7 +66,10 @@ export function RewardsPage() {
   // "empty" -- it does not exist.
   if (!info?.advertised) return <Navigate to="/" replace />
 
-  const perOrder = `${info.earn_points} point${info.earn_points === 1 ? '' : 's'} for every ${money(info.earn_per_amount)} you spend`
+  const perOrder = t(info.earn_points === 1 ? 'rewardsPage.perOrderOne' : 'rewardsPage.perOrder', {
+    points: info.earn_points,
+    amount: money(info.earn_per_amount),
+  })
 
   return (
     <div className="mx-auto max-w-5xl py-4">
@@ -64,29 +86,26 @@ export function RewardsPage() {
         <div className="relative max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
             <Gift className="h-3.5 w-3.5" aria-hidden="true" />
-            Reward points
+            {t('reward.title')}
           </span>
 
           <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">
-            Earn as you shop. Spend it next time.
+            {t('rewardsPage.headline')}
           </h1>
 
-          <p className="mt-3 text-white/85">
-            Every delivered order earns {perOrder}. Points come off the bill on a later order —
-            no card, no coupon to remember.
-          </p>
+          <p className="mt-3 text-white/85">{t('rewardsPage.intro', { perOrder })}</p>
 
           <Link
             to={user ? '/account?section=rewards' : '/register'}
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 transition-colors hover:bg-brand-50"
           >
-            {user ? 'See my points' : 'Create an account to start earning'}
+            {user ? t('rewardsPage.seeMyPoints') : t('rewardsPage.createAccount')}
           </Link>
         </div>
       </section>
 
       <h2 className="mt-8 text-lg font-bold uppercase tracking-wide text-ink-900">
-        How you earn
+        {t('rewardsPage.howYouEarn')}
       </h2>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -94,37 +113,37 @@ export function RewardsPage() {
           icon={ShoppingBag}
           points={info.earn_points}
           delay={80}
-          title="On every order"
-          body={`${perOrder}, credited once the order is delivered.`}
+          title={t('rewardsPage.orderTitle')}
+          body={t('rewardsPage.orderBody', { perOrder })}
         />
 
         <EarnCard
           icon={Star}
           points={info.review_points}
           delay={140}
-          title="For a review"
-          body={`${info.review_points} points for each review we publish of something you bought.`}
+          title={t('rewardsPage.reviewTitle')}
+          body={t('rewardsPage.reviewBody', { points: info.review_points })}
         />
 
         <EarnCard
           icon={UserCheck}
           points={info.profile_points}
           delay={200}
-          title="For completing your profile"
-          body={`${info.profile_points} points, once, when your name, number and birthday are on file.`}
+          title={t('rewardsPage.profileTitle')}
+          body={t('rewardsPage.profileBody', { points: info.profile_points })}
         />
 
         <EarnCard
           icon={Cake}
           points={info.birthday_points}
           delay={260}
-          title="On your birthday"
-          body={`${info.birthday_points} points a year, on the day.`}
+          title={t('rewardsPage.birthdayTitle')}
+          body={t('rewardsPage.birthdayBody', { points: info.birthday_points })}
         />
       </div>
 
       <h2 className="mt-8 text-lg font-bold uppercase tracking-wide text-ink-900">
-        What they are worth
+        {t('rewardsPage.worth')}
       </h2>
 
       <Card className="rise mt-3 divide-y divide-ink-100" style={{ animationDelay: '120ms' }}>
@@ -135,11 +154,9 @@ export function RewardsPage() {
 
           <div>
             <p className="font-semibold text-ink-900">
-              1 point = {money(info.point_value)}
+              {t('rewardsPage.pointValue', { amount: money(info.point_value) })}
             </p>
-            <p className="mt-0.5 text-sm text-ink-600">
-              Taken off the total at checkout. Nothing to type in.
-            </p>
+            <p className="mt-0.5 text-sm text-ink-600">{t('rewardsPage.pointValueBody')}</p>
           </div>
         </div>
 
@@ -147,21 +164,19 @@ export function RewardsPage() {
           <ul className="flex flex-col gap-1.5">
             {info.min_redeem > 0 && (
               <li>
-                You can spend points once you have <strong className="font-semibold text-ink-900">{info.min_redeem}</strong>.
+                <Emphasised text={t('rewardsPage.minRedeem')} value={info.min_redeem} />
               </li>
             )}
 
             {info.max_redeem > 0 && (
               <li>
-                Up to <strong className="font-semibold text-ink-900">{info.max_redeem}</strong> points on a single order.
+                <Emphasised text={t('rewardsPage.maxRedeem')} value={info.max_redeem} />
               </li>
             )}
 
             {info.max_percent > 0 && (
               <li>
-                Points can cover up to{' '}
-                <strong className="font-semibold text-ink-900">{info.max_percent}%</strong> of an
-                order — the rest is paid as usual.
+                <Emphasised text={t('rewardsPage.maxPercent')} value={`${info.max_percent}%`} />
               </li>
             )}
           </ul>
@@ -175,11 +190,9 @@ export function RewardsPage() {
 
             <div>
               <p className="font-semibold text-ink-900">
-                Points last {info.expiry_days} days
+                {t('rewardsPage.expiry', { days: info.expiry_days })}
               </p>
-              <p className="mt-0.5 text-sm text-ink-600">
-                Counted from the day they were earned, and the oldest are always spent first.
-              </p>
+              <p className="mt-0.5 text-sm text-ink-600">{t('rewardsPage.expiryBody')}</p>
             </div>
           </div>
         )}

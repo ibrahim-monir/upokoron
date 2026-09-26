@@ -195,6 +195,70 @@ const STRINGS = {
 
   // ------------------------------------------------- reward points box
   'reward.title': { en: 'Reward points', bn: 'রিওয়ার্ড পয়েন্ট' },
+
+  // ------------------------------------------------------- rewards page
+  'rewardsPage.headline': { en: 'Earn as you shop. Spend it next time.', bn: 'কেনাকাটায় পয়েন্ট জমান, পরের বার খরচ করুন।' },
+  'rewardsPage.perOrder': {
+    en: '{points} points for every {amount} you spend',
+    bn: 'প্রতি {amount} কেনাকাটায় {points} পয়েন্ট',
+  },
+  'rewardsPage.perOrderOne': {
+    en: '1 point for every {amount} you spend',
+    bn: 'প্রতি {amount} কেনাকাটায় ১ পয়েন্ট',
+  },
+  'rewardsPage.intro': {
+    en: 'Every delivered order earns {perOrder}. Points come off the bill on a later order — no card, no coupon to remember.',
+    bn: 'প্রতিটি ডেলিভারি হওয়া অর্ডারে পাবেন {perOrder}। পরের অর্ডারে পয়েন্ট বিল থেকে বাদ যাবে — কোনো কার্ড বা কুপন মনে রাখতে হবে না।',
+  },
+  'rewardsPage.seeMyPoints': { en: 'See my points', bn: 'আমার পয়েন্ট দেখুন' },
+  'rewardsPage.createAccount': {
+    en: 'Create an account to start earning',
+    bn: 'পয়েন্ট জমাতে একাউন্ট খুলুন',
+  },
+  'rewardsPage.howYouEarn': { en: 'How you earn', bn: 'যেভাবে পয়েন্ট পাবেন' },
+  'rewardsPage.orderTitle': { en: 'On every order', bn: 'প্রতিটি অর্ডারে' },
+  'rewardsPage.orderBody': {
+    en: '{perOrder}, credited once the order is delivered.',
+    bn: '{perOrder}, অর্ডার ডেলিভারি হলে যোগ হবে।',
+  },
+  'rewardsPage.reviewTitle': { en: 'For a review', bn: 'রিভিউ দিলে' },
+  'rewardsPage.reviewBody': {
+    en: '{points} points for each review we publish of something you bought.',
+    bn: 'আপনার কেনা পণ্যের প্রতিটি রিভিউ প্রকাশিত হলে {points} পয়েন্ট।',
+  },
+  'rewardsPage.profileTitle': { en: 'For completing your profile', bn: 'প্রোফাইল সম্পূর্ণ করলে' },
+  'rewardsPage.profileBody': {
+    en: '{points} points, once, when your name, number and birthday are on file.',
+    bn: 'আপনার নাম, নম্বর ও জন্মদিন দেওয়া থাকলে একবার {points} পয়েন্ট।',
+  },
+  'rewardsPage.birthdayTitle': { en: 'On your birthday', bn: 'আপনার জন্মদিনে' },
+  'rewardsPage.birthdayBody': {
+    en: '{points} points a year, on the day.',
+    bn: 'প্রতি বছর জন্মদিনে {points} পয়েন্ট।',
+  },
+  'rewardsPage.worth': { en: 'What they are worth', bn: 'পয়েন্টের মূল্য' },
+  'rewardsPage.pointValue': { en: '1 point = {amount}', bn: '১ পয়েন্ট = {amount}' },
+  'rewardsPage.pointValueBody': {
+    en: 'Taken off the total at checkout. Nothing to type in.',
+    bn: 'চেকআউটে মোট বিল থেকে বাদ যাবে। কিছু লিখতে হবে না।',
+  },
+  'rewardsPage.minRedeem': {
+    en: 'You can spend points once you have {n}.',
+    bn: '{n} পয়েন্ট জমলে খরচ করতে পারবেন।',
+  },
+  'rewardsPage.maxRedeem': {
+    en: 'Up to {n} points on a single order.',
+    bn: 'একটি অর্ডারে সর্বোচ্চ {n} পয়েন্ট।',
+  },
+  'rewardsPage.maxPercent': {
+    en: 'Points can cover up to {n} of an order — the rest is paid as usual.',
+    bn: 'পয়েন্ট দিয়ে অর্ডারের সর্বোচ্চ {n} পরিশোধ করা যাবে — বাকিটা স্বাভাবিকভাবে দিতে হবে।',
+  },
+  'rewardsPage.expiry': { en: 'Points last {days} days', bn: 'পয়েন্টের মেয়াদ {days} দিন' },
+  'rewardsPage.expiryBody': {
+    en: 'Counted from the day they were earned, and the oldest are always spent first.',
+    bn: 'অর্জনের দিন থেকে গণনা হয়, আর সবসময় পুরনো পয়েন্ট আগে খরচ হয়।',
+  },
   'reward.phonePlaceholder': { en: 'Your phone number', bn: 'আপনার ফোন নম্বর' },
   'reward.phoneAriaLabel': { en: 'Phone number', bn: 'ফোন নম্বর' },
   'reward.checkBalance': { en: 'Check balance', bn: 'ব্যালেন্স দেখুন' },
