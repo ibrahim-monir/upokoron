@@ -89,6 +89,7 @@ class CheckoutController extends Controller
                 'reward_points' => $summary['reward_points'],
                 'reward_points_balance' => $customer === null ? null : $this->rewards->balance($customer),
                 'has_unheld_items' => $summary['has_unheld'],
+                'free_shipping' => $summary['free_shipping'],
                 'addresses' => $addresses,
 
                 'payment_methods' => PaymentMethod::query()

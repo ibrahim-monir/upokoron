@@ -217,6 +217,10 @@ class CartController extends Controller
                 'reward_points_balance' => $customer === null ? null : $this->rewards->balance($customer),
                 'weight_kg' => $summary['weight_kg']->value(),
 
+                // Delivery will be free whatever the address -- lets checkout
+                // say so before a district is even chosen.
+                'free_shipping' => $summary['free_shipping'],
+
                 // True when a hold has lapsed. The UI shows the line as no
                 // longer reserved instead of quietly dropping it, and
                 // checkout refuses until it is taken again.

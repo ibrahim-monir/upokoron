@@ -376,6 +376,12 @@ export function CheckoutPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <Section step="2" title={t('checkout.deliveryOption')}>
+              {data?.free_shipping && (
+                <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-success-50 px-3 py-2 text-sm font-medium text-success-700">
+                  <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {t('checkout.freeDeliveryByProduct')}
+                </p>
+              )}
               {!district ? (
                 <p className="text-sm text-ink-500">{t('checkout.enterDistrictFirst')}</p>
               ) : shippingOptions.isPending ? (
@@ -386,12 +392,6 @@ export function CheckoutPage() {
                 <p className="text-sm text-danger-700">{t('checkout.noDeliveryOption')}</p>
               ) : (
                 <div className="grid gap-2">
-                  {options[0]?.free_by_product && (
-                    <p className="flex items-center gap-1.5 rounded-lg bg-success-50 px-3 py-2 text-sm font-medium text-success-700">
-                      <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      {t('checkout.freeDeliveryByProduct')}
-                    </p>
-                  )}
                   {options.map((option) => (
                     <Choice key={option.id} selected={option.id === rateId} onSelect={() => setRateId(option.id)}>
                       <div className="flex items-baseline justify-between gap-3">
@@ -577,7 +577,13 @@ export function CheckoutPage() {
               <div className="flex justify-between">
                 <dt className="text-ink-600">{t('checkout.delivery')}</dt>
                 <dd className="tabular text-ink-900">
-                  {rate ? (rate.is_free ? t('checkout.free') : money(totals.delivery)) : '—'}
+                  {rate
+                    ? rate.is_free
+                      ? t('checkout.free')
+                      : money(totals.delivery)
+                    : data?.free_shipping
+                      ? t('checkout.free')
+                      : '—'}
                 </dd>
               </div>
 

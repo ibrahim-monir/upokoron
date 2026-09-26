@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Gift, Heart, ImageOff, Star } from 'lucide-react'
+import { Gift, Heart, ImageOff, Star, Truck } from 'lucide-react'
 import { cx, money } from '../../lib/format'
 import { useTranslation } from '../../lib/i18n'
 import { AddToCart } from '../cart/AddToCart'
@@ -179,6 +179,12 @@ export function ProductCard({ product }) {
           <span className="tabular text-lg font-bold text-brand-800">{money(price)}</span>
           {discount !== null && (
             <span className="tabular text-sm text-ink-400 line-through">{money(wasPrice)}</span>
+          )}
+          {product.free_shipping && (
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1 self-center rounded-full bg-success-50 px-2 py-0.5 text-[11px] font-semibold text-success-700">
+              <Truck className="h-3 w-3" aria-hidden="true" />
+              {t('product.freeDelivery')}
+            </span>
           )}
         </div>
 
