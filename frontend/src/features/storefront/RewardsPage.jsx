@@ -3,6 +3,7 @@ import { Cake, Gift, ShoppingBag, Star, Timer, UserCheck, Wallet } from 'lucide-
 
 import { money } from '../../lib/format'
 import { useTranslation } from '../../lib/i18n'
+import { pageTitle, usePageMeta } from '../../lib/usePageMeta'
 import { useRewardInfo } from './useRewardInfo'
 import { Card, PageLoader } from '../../components/ui'
 import { useAuthStore } from '../../stores/authStore'
@@ -55,6 +56,8 @@ function Emphasised({ text, value }) {
 export function RewardsPage() {
   const user = useAuthStore((state) => state.user)
   const { t } = useTranslation()
+
+  usePageMeta({ title: pageTitle(t('reward.title')) })
 
   const query = useRewardInfo()
 

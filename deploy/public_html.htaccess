@@ -34,6 +34,12 @@
     RewriteRule ^sitemap-[a-z0-9-]+\.xml$ api/index.php [L]
     RewriteRule ^sitemap-(index|urlset)\.xsl$ api/index.php [L]
 
+    # Product and category pages go through Laravel first, which returns
+    # the same index.html with that page's title, description, share
+    # preview and structured data filled in -- link previews on Facebook
+    # and WhatsApp never run the app, so they only ever see what is here.
+    RewriteRule ^(products|category)/[A-Za-z0-9-]+/?$ api/index.php [L]
+
     # A real file or directory is served as-is.
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d

@@ -31,6 +31,7 @@ import {
 import { ApiError, get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
 import { parseVideo } from '../../lib/video'
+import { pageTitle, usePageMeta } from '../../lib/usePageMeta'
 import { useWishlistStore } from '../../stores/wishlistStore'
 import {
   Badge,
@@ -799,6 +800,19 @@ export function ProductDetailPage() {
     queryFn: () => get(`/shop/products/${slug}`),
     select: (response) => response.data,
   })
+
+  const loaded = query.data ?? null
+
+  usePageMeta(
+    loaded
+      ? {
+          title: pageTitle(loaded.meta_title || loaded.name),
+          description: loaded.meta_description || loaded.short_description || loaded.description,
+          image: loaded.primary_image ?? loaded.images?.[0]?.url,
+          type: 'product',
+        }
+      : null,
+  )
 
   if (query.isLoading) return <PageLoader label="Loading product" />
 

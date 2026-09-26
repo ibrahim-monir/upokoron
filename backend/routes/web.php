@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\SitemapController;
+use App\Http\Controllers\PageMetaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -14,6 +15,19 @@ Route::get('/', function () {
 // and crawlers expect them, not buried under /api.
 // No session, no CSRF: a crawler hitting these repeatedly should not force a
 // database session read/write on every request, and GET needs no CSRF token.
+// Product and category pages, served as the storefront's index.html with
+// that page's title, description, share preview and structured data filled
+// in (see PageMetaController). No session: these are public pages.
+Route::get('products/{slug}', [PageMetaController::class, 'product'])
+    ->where('slug', '[A-Za-z0-9-]+')
+    ->withoutMiddleware('web')
+    ->name('page-meta.product');
+
+Route::get('category/{slug}', [PageMetaController::class, 'category'])
+    ->where('slug', '[A-Za-z0-9-]+')
+    ->withoutMiddleware('web')
+    ->name('page-meta.category');
+
 Route::get('sitemap.xml', [SitemapController::class, 'index'])
     ->withoutMiddleware('web')
     ->name('sitemap.index');

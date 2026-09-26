@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Clock, FileText, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { get } from '../../lib/api'
 import { useTranslation } from '../../lib/i18n'
+import { pageTitle, usePageMeta } from '../../lib/usePageMeta'
 import { Card, PageLoader } from '../../components/ui'
 import { ContactForm } from './ContactForm'
 import { FaqSection } from './FaqSection'
@@ -70,6 +71,8 @@ export function ContentPage({ title, banglaTitle, settingKey, banglaKey, intro }
   const { data: settings, isLoading } = useStoreSettings()
   const { locale } = useTranslation()
 
+  usePageMeta({ title: pageTitle(locale === 'bn' && banglaTitle ? banglaTitle : title) })
+
   if (isLoading) return <PageLoader />
 
   // The Bangla text when the reader is on Bangla and it has been written;
@@ -108,6 +111,11 @@ export function ContentPage({ title, banglaTitle, settingKey, banglaKey, intro }
  */
 export function ContactPage() {
   const { data: settings, isLoading } = useStoreSettings()
+
+  usePageMeta({
+    title: pageTitle('Contact us'),
+    description: 'Call, email or message Upokoron.com about an order, a product or a return.',
+  })
 
   if (isLoading) return <PageLoader />
 

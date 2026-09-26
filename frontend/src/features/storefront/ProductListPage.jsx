@@ -5,6 +5,7 @@ import { get } from '../../lib/api'
 import { EmptyState, ErrorState, Pagination } from '../../components/ui'
 import { PRODUCT_GRID_WITH_SIDEBAR, ProductCard, ProductCardSkeleton } from './ProductCard'
 import { FILTER_KEYS, ProductFilters } from './ProductFilters'
+import { pageTitle, usePageMeta } from '../../lib/usePageMeta'
 
 function useSidebarData() {
   const settings = useQuery({
@@ -106,17 +107,24 @@ export function ProductListPage() {
       }, null)
     : null
 
+  const heading = search
+    ? `Results for “${search}”`
+    : category
+      ? categoryName ?? titleFromSlug(category)
+      : 'All products'
+
+  usePageMeta({
+    title: pageTitle(heading),
+    description: category
+      ? `Shop ${heading} at Upokoron.com. Genuine products, cash on delivery across Bangladesh.`
+      : undefined,
+  })
+
   const grid = (
     <div className="flex flex-col gap-6">
       {/* Sort moved into the sidebar, so the heading has the row to itself. */}
       <div>
-        <h1 className="text-2xl font-semibold text-ink-900">
-          {search
-            ? `Results for “${search}”`
-            : category
-              ? categoryName ?? titleFromSlug(category)
-              : 'All products'}
-        </h1>
+        <h1 className="text-2xl font-semibold text-ink-900">{heading}</h1>
         {query.data?.meta && (
           <p className="mt-1 text-sm text-ink-500">{query.data.meta.total} product(s)</p>
         )}
