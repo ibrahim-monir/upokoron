@@ -74,6 +74,11 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class)->orderBy('id');
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

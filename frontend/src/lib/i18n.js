@@ -196,6 +196,42 @@ const STRINGS = {
   // ------------------------------------------------- reward points box
   'reward.title': { en: 'Reward points', bn: 'রিওয়ার্ড পয়েন্ট' },
 
+  // ------------------------------------------------------------ returns
+  'returns.title': { en: 'Returns', bn: 'পণ্য ফেরত' },
+  'returns.request': { en: 'Request a return', bn: 'ফেরতের অনুরোধ করুন' },
+  'returns.windowOpen': {
+    en: 'You can ask to return items from this order until {date}.',
+    bn: '{date} পর্যন্ত এই অর্ডারের পণ্য ফেরতের অনুরোধ করতে পারবেন।',
+  },
+  'returns.chooseItems': { en: 'Choose what you want to send back.', bn: 'কোন পণ্য ফেরত দিতে চান, বেছে নিন।' },
+  'returns.quantity': { en: 'Quantity', bn: 'পরিমাণ' },
+  'returns.reason': { en: 'Reason', bn: 'কারণ' },
+  'returns.chooseReason': { en: 'Choose a reason', bn: 'একটি কারণ বেছে নিন' },
+  'returns.note': { en: 'Anything we should know? (optional)', bn: 'আর কিছু জানাতে চান? (ঐচ্ছিক)' },
+  'returns.notePlaceholder': {
+    en: 'What is wrong with it, what you expected…',
+    bn: 'কী সমস্যা হয়েছে, আপনি কী আশা করেছিলেন…',
+  },
+  'returns.conditions': {
+    en: 'Please keep the box, accessories and any free items — they need to come back with the product. We will contact you about collecting it.',
+    bn: 'বক্স, এক্সেসরিজ ও ফ্রি উপহার রেখে দিন — পণ্যের সঙ্গে এগুলোও ফেরত দিতে হবে। পণ্য সংগ্রহের বিষয়ে আমরা আপনার সঙ্গে যোগাযোগ করব।',
+  },
+  'returns.submit': { en: 'Send return request', bn: 'ফেরতের অনুরোধ পাঠান' },
+  'returns.cancel': { en: 'Cancel', bn: 'বাতিল' },
+  'returns.requested': { en: 'Return requested.', bn: 'ফেরতের অনুরোধ পাঠানো হয়েছে।' },
+  'returns.failed': { en: 'Could not send the request.', bn: 'অনুরোধ পাঠানো যায়নি।' },
+  'returns.status.requested': { en: 'Requested', bn: 'অনুরোধ করা হয়েছে' },
+  'returns.status.approved': { en: 'Approved', bn: 'অনুমোদিত' },
+  'returns.status.rejected': { en: 'Rejected', bn: 'বাতিল করা হয়েছে' },
+  'returns.status.received': { en: 'Received by us', bn: 'আমরা পেয়েছি' },
+  'returns.status.refunded': { en: 'Refunded', bn: 'টাকা ফেরত দেওয়া হয়েছে' },
+  'returns.reasons.damaged': { en: 'Arrived damaged', bn: 'ক্ষতিগ্রস্ত অবস্থায় এসেছে' },
+  'returns.reasons.faulty': { en: 'Faulty / not working', bn: 'ত্রুটিপূর্ণ / কাজ করছে না' },
+  'returns.reasons.wrong_item': { en: 'Wrong item sent', bn: 'ভুল পণ্য পাঠানো হয়েছে' },
+  'returns.reasons.not_as_described': { en: 'Not as described', bn: 'বর্ণনার সঙ্গে মেলে না' },
+  'returns.reasons.missing_parts': { en: 'Parts or accessories missing', bn: 'যন্ত্রাংশ বা এক্সেসরিজ নেই' },
+  'returns.reasons.other': { en: 'Other', bn: 'অন্যান্য' },
+
   // ------------------------------------------------------- rewards page
   'rewardsPage.headline': { en: 'Earn as you shop. Spend it next time.', bn: 'কেনাকাটায় পয়েন্ট জমান, পরের বার খরচ করুন।' },
   'rewardsPage.perOrder': {

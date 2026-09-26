@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Api\V1\Shop\Concerns\ResolvesCartToken;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
+use App\Services\Order\ReturnService;
 use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\PaymentMethod;
@@ -281,10 +282,40 @@ class CheckoutController extends Controller
     public function showOrder(Request $request, string $number): JsonResponse
     {
         $order = $this->findForCaller($request, $number, [
-            'items.variation.image', 'paymentMethod', 'history', 'payments', 'shippingRate',
+            'items.variation.image', 'paymentMethod', 'history', 'payments', 'shippingRate', 'returns',
         ]);
 
         return response()->json(['data' => new OrderResource($order)]);
+    }
+
+    /**
+     * Ask to send items from a delivered order back. Same access rule as
+     * seeing the order: the owner signed in, or the delivery phone number.
+     */
+    public function requestReturn(Request $request, string $number, ReturnService $returns): JsonResponse
+    {
+        $order = $this->findForCaller($request, $number);
+
+        $data = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.order_item_id' => ['required', 'integer'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0'],
+            'reason' => ['required', 'string', 'max:40'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $return = $returns->request(
+            order: $order,
+            lines: $data['items'],
+            reason: $data['reason'],
+            note: $data['note'] ?? null,
+            customer: $request->user()?->customer,
+        );
+
+        return response()->json([
+            'message' => "Return {$return->number} requested. We will contact you about collecting the items.",
+            'data' => ['number' => $return->number],
+        ], 201);
     }
 
     /**

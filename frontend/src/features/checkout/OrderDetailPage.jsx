@@ -5,6 +5,7 @@ import { Badge, Button, ErrorState, Spinner, useToast } from '../../components/u
 import { statusTone } from './orderStatus'
 import { PaymentReferenceCard } from './PaymentReferenceCard'
 import { PhoneGate } from './PhoneGate'
+import { ReturnSection } from './ReturnSection'
 import { useCancelOrder, useOrder } from './useCheckout'
 
 export function OrderDetailPage() {
@@ -153,6 +154,8 @@ export function OrderDetailPage() {
           </ol>
         </div>
       </div>
+
+      <ReturnSection order={data} phone={phone} />
 
       <div className="flex flex-wrap gap-2">
         <Link

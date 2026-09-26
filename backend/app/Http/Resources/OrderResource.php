@@ -6,6 +6,8 @@ namespace App\Http\Resources;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderReturn;
+use App\Services\Order\ReturnService;
 use App\Models\OrderStatusHistory;
 use App\Models\Payment;
 use Illuminate\Http\Request;
@@ -91,6 +93,26 @@ class OrderResource extends JsonResource
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
 
             'can_cancel' => ! $this->status->hasShipped() && ! $this->status->isFinal(),
+
+            // Returns: how long the window stays open, what can still go
+            // back, and what has been asked for already. Only on the order
+            // page, where the returns are loaded.
+            'returnable_until' => $this->whenLoaded('returns', fn (): ?string => app(ReturnService::class)
+                ->returnableUntil($this->resource)?->toIso8601String()),
+            'can_request_return' => $this->whenLoaded('returns', fn (): bool => app(ReturnService::class)
+                ->canRequest($this->resource)),
+            'returnable_quantities' => $this->whenLoaded('returns', fn (): array => collect(
+                app(ReturnService::class)->returnable($this->resource),
+            )->map(fn ($qty): string => $qty->value())->all()),
+            'return_reasons' => $this->whenLoaded('returns', fn (): array => OrderReturn::REASONS),
+            'returns' => $this->whenLoaded('returns', fn () => $this->returns->map(fn (OrderReturn $r): array => [
+                'number' => $r->number,
+                'status' => $r->status->value,
+                'status_label' => $r->status->label(),
+                'reason_label' => OrderReturn::REASONS[$r->reason] ?? $r->reason,
+                'refund_amount' => $r->refund_amount,
+                'requested_at' => $r->requested_at?->toIso8601String(),
+            ])->all()),
 
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn (OrderItem $item): array => [
                 'id' => $item->id,

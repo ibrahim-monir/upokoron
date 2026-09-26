@@ -34,6 +34,7 @@ import {
   Users,
   Wallet,
   X,
+  RotateCcw,
 } from 'lucide-react'
 import { get } from '../lib/api'
 import { cx, initials } from '../lib/format'
@@ -57,6 +58,14 @@ const SECTIONS = [
         badge: 'pendingOrders',
         badgeNoun: 'orders pending',
         prominent: true,
+      },
+      {
+        to: '/admin/returns',
+        icon: RotateCcw,
+        label: 'Returns',
+        can: 'returns.view',
+        badge: 'newReturns',
+        badgeNoun: 'new return requests',
       },
     ],
   },
@@ -320,6 +329,19 @@ function useAnnounceIncrease(count, message) {
   }, [count])
 }
 
+/** Return requests nobody has looked at yet. */
+function useNewReturnCount(enabled) {
+  const query = useQuery({
+    queryKey: ['admin', 'returns', 'new-count'],
+    queryFn: () => get('/admin/returns', { params: { per_page: 1, status: 'requested' } }),
+    enabled,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  })
+
+  return Number(query.data?.counts?.requested ?? 0)
+}
+
 function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
   const Icon = section.icon
   const hasActiveItem = visibleItems.some((item) =>
@@ -427,6 +449,7 @@ function Sidebar({ onNavigate }) {
   const pendingOrders = usePendingOrderCount(can('orders.view'))
   const unreadChats = useUnreadChatCount(can('chat.view'))
   const unreadMessages = useUnreadMessageCount(can('contact.view'))
+  const newReturns = useNewReturnCount(can('returns.view'))
 
   useAnnounceIncrease(pendingOrders, (n) =>
     n === 1 ? 'New order received.' : `${n} new orders received.`,
@@ -437,8 +460,8 @@ function Sidebar({ onNavigate }) {
   )
 
   const badges = useMemo(
-    () => ({ pendingOrders, unreadChats, unreadMessages }),
-    [pendingOrders, unreadChats, unreadMessages],
+    () => ({ pendingOrders, unreadChats, unreadMessages, newReturns }),
+    [pendingOrders, unreadChats, unreadMessages, newReturns],
   )
 
   const sections = useMemo(

@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
 use App\Http\Controllers\Api\V1\Admin\NotificationTestController;
+use App\Http\Controllers\Api\V1\Admin\ReturnController;
 use App\Http\Controllers\Api\V1\Admin\ShippingClassController;
 use App\Http\Controllers\Api\V1\Admin\ShippingZoneController;
 use App\Http\Controllers\Api\V1\Admin\SitemapController;
@@ -230,6 +231,15 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::post('orders/{order}/refunds', [OrderController::class, 'refund'])->name('orders.refunds');
     Route::put('orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.note');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+
+    // Returns: request comes from the customer; the desk approves,
+    // receives the goods back and refunds.
+    Route::get('returns', [ReturnController::class, 'index'])->name('returns.index');
+    Route::get('returns/{return}', [ReturnController::class, 'show'])->name('returns.show');
+    Route::post('returns/{return}/approve', [ReturnController::class, 'approve'])->name('returns.approve');
+    Route::post('returns/{return}/reject', [ReturnController::class, 'reject'])->name('returns.reject');
+    Route::post('returns/{return}/receive', [ReturnController::class, 'receive'])->name('returns.receive');
+    Route::post('returns/{return}/refund', [ReturnController::class, 'refund'])->name('returns.refund');
     // Trash: restore and permanent delete look up orders that are already binned.
     Route::post('orders/{order}/restore', [OrderController::class, 'restore'])
         ->name('orders.restore')->withTrashed();

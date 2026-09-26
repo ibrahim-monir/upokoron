@@ -195,6 +195,9 @@ Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.st
 
 Route::get('orders/{number}', [CheckoutController::class, 'showOrder'])->name('orders.show');
 Route::post('orders/{number}/cancel', [CheckoutController::class, 'cancel'])->name('orders.cancel');
+Route::post('orders/{number}/returns', [CheckoutController::class, 'requestReturn'])
+    ->middleware('throttle:10,1')
+    ->name('orders.returns.store');
 
 // "I have sent the money, here is the bKash id." A note for staff to check
 // against the statement -- it marks nothing paid on its own.
