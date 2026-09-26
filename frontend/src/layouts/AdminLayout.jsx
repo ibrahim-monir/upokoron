@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
@@ -38,6 +38,7 @@ import {
 import { get } from '../lib/api'
 import { cx, initials } from '../lib/format'
 import { useAuthStore } from '../stores/authStore'
+import { useToast } from '../components/ui'
 
 const SECTIONS = [
   {
@@ -96,7 +97,14 @@ const SECTIONS = [
       { to: '/admin/coupons', icon: Tag, label: 'Coupons', can: 'coupons.manage' },
       { to: '/admin/reviews', icon: Star, label: 'Reviews', can: 'reviews.view' },
       { to: '/admin/questions', icon: MessagesSquare, label: 'Q&A', can: 'questions.view' },
-      { to: '/admin/contact-messages', icon: Mail, label: 'Messages', can: 'contact.view' },
+      {
+        to: '/admin/contact-messages',
+        icon: Mail,
+        label: 'Messages',
+        can: 'contact.view',
+        badge: 'unreadMessages',
+        badgeNoun: 'unread',
+      },
       {
         to: '/admin/chat',
         icon: MessageCircle,
@@ -267,6 +275,45 @@ function useUnreadChatCount(enabled) {
   return query.data?.unread ?? 0
 }
 
+/**
+ * How many contact-page messages nobody has read yet.
+ *
+ * The messages list already totals it, so this is the same one-row trick as
+ * above. Keyed under the page's own query key, so marking a message read on
+ * that page refreshes the badge at once instead of on the next poll.
+ */
+function useUnreadMessageCount(enabled) {
+  const query = useQuery({
+    queryKey: ['admin.contact-messages', 'unread-count'],
+    queryFn: () => get('/admin/contact-messages', { params: { per_page: 1 } }),
+    enabled,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  })
+
+  return query.data?.unread ?? 0
+}
+
+/**
+ * Say so when the unread count goes UP while the console is open.
+ *
+ * The first reading is the baseline, not news -- otherwise every page load
+ * would announce messages the admin already knows about. A count that drops
+ * (someone read one) is silent.
+ */
+function useAnnounceIncrease(count, message) {
+  const toast = useToast()
+  const previous = useRef(null)
+
+  useEffect(() => {
+    if (previous.current !== null && count > previous.current) {
+      toast.info(message(count - previous.current))
+    }
+
+    previous.current = count
+  }, [count])
+}
+
 function NavSection({ section, visibleItems, pathname, badges, onNavigate }) {
   const Icon = section.icon
   const hasActiveItem = visibleItems.some((item) =>
@@ -373,10 +420,15 @@ function Sidebar({ onNavigate }) {
 
   const pendingOrders = usePendingOrderCount(can('orders.view'))
   const unreadChats = useUnreadChatCount(can('chat.view'))
+  const unreadMessages = useUnreadMessageCount(can('contact.view'))
+
+  useAnnounceIncrease(unreadMessages, (n) =>
+    n === 1 ? 'New message from the contact page.' : `${n} new messages from the contact page.`,
+  )
 
   const badges = useMemo(
-    () => ({ pendingOrders, unreadChats }),
-    [pendingOrders, unreadChats],
+    () => ({ pendingOrders, unreadChats, unreadMessages }),
+    [pendingOrders, unreadChats, unreadMessages],
   )
 
   const sections = useMemo(
