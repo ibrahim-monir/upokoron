@@ -101,9 +101,11 @@ class OrderResource extends JsonResource
                 ->returnableUntil($this->resource)?->toIso8601String()),
             'can_request_return' => $this->whenLoaded('returns', fn (): bool => app(ReturnService::class)
                 ->canRequest($this->resource)),
+            // A list of pairs, not an id-keyed map: a resource renumbers
+            // numeric keys, which would lose which line each figure is for.
             'returnable_quantities' => $this->whenLoaded('returns', fn (): array => collect(
                 app(ReturnService::class)->returnable($this->resource),
-            )->map(fn ($qty): string => $qty->value())->all()),
+            )->map(fn ($qty, $itemId): array => ['order_item_id' => $itemId, 'quantity' => $qty->value()])->values()->all()),
             'return_reasons' => $this->whenLoaded('returns', fn (): array => OrderReturn::REASONS),
             'returns' => $this->whenLoaded('returns', fn () => $this->returns->map(fn (OrderReturn $r): array => [
                 'number' => $r->number,

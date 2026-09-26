@@ -34,7 +34,9 @@ export function ReturnSection({ order, phone }) {
   const [reason, setReason] = useState('')
   const [note, setNote] = useState('')
 
-  const returnable = order.returnable_quantities ?? {}
+  const returnable = Object.fromEntries(
+    (order.returnable_quantities ?? []).map((row) => [row.order_item_id, row.quantity]),
+  )
   const items = (order.items ?? []).filter((item) => Number(returnable[item.id] ?? 0) > 0)
   const returns = order.returns ?? []
 
