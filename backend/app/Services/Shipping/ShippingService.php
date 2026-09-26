@@ -96,8 +96,9 @@ class ShippingService
         ?Quantity $weightKg = null,
         bool $requiresCod = false,
         bool $freeShipping = false,
+        array $shippingClassIds = [],
     ): array {
-        $rates = $zone->rates()->active()->get();
+        $rates = $zone->rates()->active()->with('classes')->get();
 
         if ($requiresCod) {
             // A courier that will not collect cash in this zone makes COD
@@ -105,8 +106,8 @@ class ShippingService
             $rates = $rates->filter(fn (ShippingRate $rate): bool => $rate->supports_cod)->values();
         }
 
-        return $rates->map(function (ShippingRate $rate) use ($subtotal, $weightKg, $freeShipping): array {
-            $charge = $freeShipping ? Money::zero() : $rate->chargeFor($subtotal, $weightKg);
+        return $rates->map(function (ShippingRate $rate) use ($subtotal, $weightKg, $freeShipping, $shippingClassIds): array {
+            $charge = $freeShipping ? Money::zero() : $rate->chargeFor($subtotal, $weightKg, $shippingClassIds);
 
             return [
                 'id' => $rate->id,
@@ -138,6 +139,7 @@ class ShippingService
         ?Quantity $weightKg = null,
         bool $requiresCod = false,
         bool $freeShipping = false,
+        array $shippingClassIds = [],
     ): Money {
         if (! $rate->is_active || ! $rate->zone?->is_active) {
             throw new BusinessRuleException(
@@ -161,6 +163,8 @@ class ShippingService
             return Money::zero();
         }
 
-        return $rate->chargeFor($subtotal, $weightKg);
+        $rate->loadMissing('classes');
+
+        return $rate->chargeFor($subtotal, $weightKg, $shippingClassIds);
     }
 }

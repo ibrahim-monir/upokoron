@@ -223,6 +223,12 @@ const schema = z
 
     is_featured: z.boolean(),
     free_shipping: z.boolean(),
+    shipping_class_id: z
+      .union([
+        z.coerce.number().int().positive(),
+        z.literal(''),
+      ])
+      .optional(),
 
     /* SEO */
     meta_title: z
@@ -900,6 +906,17 @@ export default function ProductFormPage() {
       get('/admin/brands'),
   })
 
+  const shippingClasses = useQuery({
+    queryKey: [
+      'admin',
+      'shipping',
+      'classes',
+    ],
+
+    queryFn: () =>
+      get('/admin/shipping/classes'),
+  })
+
   const units = useQuery({
     queryKey: [
       'admin',
@@ -984,6 +1001,7 @@ export default function ProductFormPage() {
       published_at: '',
       is_featured: false,
       free_shipping: false,
+      shipping_class_id: '',
 
       /* SEO */
       meta_title: '',
@@ -1258,6 +1276,11 @@ export default function ProductFormPage() {
       free_shipping:
         product.free_shipping ??
         false,
+
+      shipping_class_id:
+        product.shipping_class_id
+          ? String(product.shipping_class_id)
+          : '',
 
       /* SEO */
 
@@ -2783,6 +2806,36 @@ export default function ProductFormPage() {
                   </span>
 
                 </label>
+
+                <Field
+                  label="Shipping class"
+                  hint="Adds that class's extra delivery charge. Set classes under Operations → Delivery."
+                >
+                  {({
+                    id: fieldId,
+                  }) => (
+                    <Select
+                      id={fieldId}
+                      {...register(
+                        'shipping_class_id',
+                      )}
+                    >
+                      <option value="">
+                        None (normal charge)
+                      </option>
+                      {(shippingClasses.data?.data ?? []).map(
+                        (shippingClass) => (
+                          <option
+                            key={shippingClass.id}
+                            value={String(shippingClass.id)}
+                          >
+                            {shippingClass.name}
+                          </option>
+                        ),
+                      )}
+                    </Select>
+                  )}
+                </Field>
 
               </div>
 

@@ -496,4 +496,18 @@ class OrderLifecycleTest extends TestCase
         $this->assertSame('0.00', $order->shipping_charge);
         $this->assertSame('2000.00', $order->total);
     }
+
+    public function test_a_shipping_class_adds_its_charge_for_the_chosen_option(): void
+    {
+        $heavy = \App\Models\ShippingClass::create(['name' => 'Heavy', 'slug' => 'heavy']);
+        $zone = app(ShippingService::class)->zoneFor('Dhaka', 'Dhaka');
+        ShippingRate::where('shipping_zone_id', $zone->id)->sole()
+            ->classes()->attach($heavy->id, ['charge' => '100.00']);
+
+        $this->variation->product->forceFill(['shipping_class_id' => $heavy->id])->save();
+
+        $order = $this->placeOrder('2');
+
+        $this->assertSame('160.00', $order->shipping_charge);
+    }
 }

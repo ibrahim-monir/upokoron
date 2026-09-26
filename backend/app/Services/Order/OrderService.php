@@ -161,6 +161,7 @@ class OrderService
             weightKg: $summary['weight_kg'],
             requiresCod: $requiresCod,
             freeShipping: $summary['free_shipping'],
+            shippingClassIds: $summary['shipping_class_ids'],
         );
 
         $extraCharge = Money::of($data->paymentMethod->extra_charge);

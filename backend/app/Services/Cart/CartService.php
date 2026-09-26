@@ -177,12 +177,12 @@ class CartService
      * nobody is buying right now should not block checkout out of lines
      * that are fine.
      *
-     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, reward_points: array<string, mixed>|null, weight_kg: Quantity, free_shipping: bool, item_count: int, selected_item_count: int, has_unheld: bool}
+     * @return array{cart: Cart, lines: array<int, array<string, mixed>>, priced: array<int, PricedLine>, subtotal: Money, discount: Money, coupon: array<string, mixed>|null, reward_points: array<string, mixed>|null, weight_kg: Quantity, free_shipping: bool, shipping_class_ids: array<int, int>, item_count: int, selected_item_count: int, has_unheld: bool}
      */
     public function summary(Cart $cart, ?Customer $customer = null): array
     {
         $cart->loadMissing([
-            'items.variation.product:id,name,slug,status,published_at,free_shipping',
+            'items.variation.product:id,name,slug,status,published_at,free_shipping,shipping_class_id',
             'items.variation.image',
             'items.variation.product.primaryImage',
             'items.variation.inventory',
@@ -194,6 +194,7 @@ class CartService
         $lines = [];
         $hasUnheld = false;
         $freeShipping = false;
+        $shippingClassIds = [];
 
         foreach ($cart->items as $item) {
             $variation = $item->variation;
@@ -207,6 +208,10 @@ class CartService
             if ($item->is_selected) {
                 $selectedPriced[] = $line;
                 $freeShipping = $freeShipping || (bool) $variation->product?->free_shipping;
+
+                if ($variation->product?->shipping_class_id !== null) {
+                    $shippingClassIds[] = $variation->product->shipping_class_id;
+                }
             }
 
             $available = $variation->inventory?->available() ?? Quantity::zero();
@@ -262,6 +267,10 @@ class CartService
             // whole delivery free -- the shop's call, so a product can be
             // used as a "buy this, delivery is on us" offer.
             'free_shipping' => $freeShipping,
+
+            // Which shipping classes the selected lines carry; each delivery
+            // option adds its charge for the dearest of them.
+            'shipping_class_ids' => array_values(array_unique($shippingClassIds)),
             'item_count' => count($lines),
             'selected_item_count' => count($selectedPriced),
             'has_unheld' => $hasUnheld,

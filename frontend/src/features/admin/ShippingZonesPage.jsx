@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapPin, Pencil, Plus, Search, Trash2, Truck, X } from 'lucide-react'
+import { Boxes, MapPin, Pencil, Plus, Power, Search, Trash2, Truck, X } from 'lucide-react'
 import { api, get } from '../../lib/api'
 import { cx, money } from '../../lib/format'
 import {
@@ -351,18 +351,176 @@ function AreaEditor({ zone, allZones, onClose }) {
 }
 
 /** One delivery option and its charge. */
+function useShippingClasses() {
+  return useQuery({
+    queryKey: ['admin', 'shipping', 'classes'],
+    queryFn: () => get('/admin/shipping/classes'),
+    select: (response) => response.data,
+  })
+}
+
+/*
+ * Shipping classes: labels such as "Heavy" or "Fragile". A product carries
+ * one (on its edit form), and each delivery option below says how much extra
+ * it charges for it. A basket with several classes pays the dearest extra
+ * once, not every one of them.
+ */
+function ShippingClassesPanel() {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const can = useAuthStore((state) => state.can)
+  const classes = useShippingClasses()
+  const [name, setName] = useState('')
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', 'shipping'] })
+  const fail = (fallback) => (error) => toast.error(error?.message ?? fallback)
+
+  const create = useMutation({
+    mutationFn: () => api.post('/admin/shipping/classes', { name: name.trim() }),
+    onSuccess() {
+      toast.success('Shipping class added. Set its extra charge on each delivery option.')
+      setName('')
+      refresh()
+    },
+    onError: fail('Could not add that class.'),
+  })
+
+  const rename = useMutation({
+    mutationFn: ({ id, newName }) => api.put(`/admin/shipping/classes/${id}`, { name: newName }),
+    onSuccess() {
+      toast.success('Shipping class renamed.')
+      refresh()
+    },
+    onError: fail('Could not rename that class.'),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id) => api.delete(`/admin/shipping/classes/${id}`),
+    onSuccess() {
+      toast.success('Shipping class removed.')
+      refresh()
+    },
+    onError: fail('Could not remove that class.'),
+  })
+
+  const editable = can('shipping.manage')
+  const list = classes.data ?? []
+
+  return (
+    <section className="rounded-card border border-ink-200 bg-white p-4">
+      <div className="flex items-start gap-3">
+        <Boxes className="mt-0.5 h-5 w-5 shrink-0 text-ink-400" aria-hidden="true" />
+        <div className="min-w-0">
+          <h2 className="font-semibold text-ink-900">Shipping classes</h2>
+          <p className="mt-0.5 text-sm text-ink-500">
+            Label products that cost more to deliver, such as Heavy or Fragile, then set each class&apos;s
+            extra charge on every delivery option. If a cart has several classes, only the highest
+            extra is added.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {classes.isLoading ? (
+          <Spinner className="h-4 w-4" />
+        ) : list.length === 0 ? (
+          <p className="text-sm text-ink-500">No shipping classes yet.</p>
+        ) : (
+          list.map((shippingClass) => (
+            <span
+              key={shippingClass.id}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-ink-50 py-1 pl-3 pr-1.5 text-sm text-ink-800"
+            >
+              {shippingClass.name}
+              <span className="text-xs text-ink-500">
+                · {shippingClass.products_count} product{shippingClass.products_count === 1 ? '' : 's'}
+              </span>
+              {editable && (
+                <>
+                  <button
+                    type="button"
+                    aria-label={`Rename ${shippingClass.name}`}
+                    onClick={() => {
+                      const newName = window.prompt('New name for this shipping class', shippingClass.name)
+
+                      if (newName && newName.trim() && newName.trim() !== shippingClass.name) {
+                        rename.mutate({ id: shippingClass.id, newName: newName.trim() })
+                      }
+                    }}
+                    className="grid h-6 w-6 place-items-center rounded-full text-ink-500 hover:bg-white hover:text-ink-800"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${shippingClass.name}`}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Remove the "${shippingClass.name}" class? Its ${shippingClass.products_count} product(s) go back to ordinary delivery charges.`,
+                        )
+                      ) {
+                        remove.mutate(shippingClass.id)
+                      }
+                    }}
+                    className="grid h-6 w-6 place-items-center rounded-full text-ink-500 hover:bg-white hover:text-danger-700"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </>
+              )}
+            </span>
+          ))
+        )}
+      </div>
+
+      {editable && (
+        <form
+          className="mt-3 flex flex-wrap gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+
+            if (name.trim()) create.mutate()
+          }}
+        >
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="New class (Heavy, Fragile…)"
+            aria-label="New shipping class name"
+            className="min-w-48 flex-1 sm:max-w-xs"
+          />
+          <Button type="submit" variant="secondary" loading={create.isPending} disabled={!name.trim()}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add class
+          </Button>
+        </form>
+      )}
+    </section>
+  )
+}
+
 function RateEditor({ zone, rate, onClose }) {
   const toast = useToast()
   const queryClient = useQueryClient()
 
+  const classes = useShippingClasses()
+
   const [form, setForm] = useState({
     name: rate?.name ?? 'Standard delivery',
     base_charge: rate?.base_charge ?? '60.00',
+    per_kg_charge: rate?.per_kg_charge ?? '0',
     free_above_subtotal: rate?.free_above_subtotal ?? '',
     min_days: rate?.min_days ?? '',
     max_days: rate?.max_days ?? '',
     supports_cod: rate?.supports_cod ?? true,
+    is_active: rate?.is_active ?? true,
   })
+
+  // Extra per shipping class, keyed by class id. Blank means none.
+  const [classCharges, setClassCharges] = useState(() =>
+    Object.fromEntries((rate?.class_charges ?? []).map((row) => [row.shipping_class_id, row.charge])),
+  )
 
   const set = (key, value) => setForm((previous) => ({ ...previous, [key]: value }))
 
@@ -371,10 +529,16 @@ function RateEditor({ zone, rate, onClose }) {
       const payload = {
         name: form.name,
         base_charge: Number(form.base_charge),
+        per_kg_charge: Number(form.per_kg_charge || 0),
         free_above_subtotal: form.free_above_subtotal === '' ? null : Number(form.free_above_subtotal),
         min_days: form.min_days === '' ? null : Number(form.min_days),
         max_days: form.max_days === '' ? null : Number(form.max_days),
         supports_cod: form.supports_cod,
+        is_active: form.is_active,
+        class_charges: (classes.data ?? []).map((shippingClass) => ({
+          shipping_class_id: shippingClass.id,
+          charge: Number(classCharges[shippingClass.id] || 0),
+        })),
       }
 
       const { data } = rate
@@ -422,6 +586,16 @@ function RateEditor({ zone, rate, onClose }) {
         />
 
         <Field
+          label="Per kg"
+          type="number"
+          step="0.01"
+          min="0"
+          hint="Added for each kg of the order's weight. 0 for none."
+          value={form.per_kg_charge}
+          onChange={(event) => set('per_kg_charge', event.target.value)}
+        />
+
+        <Field
           label="Free above"
           type="number"
           step="0.01"
@@ -464,6 +638,43 @@ function RateEditor({ zone, rate, onClose }) {
         cash on delivery at checkout.
       </p>
 
+      <label className="mt-3 flex items-center gap-2 text-sm text-ink-800">
+        <input
+          type="checkbox"
+          checked={form.is_active}
+          onChange={(event) => set('is_active', event.target.checked)}
+          className="h-4 w-4 rounded border-ink-300 text-brand-800"
+        />
+        Offer this delivery option at checkout
+      </label>
+
+      {(classes.data ?? []).length > 0 && (
+        <div className="mt-3 rounded-lg border border-ink-200 bg-white p-3">
+          <p className="text-sm font-semibold text-ink-900">Extra charge by shipping class</p>
+          <p className="mt-0.5 text-xs text-ink-500">
+            Added on top of the charge above. If a cart has several classes, only the highest extra is
+            added. Leave blank for no extra.
+          </p>
+
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {classes.data.map((shippingClass) => (
+              <Field
+                key={shippingClass.id}
+                label={shippingClass.name}
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0"
+                value={classCharges[shippingClass.id] ?? ''}
+                onChange={(event) =>
+                  setClassCharges((previous) => ({ ...previous, [shippingClass.id]: event.target.value }))
+                }
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 flex gap-2">
         <Button onClick={() => save.mutate()} loading={save.isPending}>
           Save
@@ -505,10 +716,32 @@ function ZoneCard({ zone, allZones }) {
     },
   })
 
+  const updateZone = useMutation({
+    mutationFn: (changes) => api.put(`/admin/shipping/zones/${zone.id}`, changes),
+    onSuccess() {
+      toast.success('Zone updated.')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shipping'] })
+    },
+    onError(error) {
+      toast.error(error?.message ?? 'Could not update that zone.')
+    },
+  })
+
+  const removeZone = useMutation({
+    mutationFn: () => api.delete(`/admin/shipping/zones/${zone.id}`),
+    onSuccess() {
+      toast.success(`${zone.name} removed.`)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shipping'] })
+    },
+    onError(error) {
+      toast.error(error?.message ?? 'Could not remove that zone.')
+    },
+  })
+
   const editable = can('shipping.manage')
 
   return (
-    <section className="rounded-card border border-ink-200 bg-white">
+    <section className={cx('rounded-card border border-ink-200 bg-white', !zone.is_active && 'opacity-70')}>
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-ink-100 p-4">
         <div className="min-w-0">
           <h3 className="flex flex-wrap items-center gap-2 font-semibold text-ink-900">
@@ -520,7 +753,34 @@ function ZoneCard({ zone, allZones }) {
         </div>
 
         {editable && (
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const newName = window.prompt('New name for this zone', zone.name)
+
+                if (newName && newName.trim() && newName.trim() !== zone.name) {
+                  updateZone.mutate({ name: newName.trim() })
+                }
+              }}
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Rename
+            </Button>
+
+            {!zone.is_fallback && (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={updateZone.isPending}
+                onClick={() => updateZone.mutate({ is_active: !zone.is_active })}
+              >
+                <Power className="h-4 w-4" aria-hidden="true" />
+                {zone.is_active ? 'Turn off' : 'Turn on'}
+              </Button>
+            )}
+
             {!zone.is_fallback && (
               <Button
                 variant="secondary"
@@ -544,6 +804,27 @@ function ZoneCard({ zone, allZones }) {
               <MapPin className="h-4 w-4" aria-hidden="true" />
               Areas ({zone.areas.length})
             </Button>
+
+            {!zone.is_fallback && (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={removeZone.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Delete the ${zone.name} zone? Its areas will be charged by the default zone instead.`,
+                    )
+                  ) {
+                    removeZone.mutate()
+                  }
+                }}
+                className="text-danger-700"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Delete
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -596,6 +877,10 @@ function ZoneCard({ zone, allZones }) {
                       ? ` · free above ${money(rate.free_above_subtotal)}`
                       : ''}
                     {!rate.supports_cod ? ' · no cash on delivery' : ''}
+                    {Number(rate.per_kg_charge) > 0 ? ` · +${money(rate.per_kg_charge)}/kg` : ''}
+                    {(rate.class_charges ?? [])
+                      .map((row) => ` · ${row.name} +${money(row.charge)}`)
+                      .join('')}
                   </p>
                 </div>
 
@@ -736,6 +1021,8 @@ export default function ShippingZonesPage() {
       )}
 
       <AddressTester />
+
+      <ShippingClassesPanel />
 
       {list.map((zone) => (
         <ZoneCard key={zone.id} zone={zone} allZones={list} />

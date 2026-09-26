@@ -33,7 +33,7 @@ class ShippingZoneController extends Controller
         abort_unless($request->user()?->can('shipping.manage'), 403);
 
         $zones = ShippingZone::query()
-            ->with(['areas:id,shipping_zone_id,district,city', 'rates'])
+            ->with(['areas:id,shipping_zone_id,district,city', 'rates.classes'])
             ->orderBy('position')
             ->orderBy('id')
             ->get();
@@ -65,7 +65,7 @@ class ShippingZoneController extends Controller
             return $zone;
         });
 
-        return response()->json(['data' => $this->present($zone->load(['areas', 'rates']))], 201);
+        return response()->json(['data' => $this->present($zone->load(['areas', 'rates.classes']))], 201);
     }
 
     public function update(Request $request, ShippingZone $zone): JsonResponse
@@ -87,7 +87,7 @@ class ShippingZoneController extends Controller
             $this->syncFallback($zone->refresh());
         });
 
-        return response()->json(['data' => $this->present($zone->refresh()->load(['areas', 'rates']))]);
+        return response()->json(['data' => $this->present($zone->refresh()->load(['areas', 'rates.classes']))]);
     }
 
     public function destroy(Request $request, ShippingZone $zone): JsonResponse
@@ -209,9 +209,16 @@ class ShippingZoneController extends Controller
     {
         abort_unless($request->user()?->can('shipping.manage'), 403);
 
-        $rate = ShippingRate::create($this->rateData($request) + ['shipping_zone_id' => $zone->id]);
+        $data = $this->rateData($request);
 
-        return response()->json(['data' => $this->presentRate($rate)], 201);
+        $rate = DB::transaction(function () use ($data, $zone): ShippingRate {
+            $rate = ShippingRate::create(collect($data)->except('class_charges')->all() + ['shipping_zone_id' => $zone->id]);
+            $this->syncClassCharges($rate, $data);
+
+            return $rate;
+        });
+
+        return response()->json(['data' => $this->presentRate($rate->load('classes'))], 201);
     }
 
     public function updateRate(Request $request, ShippingZone $zone, ShippingRate $rate): JsonResponse
@@ -219,9 +226,14 @@ class ShippingZoneController extends Controller
         abort_unless($request->user()?->can('shipping.manage'), 403);
         abort_unless($rate->shipping_zone_id === $zone->id, 404);
 
-        $rate->update($this->rateData($request, partial: true));
+        $data = $this->rateData($request, partial: true);
 
-        return response()->json(['data' => $this->presentRate($rate->refresh())]);
+        DB::transaction(function () use ($data, $rate): void {
+            $rate->update(collect($data)->except('class_charges')->all());
+            $this->syncClassCharges($rate, $data);
+        });
+
+        return response()->json(['data' => $this->presentRate($rate->refresh()->load('classes'))]);
     }
 
     public function destroyRate(Request $request, ShippingZone $zone, ShippingRate $rate): JsonResponse
@@ -259,7 +271,32 @@ class ShippingZoneController extends Controller
             'supports_cod' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
             'position' => ['sometimes', 'integer', 'min:0', 'max:9999'],
+
+            // The extra this option charges per shipping class. Sent whole:
+            // a class left out, or given 0, charges nothing extra.
+            'class_charges' => ['sometimes', 'array'],
+            'class_charges.*.shipping_class_id' => ['required', 'integer', 'distinct', 'exists:shipping_classes,id'],
+            'class_charges.*.charge' => ['required', 'numeric', 'min:0', 'max:99999999'],
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function syncClassCharges(ShippingRate $rate, array $data): void
+    {
+        if (! array_key_exists('class_charges', $data)) {
+            return;
+        }
+
+        $rate->classes()->sync(
+            collect($data['class_charges'])
+                ->filter(fn (array $row): bool => (float) $row['charge'] > 0)
+                ->mapWithKeys(fn (array $row): array => [
+                    (int) $row['shipping_class_id'] => ['charge' => $row['charge']],
+                ])
+                ->all(),
+        );
     }
 
     /**
@@ -352,6 +389,11 @@ class ShippingZoneController extends Controller
             'supports_cod' => $rate->supports_cod,
             'is_active' => $rate->is_active,
             'position' => $rate->position,
+            'class_charges' => $rate->classes->map(fn ($class): array => [
+                'shipping_class_id' => $class->id,
+                'name' => $class->name,
+                'charge' => (string) $class->pivot->charge,
+            ])->values()->all(),
         ];
     }
 }

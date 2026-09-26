@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\Admin\QuestionController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
+use App\Http\Controllers\Api\V1\Admin\ShippingClassController;
 use App\Http\Controllers\Api\V1\Admin\ShippingZoneController;
 use App\Http\Controllers\Api\V1\Admin\SitemapController;
 use App\Http\Controllers\Api\V1\Admin\UnitController;
@@ -236,6 +237,10 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
 
     // Delivery zones, the places in them, and what each charges.
     Route::get('shipping/zones', [ShippingZoneController::class, 'index'])->name('shipping.zones.index');
+    Route::get('shipping/classes', [ShippingClassController::class, 'index'])->name('shipping.classes.index');
+    Route::post('shipping/classes', [ShippingClassController::class, 'store'])->name('shipping.classes.store');
+    Route::put('shipping/classes/{shippingClass}', [ShippingClassController::class, 'update'])->name('shipping.classes.update');
+    Route::delete('shipping/classes/{shippingClass}', [ShippingClassController::class, 'destroy'])->name('shipping.classes.destroy');
 
     // "Which zone does this address fall in, and what would it cost?"
     Route::post('shipping/test', [ShippingZoneController::class, 'test'])->name('shipping.test');

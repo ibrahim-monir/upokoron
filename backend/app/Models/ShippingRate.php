@@ -10,6 +10,7 @@ use App\Support\Quantity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * A delivery option within a zone, and what it costs.
@@ -40,6 +41,14 @@ class ShippingRate extends Model
         return $this->belongsTo(ShippingZone::class, 'shipping_zone_id');
     }
 
+    /** What this option charges on top for each shipping class. */
+    public function classes(): BelongsToMany
+    {
+        return $this->belongsToMany(ShippingClass::class, 'shipping_class_rates')
+            ->withPivot('charge')
+            ->withTimestamps();
+    }
+
     /**
      * What this rate charges for a given basket.
      *
@@ -48,7 +57,10 @@ class ShippingRate extends Model
      * circular, and lands on the wrong side of the threshold for any order
      * sitting near it.
      */
-    public function chargeFor(Money $subtotal, ?Quantity $totalWeightKg = null): Money
+    /**
+     * @param  array<int, int>  $shippingClassIds  the classes of the products in the basket
+     */
+    public function chargeFor(Money $subtotal, ?Quantity $totalWeightKg = null, array $shippingClassIds = []): Money
     {
         if ($this->free_above_subtotal !== null
             && $subtotal->greaterThanOrEqual(Money::of($this->free_above_subtotal))) {
@@ -64,7 +76,40 @@ class ShippingRate extends Model
             $charge = $charge->plus(Money::of($this->per_kg_charge)->times($totalWeightKg->value()));
         }
 
-        return $charge;
+        return $charge->plus($this->classCharge($shippingClassIds));
+    }
+
+    /**
+     * The extra for the basket's shipping classes: the dearest one, once.
+     *
+     * Not the sum. Three heavy items go in one parcel, and a heavy item plus
+     * a fragile one is still one delivery -- adding the extras together would
+     * charge for trips the courier does not make. (WooCommerce's default,
+     * "charge for the most expensive class", for the same reason.)
+     *
+     * @param  array<int, int>  $shippingClassIds
+     */
+    public function classCharge(array $shippingClassIds): Money
+    {
+        if ($shippingClassIds === []) {
+            return Money::zero();
+        }
+
+        $highest = Money::zero();
+
+        foreach ($this->classes as $class) {
+            if (! in_array($class->id, $shippingClassIds, true)) {
+                continue;
+            }
+
+            $extra = Money::of((string) $class->pivot->charge);
+
+            if ($extra->greaterThan($highest)) {
+                $highest = $extra;
+            }
+        }
+
+        return $highest;
     }
 
     public function estimateLabel(): ?string

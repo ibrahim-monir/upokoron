@@ -152,6 +152,7 @@ class CheckoutController extends Controller
                     weightKg: $summary['weight_kg'],
                     requiresCod: (bool) ($data['cod'] ?? false),
                     freeShipping: $summary['free_shipping'],
+                    shippingClassIds: $summary['shipping_class_ids'],
                 ),
             ],
         ]);
