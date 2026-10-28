@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import { Download, FileSpreadsheet, Link2, Upload } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Download, FileSpreadsheet, Link2, RefreshCw, Upload } from 'lucide-react'
 import { post } from '../../lib/api'
 import { useList } from './useResource'
 import { useAuthStore } from '../../stores/authStore'
@@ -43,7 +43,7 @@ export default function ProductImportPage() {
 
         <h1 className="text-2xl font-bold tracking-tight text-slate-950">Import products</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-500">
-          Read one product page, or a whole supplier price list. Everything arrives as a draft for
+          Read one product page, a CSV price list, or the connected supplier catalog. Imported items arrive as drafts for
           you to check — prices move, and product photos and descriptions usually belong to whoever
           published them, so rewrite anything you did not write yourself before going live.
         </p>
@@ -53,6 +53,7 @@ export default function ProductImportPage() {
         {[
           { id: 'url', label: 'From a product page', icon: Link2 },
           { id: 'csv', label: 'From a CSV price list', icon: FileSpreadsheet },
+          { id: 'dropshipping', label: 'DropShipping.com.bd', icon: RefreshCw },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -70,7 +71,7 @@ export default function ProductImportPage() {
         ))}
       </div>
 
-      {tab === 'url' ? <ImportFromUrl /> : <ImportFromCsv />}
+      {tab === 'url' ? <ImportFromUrl /> : tab === 'csv' ? <ImportFromCsv /> : <ImportFromDropShipping />}
     </div>
   )
 }
@@ -615,6 +616,118 @@ function ImportFromCsv() {
       {categories.isError && <ErrorState error={categories.error} onRetry={categories.refetch} />}
 
       {summary && <CsvSummary summary={summary} />}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------
+   Full DropShipping.com.bd catalog, run manually and processed in the queue
+   ------------------------------------------------------------------------- */
+
+const ACTIVE_IMPORT_STATUSES = new Set(['queued', 'running'])
+
+function ImportFromDropShipping() {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const status = useList(
+    'admin.dropshipping.import-status',
+    '/admin/products/import/dropshipping/status',
+    {},
+    {
+      refetchInterval: (query) =>
+        ACTIVE_IMPORT_STATUSES.has(query.state.data?.run?.status) ? 2500 : false,
+    },
+  )
+
+  const start = useMutation({
+    mutationFn: () => post('/admin/products/import/dropshipping', {}),
+    onSuccess(data) {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['admin.dropshipping.import-status'] })
+    },
+    onError: (error) => toast.error(error?.message ?? 'Could not start the supplier import.'),
+  })
+
+  const configured = status.data?.configured ?? false
+  const run = status.data?.run
+  const isRunning = ACTIVE_IMPORT_STATUSES.has(run?.status)
+  const progress = run?.last_page > 0 ? Math.min(100, (run.current_page / run.last_page) * 100) : 0
+
+  const statusLabel = {
+    queued: 'Queued',
+    running: 'Importing',
+    completed: 'Completed',
+    completed_with_errors: 'Completed with skipped errors',
+    failed: 'Failed',
+  }[run?.status]
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader
+          title="Import supplier catalog"
+          description="Fetches every page from DropShipping.com.bd and creates unpublished drafts. Re-running skips products already imported."
+        />
+
+        <div className="grid gap-4 p-4">
+          <p className="max-w-3xl text-sm text-ink-600">
+            This runs in the background, so you can leave this page while it works. Supplier categories are grouped by their API IDs; review category labels and variant details before publishing.
+          </p>
+
+          {!configured && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+              Supplier API credentials are not configured on the live server. Add the rotated keys to the backend <code>.env</code>, then refresh this page.
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => start.mutate()}
+              loading={start.isPending}
+              disabled={!configured || isRunning || status.isLoading}
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              {isRunning ? 'Import running' : 'Import all products as drafts'}
+            </Button>
+            <Button variant="secondary" onClick={() => status.refetch()} loading={status.isFetching}>
+              Refresh status
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {status.isError && <ErrorState error={status.error} onRetry={status.refetch} />}
+
+      {run && (
+        <Card>
+          <CardHeader
+            title={`Import #${run.id}: ${statusLabel ?? run.status}`}
+            description={run.last_page > 0 ? `Page ${run.current_page} of ${run.last_page}` : 'Waiting for the queue worker'}
+            actions={<Badge tone={run.status === 'failed' ? 'danger' : isRunning ? 'brand' : 'success'}>{statusLabel ?? run.status}</Badge>}
+          />
+
+          <div className="grid gap-4 p-4">
+            {run.last_page > 0 && (
+              <progress className="h-2 w-full overflow-hidden rounded-full accent-brand-600" max="100" value={progress} aria-label="Supplier import progress" />
+            )}
+
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                ['Drafts created', run.created_count],
+                ['Already imported', run.skipped_count],
+                ['Failed products', run.failed_count],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-ink-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
+                  <p className="text-xl font-bold text-ink-900">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {run.error && <p className="text-sm text-red-700">{run.error}</p>}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

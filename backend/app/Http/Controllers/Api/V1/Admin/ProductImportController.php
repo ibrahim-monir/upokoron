@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ImportDropShippingCatalogPage;
+use App\Models\DropShippingImportRun;
 use App\Services\Catalog\Import\ProductCsvImporter;
 use App\Services\Catalog\Import\ProductPageScraper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -53,6 +57,87 @@ class ProductImportController extends Controller
             'message' => "Read [{$product->name}] from {$product->source}. Check every field before saving.",
             'product' => $product->toArray(),
         ]);
+    }
+
+    /** Start a background import of every page in the supplier catalog. */
+    public function startDropshipping(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->can('products.create'), 403);
+
+        if (! filled(config('services.dropshipping.api_key')) || ! filled(config('services.dropshipping.secret_key'))) {
+            return response()->json([
+                'message' => 'Add the supplier API credentials to the live server .env before starting an import.',
+            ], 503);
+        }
+
+        $lock = Cache::lock('dropshipping-catalog-import-start', 15);
+        if (! $lock->get()) {
+            return response()->json(['message' => 'Another supplier import is being started. Try again shortly.'], 409);
+        }
+
+        try {
+            $run = DB::transaction(function () use ($request): DropShippingImportRun|JsonResponse {
+                $active = DropShippingImportRun::query()
+                    ->whereIn('status', ['queued', 'running'])
+                    ->latest('id')
+                    ->first();
+
+                if ($active !== null) {
+                    return response()->json([
+                        'message' => 'A supplier catalog import is already running.',
+                        'run' => $this->runData($active),
+                    ], 409);
+                }
+
+                $run = DropShippingImportRun::create([
+                    'status' => 'queued',
+                    'started_by' => $request->user()->id,
+                ]);
+
+                ImportDropShippingCatalogPage::dispatch($run->id, 1)->onQueue('imports')->afterCommit();
+
+                return $run;
+            });
+
+            if ($run instanceof JsonResponse) return $run;
+
+            return response()->json([
+                'message' => 'Supplier catalog import queued. All imported products will remain drafts.',
+                'run' => $this->runData($run),
+            ], 202);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /** Current/latest supplier import progress for the admin screen. */
+    public function dropshippingStatus(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->can('products.create'), 403);
+
+        $run = DropShippingImportRun::query()->latest('id')->first();
+
+        return response()->json([
+            'configured' => filled(config('services.dropshipping.api_key')) && filled(config('services.dropshipping.secret_key')),
+            'run' => $run === null ? null : $this->runData($run),
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function runData(DropShippingImportRun $run): array
+    {
+        return [
+            'id' => $run->id,
+            'status' => $run->status,
+            'current_page' => $run->current_page,
+            'last_page' => $run->last_page,
+            'created_count' => $run->created_count,
+            'skipped_count' => $run->skipped_count,
+            'failed_count' => $run->failed_count,
+            'error' => $run->error,
+            'started_at' => $run->started_at,
+            'finished_at' => $run->finished_at,
+        ];
     }
 
     /**

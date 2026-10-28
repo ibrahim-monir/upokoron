@@ -17,7 +17,9 @@ use Illuminate\Support\Facades\Schedule;
 |
 */
 
-Schedule::command('queue:work --stop-when-empty --max-time=50')
+// Keep catalog import pages ahead of product-image downloads so a large
+// image backlog cannot stall the import progress chain.
+Schedule::command('queue:work --queue=imports,default --stop-when-empty --max-time=50')
     ->everyMinute()
     ->withoutOverlapping();
 

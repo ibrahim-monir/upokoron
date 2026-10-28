@@ -120,6 +120,11 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::post('products/import/scrape', [ProductImportController::class, 'scrape'])
         ->middleware('throttle:import')
         ->name('products.import.scrape');
+    Route::post('products/import/dropshipping', [ProductImportController::class, 'startDropshipping'])
+        ->middleware('throttle:import')
+        ->name('products.import.dropshipping.start');
+    Route::get('products/import/dropshipping/status', [ProductImportController::class, 'dropshippingStatus'])
+        ->name('products.import.dropshipping.status');
     Route::post('products/import/csv', [ProductImportController::class, 'csv'])
         ->middleware('throttle:import')
         ->name('products.import.csv');
