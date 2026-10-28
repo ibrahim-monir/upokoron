@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -127,12 +128,33 @@ class ProductImportController extends Controller
     {
         abort_unless($request->user()?->can('products.create'), 403);
 
+        if (! Schema::hasTable('dropshipping_import_runs')
+            || ! Schema::hasColumns('dropshipping_import_runs', ['page_from', 'page_to', 'category_id', 'status'])) {
+            return response()->json([
+                'message' => 'Supplier import database migrations are pending. Run php artisan migrate --force on the live server.',
+            ], 503);
+        }
+
         $run = DropShippingImportRun::query()->latest('id')->first();
+        $categories = [];
+
+        if (Schema::hasTable('dropshipping_catalog_items')) {
+            try {
+                $categories = $this->supplierCategories();
+            } catch (\Throwable $exception) {
+                // Category choices are optional. Keep status and page-range
+                // imports usable even if an older database has catalog rows
+                // in a schema this version does not recognize.
+                Log::warning('Could not load DropShipping category options.', [
+                    'exception' => $exception::class,
+                ]);
+            }
+        }
 
         return response()->json([
             'configured' => filled(config('services.dropshipping.api_key')) && filled(config('services.dropshipping.secret_key')),
             'run' => $run === null ? null : $this->runData($run),
-            'categories' => $this->supplierCategories(),
+            'categories' => $categories,
         ]);
     }
 
