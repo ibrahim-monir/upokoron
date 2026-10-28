@@ -54,6 +54,13 @@ return [
         'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
     ],
 
+    'dropshipping' => [
+        'catalog_url' => env('DROPSHIPPING_CATALOG_URL', 'https://mohasagor.com.bd/api/reseller/product'),
+        'image_base_url' => env('DROPSHIPPING_IMAGE_BASE_URL', 'https://mohasagor.com.bd'),
+        'api_key' => env('DROPSHIPPING_API_KEY'),
+        'secret_key' => env('DROPSHIPPING_SECRET_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -366,7 +366,46 @@ Anything unexplained: put `preflight.php` back, run it, delete it again.
 
 ---
 
-## 11. Deploying an update later
+## 11. Importing the DropShipping.com.bd catalog
+
+The backend command reads every page from the reseller product API and creates
+unpublished, untracked-stock drafts. It is safe to retry: supplier products
+already recorded are not duplicated, and their latest raw API record is kept
+in `dropshipping_catalog_items`.
+
+Before running it on the live server, add the rotated API credentials to
+`/home/USER/laravel/.env`:
+
+```dotenv
+DROPSHIPPING_API_KEY=YOUR_ROTATED_API_KEY
+DROPSHIPPING_SECRET_KEY=YOUR_ROTATED_SECRET_KEY
+```
+
+Then run the migration and importer from cPanel Terminal:
+
+```bash
+cd ~/laravel
+php artisan migrate --force
+php artisan dropshipping:import-catalog
+```
+
+If there is no Terminal, run those commands one at a time through the
+temporary one-off cron procedure in section 6b, then delete the cron job.
+The importer commits each product separately, so if shared-hosting execution
+stops partway through, run the same command again; it resumes by skipping
+products already mapped.
+
+Products are kept as drafts. Supplier category IDs are grouped under inactive
+placeholder categories until their real names are available. Supplier prices,
+category ID, attribute/variant IDs, details, and images are copied to the
+draft; the complete supplier payload is also retained in
+`dropshipping_catalog_items`.
+This API response does not include readable category labels or variant option
+names, so those details must be resolved before the drafts are published.
+This command imports the catalog only; it does not submit customer orders to
+the supplier.
+
+## 12. Deploying an update later
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File deploy\build.ps1
@@ -388,7 +427,7 @@ That is where all the state lives.
 
 ---
 
-## 12. Backups
+## 13. Backups
 
 Take these before every update, and on a schedule once real orders exist.
 
@@ -403,7 +442,7 @@ The code is in git and does not need backing up.
 
 ---
 
-## 13. What this deployment deliberately does not do
+## 14. What this deployment deliberately does not do
 
 Each of these is a shared-hosting reality, not an oversight:
 
