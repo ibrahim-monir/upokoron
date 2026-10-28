@@ -678,8 +678,8 @@ function ImportFromDropShipping() {
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader
-          title="Import supplier catalog"
-          description="Fetches every page from DropShipping.com.bd and creates unpublished drafts. Re-running skips products already imported."
+          title="DropShipping.com.bd supplier catalog"
+          description="Supplier: DropShipping.com.bd. Fetches every page and creates unpublished drafts. Re-running skips products already imported."
         />
 
         <div className="grid gap-4 p-4">
