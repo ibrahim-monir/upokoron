@@ -43,14 +43,40 @@ class ImportDropShippingCatalogPage implements ShouldQueue
         ]);
 
         $batch = $catalog->page($this->page);
-        $summary = $importer->importProducts($batch['products']);
+        $lastSelectedPage = $run->page_to === null
+            ? $batch['last_page']
+            : min($run->page_to, $batch['last_page']);
+
+        if ($this->page > $batch['last_page']) {
+            $run->update([
+                'status' => 'failed',
+                'error' => "Page {$this->page} does not exist. The supplier catalog currently has {$batch['last_page']} page(s).",
+                'finished_at' => now(),
+            ]);
+
+            return;
+        }
+
+        $products = $batch['products'];
+        if ($run->category_id !== null) {
+            $products = array_values(array_filter(
+                $products,
+                fn (array $product): bool => (string) ($product['category_id'] ?? '') === $run->category_id,
+            ));
+        }
+
+        $summary = $importer->importProducts($products);
 
         $run->created_count += $summary['created'];
         $run->skipped_count += $summary['skipped'];
         $run->failed_count += $summary['failed'];
-        $run->last_page = $batch['last_page'];
+        $run->last_page = $lastSelectedPage;
+        if ($summary['errors'] !== []) {
+            $currentErrors = $run->error ? $run->error."\n" : '';
+            $run->error = mb_substr($currentErrors.implode("\n", $summary['errors']), 0, 4000);
+        }
 
-        if ($this->page >= $batch['last_page']) {
+        if ($this->page >= $lastSelectedPage) {
             $run->status = $run->failed_count > 0 ? 'completed_with_errors' : 'completed';
             $run->finished_at = now();
             $run->save();

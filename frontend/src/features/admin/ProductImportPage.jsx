@@ -629,6 +629,7 @@ const ACTIVE_IMPORT_STATUSES = new Set(['queued', 'running'])
 function ImportFromDropShipping() {
   const toast = useToast()
   const queryClient = useQueryClient()
+  const [filters, setFilters] = useState({ page_from: '1', page_to: '', category_id: '' })
   const status = useList(
     'admin.dropshipping.import-status',
     '/admin/products/import/dropshipping/status',
@@ -640,7 +641,12 @@ function ImportFromDropShipping() {
   )
 
   const start = useMutation({
-    mutationFn: () => post('/admin/products/import/dropshipping', {}),
+    mutationFn: () =>
+      post('/admin/products/import/dropshipping', {
+        page_from: Number(filters.page_from || 1),
+        page_to: filters.page_to ? Number(filters.page_to) : null,
+        category_id: filters.category_id || null,
+      }),
     onSuccess(data) {
       toast.success(data.message)
       queryClient.invalidateQueries({ queryKey: ['admin.dropshipping.import-status'] })
@@ -651,7 +657,13 @@ function ImportFromDropShipping() {
   const configured = status.data?.configured ?? false
   const run = status.data?.run
   const isRunning = ACTIVE_IMPORT_STATUSES.has(run?.status)
-  const progress = run?.last_page > 0 ? Math.min(100, (run.current_page / run.last_page) * 100) : 0
+  const selectedPageCount = run?.last_page > 0 ? Math.max(1, run.last_page - run.page_from + 1) : 0
+  const progress = selectedPageCount > 0
+    ? Math.min(100, ((run.current_page - run.page_from + 1) / selectedPageCount) * 100)
+    : 0
+  const categories = status.data?.categories ?? []
+  const pageRangeInvalid = filters.page_to && Number(filters.page_to) < Number(filters.page_from || 1)
+  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }))
 
   const statusLabel = {
     queued: 'Queued',
@@ -660,6 +672,7 @@ function ImportFromDropShipping() {
     completed_with_errors: 'Completed with skipped errors',
     failed: 'Failed',
   }[run?.status]
+  const selectedCategoryName = categories.find((category) => category.id === run?.category_id)?.name
 
   return (
     <div className="flex flex-col gap-4">
@@ -674,6 +687,41 @@ function ImportFromDropShipping() {
             This runs in the background, so you can leave this page while it works. Supplier categories are grouped by their API IDs; review category labels and variant details before publishing.
           </p>
 
+          <div className="grid gap-3 sm:grid-cols-3">
+            {categories.length > 0 ? (
+              <Field label="Supplier category">
+                {({ id }) => (
+                  <Select id={id} value={filters.category_id} onChange={setFilter('category_id')}>
+                    <option value="">All categories</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.name} (ID {category.id})</option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            ) : (
+              <Field label="Supplier category ID" hint="Leave blank for every category. The API only provides category IDs.">
+                {({ id }) => (
+                  <Input id={id} type="number" min="1" value={filters.category_id} onChange={setFilter('category_id')} placeholder="All categories" />
+                )}
+              </Field>
+            )}
+
+            <Field label="First page" hint="The supplier API returns up to 200 products per page.">
+              {({ id }) => (
+                <Input id={id} type="number" min="1" value={filters.page_from} onChange={setFilter('page_from')} />
+              )}
+            </Field>
+
+            <Field label="Last page" hint="Leave blank to continue through the supplier's last page.">
+              {({ id }) => (
+                <Input id={id} type="number" min={filters.page_from || 1} value={filters.page_to} onChange={setFilter('page_to')} placeholder="Last page" />
+              )}
+            </Field>
+          </div>
+
+          {pageRangeInvalid && <p className="text-sm text-red-700">Last page must be greater than or equal to first page.</p>}
+
           {!configured && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
               Supplier API credentials are not configured on the live server. Add the rotated keys to the backend <code>.env</code>, then refresh this page.
@@ -684,7 +732,7 @@ function ImportFromDropShipping() {
             <Button
               onClick={() => start.mutate()}
               loading={start.isPending}
-              disabled={!configured || isRunning || status.isLoading}
+              disabled={!configured || isRunning || status.isLoading || Boolean(pageRangeInvalid)}
             >
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
               {isRunning ? 'Import running' : 'Import all products as drafts'}
@@ -702,7 +750,9 @@ function ImportFromDropShipping() {
         <Card>
           <CardHeader
             title={`Import #${run.id}: ${statusLabel ?? run.status}`}
-            description={run.last_page > 0 ? `Page ${run.current_page} of ${run.last_page}` : 'Waiting for the queue worker'}
+            description={run.last_page > 0
+              ? `Page ${run.current_page} of ${run.last_page}${run.category_id ? ` · ${selectedCategoryName ?? `Supplier category ${run.category_id}`}` : ' · All categories'}`
+              : 'Waiting for the queue worker'}
             actions={<Badge tone={run.status === 'failed' ? 'danger' : isRunning ? 'brand' : 'success'}>{statusLabel ?? run.status}</Badge>}
           />
 

@@ -64,6 +64,15 @@ class ProductImportController extends Controller
     {
         abort_unless($request->user()?->can('products.create'), 403);
 
+        $filters = $request->validate([
+            'page_from' => ['sometimes', 'integer', 'min:1'],
+            'page_to' => ['nullable', 'integer', 'min:1'],
+            'category_id' => ['nullable', 'string', 'max:100'],
+        ]);
+        if (isset($filters['page_to']) && $filters['page_to'] < ($filters['page_from'] ?? 1)) {
+            return response()->json(['message' => 'The last page must be greater than or equal to the first page.'], 422);
+        }
+
         if (! filled(config('services.dropshipping.api_key')) || ! filled(config('services.dropshipping.secret_key'))) {
             return response()->json([
                 'message' => 'Add the supplier API credentials to the live server .env before starting an import.',
@@ -76,7 +85,7 @@ class ProductImportController extends Controller
         }
 
         try {
-            $run = DB::transaction(function () use ($request): DropShippingImportRun|JsonResponse {
+            $run = DB::transaction(function () use ($request, $filters): DropShippingImportRun|JsonResponse {
                 $active = DropShippingImportRun::query()
                     ->whereIn('status', ['queued', 'running'])
                     ->latest('id')
@@ -91,10 +100,13 @@ class ProductImportController extends Controller
 
                 $run = DropShippingImportRun::create([
                     'status' => 'queued',
+                    'page_from' => (int) ($filters['page_from'] ?? 1),
+                    'page_to' => isset($filters['page_to']) ? (int) $filters['page_to'] : null,
+                    'category_id' => filled($filters['category_id'] ?? null) ? trim($filters['category_id']) : null,
                     'started_by' => $request->user()->id,
                 ]);
 
-                ImportDropShippingCatalogPage::dispatch($run->id, 1)->onQueue('imports')->afterCommit();
+                ImportDropShippingCatalogPage::dispatch($run->id, $run->page_from)->onQueue('imports')->afterCommit();
 
                 return $run;
             });
@@ -120,7 +132,32 @@ class ProductImportController extends Controller
         return response()->json([
             'configured' => filled(config('services.dropshipping.api_key')) && filled(config('services.dropshipping.secret_key')),
             'run' => $run === null ? null : $this->runData($run),
+            'categories' => $this->supplierCategories(),
         ]);
+    }
+
+    /** @return array<int, array{id: string, name: string}> */
+    private function supplierCategories(): array
+    {
+        $ids = DB::table('dropshipping_catalog_items')
+            ->whereNotNull('provider_category_id')
+            ->distinct()
+            ->orderBy('provider_category_id')
+            ->pluck('provider_category_id');
+
+        return $ids->map(function ($categoryId): array {
+                $payloadValue = DB::table('dropshipping_catalog_items')
+                    ->where('provider_category_id', $categoryId)
+                    ->value('source_payload');
+                $payload = is_array($payloadValue) ? $payloadValue : json_decode((string) $payloadValue, true);
+                $name = data_get($payload, 'category_name') ?? data_get($payload, 'category.name');
+                $id = (string) $categoryId;
+
+                return ['id' => $id, 'name' => filled($name) ? (string) $name : "Supplier category {$id}"];
+            })
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
     }
 
     /** @return array<string, mixed> */
@@ -129,6 +166,9 @@ class ProductImportController extends Controller
         return [
             'id' => $run->id,
             'status' => $run->status,
+            'page_from' => $run->page_from,
+            'page_to' => $run->page_to,
+            'category_id' => $run->category_id,
             'current_page' => $run->current_page,
             'last_page' => $run->last_page,
             'created_count' => $run->created_count,

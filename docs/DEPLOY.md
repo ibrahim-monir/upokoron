@@ -390,9 +390,12 @@ php artisan config:cache
 
 After the new build and migration are live, an admin with `products.create`
 can also start this from **Admin → Products → Import → DropShipping.com.bd**.
-The page shows progress and counts while the scheduled queue worker processes
-one supplier page at a time. Leave the existing once-per-minute scheduler cron
-active for this to progress.
+Choose a supplier category and page range there, or leave the defaults to
+process the whole catalog. The page shows progress and counts while the
+scheduled queue worker processes one supplier page at a time. The first run
+can filter by a numeric supplier category ID; later runs offer categories
+already discovered in the supplier records. Leave the existing once-per-minute
+scheduler cron active for this to progress.
 
 Then run the migration and importer from cPanel Terminal:
 
