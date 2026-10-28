@@ -128,6 +128,20 @@ class ProductImportController extends Controller
     {
         abort_unless($request->user()?->can('products.create'), 403);
 
+        $configured = filled(config('services.dropshipping.api_key'))
+            && filled(config('services.dropshipping.secret_key'));
+
+        // No catalog run can be started without credentials. Avoid touching
+        // the import tables in this state so a missing/old schema cannot turn
+        // the actionable configuration warning into a generic 500 response.
+        if (! $configured) {
+            return response()->json([
+                'configured' => false,
+                'run' => null,
+                'categories' => [],
+            ]);
+        }
+
         if (! Schema::hasTable('dropshipping_import_runs')
             || ! Schema::hasColumns('dropshipping_import_runs', ['page_from', 'page_to', 'category_id', 'status'])) {
             return response()->json([
@@ -152,7 +166,7 @@ class ProductImportController extends Controller
         }
 
         return response()->json([
-            'configured' => filled(config('services.dropshipping.api_key')) && filled(config('services.dropshipping.secret_key')),
+            'configured' => $configured,
             'run' => $run === null ? null : $this->runData($run),
             'categories' => $categories,
         ]);
