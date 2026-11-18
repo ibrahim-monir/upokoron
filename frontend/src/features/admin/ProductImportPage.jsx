@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Download, FileSpreadsheet, Link2, RefreshCw, Upload } from 'lucide-react'
-import { post } from '../../lib/api'
+import { post, put } from '../../lib/api'
 import { useList } from './useResource'
 import { useAuthStore } from '../../stores/authStore'
 import {
@@ -16,6 +16,7 @@ import {
   Select,
   TableWrap,
   Td,
+  Textarea,
   Th,
   useToast,
 } from '../../components/ui'
@@ -621,151 +622,190 @@ function ImportFromCsv() {
 }
 
 /* -------------------------------------------------------------------------
-   Full DropShipping.com.bd catalog, run manually and processed in the queue
+   DropShipping.com.bd reseller panel: import + price/stock sync
    ------------------------------------------------------------------------- */
 
 const ACTIVE_IMPORT_STATUSES = new Set(['queued', 'running'])
+const STATUS_KEY = ['admin.dropshipping.import-status']
 
 function ImportFromDropShipping() {
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [filters, setFilters] = useState({ page_from: '1', page_to: '', category_id: '' })
+  const [form, setForm] = useState(null)
+  const [test, setTest] = useState(null)
   const status = useList(
     'admin.dropshipping.import-status',
     '/admin/products/import/dropshipping/status',
     {},
     {
       refetchInterval: (query) =>
-        ACTIVE_IMPORT_STATUSES.has(query.state.data?.run?.status) ? 2500 : false,
+        ACTIVE_IMPORT_STATUSES.has(query.state.data?.run?.status) ? 3000 : false,
     },
   )
 
-  const start = useMutation({
-    mutationFn: () =>
-      post('/admin/products/import/dropshipping', {
-        page_from: Number(filters.page_from || 1),
-        page_to: filters.page_to ? Number(filters.page_to) : null,
-        category_id: filters.category_id || null,
-      }),
+  const settings = status.data?.settings
+  const values = form ?? (settings ? { ...settings, password: '' } : null)
+  const set = (key) => (event) => {
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value
+    setForm((current) => ({ ...(current ?? { ...settings, password: '' }), [key]: value }))
+  }
+  const refresh = () => queryClient.invalidateQueries({ queryKey: STATUS_KEY })
+
+  const save = useMutation({
+    mutationFn: () => {
+      const body = {
+        phone: values.phone,
+        sources: values.sources,
+        auto_sync: Boolean(values.auto_sync),
+        interval_hours: Number(values.interval_hours || 3),
+        import_new: Boolean(values.import_new),
+        new_status: values.new_status,
+        price_field: values.price_field,
+        compare_at_from_regular: Boolean(values.compare_at_from_regular),
+        hide_out_of_stock: Boolean(values.hide_out_of_stock),
+        max_images: Number(values.max_images || 5),
+        site_code: values.site_code,
+      }
+      if (values.password) body.password = values.password
+      return put('/admin/products/import/dropshipping/settings', body)
+    },
     onSuccess(data) {
       toast.success(data.message)
-      queryClient.invalidateQueries({ queryKey: ['admin.dropshipping.import-status'] })
+      setForm(null)
+      refresh()
     },
-    onError: (error) => toast.error(error?.message ?? 'Could not start the supplier import.'),
+    onError: (error) => toast.error(error?.message ?? 'Could not save the settings.'),
+  })
+
+  const runTest = useMutation({
+    mutationFn: () => post('/admin/products/import/dropshipping/test'),
+    onSuccess(data) {
+      setTest(data)
+      toast.success(data.message)
+    },
+    onError: (error) => {
+      setTest(null)
+      toast.error(error?.message ?? 'Could not reach the panel.')
+    },
+  })
+
+  const start = useMutation({
+    mutationFn: () => post('/admin/products/import/dropshipping/sync'),
+    onSuccess(data) {
+      toast.success(data.message)
+      refresh()
+    },
+    onError: (error) => toast.error(error?.message ?? 'Could not start the sync.'),
+  })
+
+  const cancel = useMutation({
+    mutationFn: () => post('/admin/products/import/dropshipping/cancel'),
+    onSuccess(data) {
+      toast.success(data.message)
+      refresh()
+    },
   })
 
   const configured = status.data?.configured ?? false
   const run = status.data?.run
+  const counts = status.data?.counts
   const isRunning = ACTIVE_IMPORT_STATUSES.has(run?.status)
-  const selectedPageCount = run?.last_page > 0 ? Math.max(1, run.last_page - run.page_from + 1) : 0
-  const progress = selectedPageCount > 0
-    ? Math.min(100, ((run.current_page - run.page_from + 1) / selectedPageCount) * 100)
-    : 0
-  const categories = status.data?.categories ?? []
-  const pageRangeInvalid = filters.page_to && Number(filters.page_to) < Number(filters.page_from || 1)
-  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }))
+  const dirty = form !== null
 
   const statusLabel = {
     queued: 'Queued',
-    running: 'Importing',
+    running: 'Syncing',
     completed: 'Completed',
-    completed_with_errors: 'Completed with skipped errors',
+    completed_with_errors: 'Completed with errors',
     failed: 'Failed',
+    cancelled: 'Stopped',
   }[run?.status]
-  const selectedCategoryName = categories.find((category) => category.id === run?.category_id)?.name
+
+  if (status.isError) return <ErrorState error={status.error} onRetry={status.refetch} />
+  if (!values) return <p className="text-sm text-ink-500">Loading…</p>
 
   return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader
-          title="DropShipping.com.bd supplier catalog"
-          description="Supplier: DropShipping.com.bd. Fetches every page and creates unpublished drafts. Re-running skips products already imported."
+          title="DropShipping.com.bd panel"
+          description="Imports products from your reseller panel and keeps price and stock in step. New products arrive as drafts; nothing is imported twice."
         />
 
         <div className="grid gap-4 p-4">
-          <p className="max-w-3xl text-sm text-ink-600">
-            This runs in the background, so you can leave this page while it works. Supplier categories are grouped by their API IDs; review category labels and variant details before publishing.
-          </p>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            {categories.length > 0 ? (
-              <Field label="Supplier category">
-                {({ id }) => (
-                  <Select id={id} value={filters.category_id} onChange={setFilter('category_id')}>
-                    <option value="">All categories</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>{category.name} (ID {category.id})</option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-            ) : (
-              <Field label="Supplier category ID" hint="Leave blank for every category. The API only provides category IDs.">
-                {({ id }) => (
-                  <Input id={id} type="number" min="1" value={filters.category_id} onChange={setFilter('category_id')} placeholder="All categories" />
-                )}
-              </Field>
-            )}
-
-            <Field label="First page" hint="The supplier API returns up to 200 products per page.">
-              {({ id }) => (
-                <Input id={id} type="number" min="1" value={filters.page_from} onChange={setFilter('page_from')} />
-              )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Panel phone number">
+              {({ id }) => <Input id={id} value={values.phone ?? ''} onChange={set('phone')} placeholder="01xxxxxxxxx" autoComplete="off" />}
             </Field>
-
-            <Field label="Last page" hint="Leave blank to continue through the supplier's last page.">
-              {({ id }) => (
-                <Input id={id} type="number" min={filters.page_from || 1} value={filters.page_to} onChange={setFilter('page_to')} placeholder="Last page" />
-              )}
+            <Field label="Panel password" hint={settings?.has_password ? 'Saved. Leave blank to keep it.' : 'Stored encrypted. Never shown again.'}>
+              {({ id }) => <Input id={id} type="password" value={values.password ?? ''} onChange={set('password')} autoComplete="new-password" />}
             </Field>
           </div>
 
-          {pageRangeInvalid && <p className="text-sm text-red-700">Last page must be greater than or equal to first page.</p>}
+          <Field
+            label="Sources"
+            hint="One panel listing per line, e.g. category_id=15 (Gadgets & Electronics) or category_id=15&sub_category_id=65. Add => category-slug to put that line's products in one of your categories; otherwise they go into hidden DropShipping.com.bd categories."
+          >
+            {({ id }) => <Textarea id={id} rows={4} value={values.sources ?? ''} onChange={set('sources')} className="font-mono text-sm" />}
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Field label="Price to sell at">
+              {({ id }) => (
+                <Select id={id} value={values.price_field} onChange={set('price_field')}>
+                  <option value="reselling_price">Panel resell price</option>
+                  <option value="price">Panel regular price</option>
+                </Select>
+              )}
+            </Field>
+            <Field label="New products as">
+              {({ id }) => (
+                <Select id={id} value={values.new_status} onChange={set('new_status')}>
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                </Select>
+              )}
+            </Field>
+            <Field label="Sync every (hours)">
+              {({ id }) => <Input id={id} type="number" min="1" max="48" value={values.interval_hours} onChange={set('interval_hours')} />}
+            </Field>
+            <Field label="Photos per product">
+              {({ id }) => <Input id={id} type="number" min="1" max="10" value={values.max_images} onChange={set('max_images')} />}
+            </Field>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Toggle checked={Boolean(values.auto_sync)} onChange={set('auto_sync')} label="Automatic sync" hint="Runs on the server schedule, no need to keep this page open." />
+            <Toggle checked={Boolean(values.import_new)} onChange={set('import_new')} label="Import new products" hint="Off: only update price and stock of products already imported." />
+            <Toggle checked={Boolean(values.hide_out_of_stock)} onChange={set('hide_out_of_stock')} label="Archive sold-out products" hint="Restored to active automatically when the panel has stock again." />
+            <Toggle checked={Boolean(values.compare_at_from_regular)} onChange={set('compare_at_from_regular')} label="Show panel regular price as the crossed-out price" />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={() => save.mutate()} loading={save.isPending} disabled={!dirty}>Save settings</Button>
+            <Button variant="secondary" onClick={() => runTest.mutate()} loading={runTest.isPending} disabled={!configured || dirty}>
+              Test connection
+            </Button>
+            <Button variant="secondary" onClick={() => start.mutate()} loading={start.isPending} disabled={!configured || dirty || isRunning}>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              {isRunning ? 'Sync running' : 'Run sync now'}
+            </Button>
+            {isRunning && <Button variant="ghost" onClick={() => cancel.mutate()} loading={cancel.isPending}>Stop</Button>}
+          </div>
 
           {!configured && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
-              Supplier API credentials are not configured on the live server. Add the rotated keys to the backend <code>.env</code>, then refresh this page.
+              Enter the panel phone number and password, then Save.
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={() => start.mutate()}
-              loading={start.isPending}
-              disabled={!configured || isRunning || status.isLoading || Boolean(pageRangeInvalid)}
-            >
-              <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              {isRunning ? 'Import running' : 'Import all products as drafts'}
-            </Button>
-            <Button variant="secondary" onClick={() => status.refetch()} loading={status.isFetching}>
-              Refresh status
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {status.isError && <ErrorState error={status.error} onRetry={status.refetch} />}
-
-      {run && (
-        <Card>
-          <CardHeader
-            title={`Import #${run.id}: ${statusLabel ?? run.status}`}
-            description={run.last_page > 0
-              ? `Page ${run.current_page} of ${run.last_page}${run.category_id ? ` · ${selectedCategoryName ?? `Supplier category ${run.category_id}`}` : ' · All categories'}`
-              : 'Waiting for the queue worker'}
-            actions={<Badge tone={run.status === 'failed' ? 'danger' : isRunning ? 'brand' : 'success'}>{statusLabel ?? run.status}</Badge>}
-          />
-
-          <div className="grid gap-4 p-4">
-            {run.last_page > 0 && (
-              <progress className="h-2 w-full overflow-hidden rounded-full accent-brand-600" max="100" value={progress} aria-label="Supplier import progress" />
-            )}
-
-            <div className="grid grid-cols-3 gap-3">
+          {counts && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                ['Drafts created', run.created_count],
-                ['Already imported', run.skipped_count],
-                ['Failed products', run.failed_count],
+                ['Linked products', counts.linked],
+                ['Active in shop', counts.active],
+                ['Sold out on panel', counts.out_of_stock],
+                ['Archived by sync', counts.archived_by_sync],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-ink-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
@@ -773,12 +813,94 @@ function ImportFromDropShipping() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      </Card>
 
-            {run.error && <p className="text-sm text-red-700">{run.error}</p>}
+      {test && <DropshippingTest test={test} />}
+
+      {run && (
+        <Card>
+          <CardHeader
+            title={`Sync #${run.id}: ${statusLabel ?? run.status}`}
+            description={`Source ${Math.min(run.source_index + 1, run.source_count || 1)} of ${run.source_count || 1} · page ${run.current_page}${run.last_page ? ` of ${run.last_page}` : ''} · ${run.seen_count} of ${run.total_count || '?'} products checked${run.trigger === 'schedule' ? ' · automatic' : ''}`}
+            actions={<Badge tone={run.status === 'failed' ? 'danger' : isRunning ? 'brand' : 'success'}>{statusLabel ?? run.status}</Badge>}
+          />
+          <div className="grid gap-4 p-4">
+            {isRunning && run.total_count > 0 && (
+              <progress className="h-2 w-full overflow-hidden rounded-full accent-brand-600" max="100" value={Math.min(100, (run.seen_count / run.total_count) * 100)} aria-label="Sync progress" />
+            )}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {[
+                ['New products', run.created_count],
+                ['Price/stock updated', run.updated_count],
+                ['Skipped', run.skipped_count],
+                ['Archived (gone)', run.hidden_count],
+                ['Failed', run.failed_count],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-ink-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
+                  <p className="text-xl font-bold text-ink-900">{value}</p>
+                </div>
+              ))}
+            </div>
+            {run.error && <p className="whitespace-pre-line text-sm text-red-700">{run.error}</p>}
           </div>
         </Card>
       )}
     </div>
+  )
+}
+
+function DropshippingTest({ test }) {
+  return (
+    <Card>
+      <CardHeader title="Connection test — nothing was saved" description={test.message} />
+      <div className="grid gap-3 p-4 text-sm text-ink-700">
+        {test.panel_categories?.length > 0 && (
+          <p>
+            <span className="font-semibold">Panel categories: </span>
+            {test.panel_categories.map((c) => `${c.name} (category_id=${c.id})`).join(', ')}
+          </p>
+        )}
+        {test.sub_categories?.length > 0 && (
+          <p>
+            <span className="font-semibold">Sub-categories in {test.source}: </span>
+            {test.sub_categories.map((c) => `${c.name} (sub_category_id=${c.id})`).join(', ')}
+          </p>
+        )}
+      </div>
+      {test.rows?.length > 0 && (
+        <TableWrap>
+          <thead>
+            <tr>
+              <Th>Code</Th>
+              <Th>Product</Th>
+              <Th numeric>Sell price</Th>
+              <Th numeric>Cost</Th>
+              <Th numeric>Stock</Th>
+              <Th>Status</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {test.rows.map((row) => (
+              <tr key={row.code} className="hover:bg-ink-50">
+                <Td>{row.code}</Td>
+                <Td>{row.name}</Td>
+                <Td numeric>{row.price ?? '—'}</Td>
+                <Td numeric>{row.cost ?? '—'}</Td>
+                <Td numeric>{row.stock ?? '—'}</Td>
+                <Td>
+                  <Badge tone={row.linked ? 'brand' : row.in_stock ? 'success' : 'neutral'}>
+                    {row.linked ? 'Already imported' : row.in_stock ? 'Will import' : 'Sold out'}
+                  </Badge>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableWrap>
+      )}
+    </Card>
   )
 }
 

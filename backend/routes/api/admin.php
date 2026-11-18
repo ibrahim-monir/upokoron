@@ -10,25 +10,26 @@ use App\Http\Controllers\Api\V1\Admin\BannerController;
 use App\Http\Controllers\Api\V1\Admin\BrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\ChatController;
+use App\Http\Controllers\Api\V1\Admin\ContactMessageController;
 use App\Http\Controllers\Api\V1\Admin\CouponController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\DropshippingController;
+use App\Http\Controllers\Api\V1\Admin\FaqController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController;
 use App\Http\Controllers\Api\V1\Admin\JournalEntryController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
+use App\Http\Controllers\Api\V1\Admin\NotificationTestController;
 use App\Http\Controllers\Api\V1\Admin\OrderController;
 use App\Http\Controllers\Api\V1\Admin\PaymentMethodController;
 use App\Http\Controllers\Api\V1\Admin\ProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\ProductImportController;
-use App\Http\Controllers\Api\V1\Admin\RewardController;
-use App\Http\Controllers\Api\V1\Admin\ContactMessageController;
-use App\Http\Controllers\Api\V1\Admin\FaqController;
 use App\Http\Controllers\Api\V1\Admin\QuestionController;
+use App\Http\Controllers\Api\V1\Admin\ReturnController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
+use App\Http\Controllers\Api\V1\Admin\RewardController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
-use App\Http\Controllers\Api\V1\Admin\NotificationTestController;
-use App\Http\Controllers\Api\V1\Admin\ReturnController;
 use App\Http\Controllers\Api\V1\Admin\ShippingClassController;
 use App\Http\Controllers\Api\V1\Admin\ShippingZoneController;
 use App\Http\Controllers\Api\V1\Admin\SitemapController;
@@ -120,11 +121,18 @@ Route::middleware(['auth:sanctum', 'account.active', 'admin.access'])->group(fun
     Route::post('products/import/scrape', [ProductImportController::class, 'scrape'])
         ->middleware('throttle:import')
         ->name('products.import.scrape');
-    Route::post('products/import/dropshipping', [ProductImportController::class, 'startDropshipping'])
+    Route::get('products/import/dropshipping/status', [DropshippingController::class, 'status'])
+        ->name('products.import.dropshipping.status');
+    Route::put('products/import/dropshipping/settings', [DropshippingController::class, 'saveSettings'])
+        ->name('products.import.dropshipping.settings');
+    Route::post('products/import/dropshipping/test', [DropshippingController::class, 'test'])
+        ->middleware('throttle:import')
+        ->name('products.import.dropshipping.test');
+    Route::post('products/import/dropshipping/sync', [DropshippingController::class, 'start'])
         ->middleware('throttle:import')
         ->name('products.import.dropshipping.start');
-    Route::get('products/import/dropshipping/status', [ProductImportController::class, 'dropshippingStatus'])
-        ->name('products.import.dropshipping.status');
+    Route::post('products/import/dropshipping/cancel', [DropshippingController::class, 'cancel'])
+        ->name('products.import.dropshipping.cancel');
     Route::post('products/import/csv', [ProductImportController::class, 'csv'])
         ->middleware('throttle:import')
         ->name('products.import.csv');
