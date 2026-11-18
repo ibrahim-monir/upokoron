@@ -366,60 +366,28 @@ Anything unexplained: put `preflight.php` back, run it, delete it again.
 
 ---
 
-## 11. Importing the DropShipping.com.bd catalog
+## 11. DropShipping.com.bd sync
 
-The backend command reads every page from the reseller product API and creates
-unpublished, untracked-stock drafts. It is safe to retry: supplier products
-already recorded are not duplicated, and their latest raw API record is kept
-in `dropshipping_catalog_items`.
+Products come from the DropShipping.com.bd reseller panel (the same account
+Avijatya uses). The panel has no API key, so the server logs in with the
+reseller phone number and password, which are entered in the admin and stored
+encrypted. Nothing goes in `.env`.
 
-Before running it on the live server, add the rotated API credentials to
-`/home/USER/laravel/.env`:
+1. Deploy, then run `php artisan migrate --force` (the deploy workflow does).
+2. **Admin → Products → Import → DropShipping.com.bd**: enter phone + password,
+   check **Sources** (default `category_id=15`, Gadgets & Electronics), Save.
+3. **Test connection** logs in and shows the first products, with the panel's
+   category IDs for the Sources box. Nothing is saved.
+4. **Run sync now**. New products arrive as drafts with colour/size variations
+   and up to 5 photos; SKU is `01-{category id}-{panel code}`. A product is
+   never imported twice.
+5. Turn on **Automatic sync** to repeat every N hours (default 3). Each run
+   updates prices and archives products the panel has sold out, then restores
+   them when stock returns.
 
-```dotenv
-DROPSHIPPING_API_KEY=YOUR_ROTATED_API_KEY
-DROPSHIPPING_SECRET_KEY=YOUR_ROTATED_SECRET_KEY
-```
-
-Refresh the cached configuration after editing `.env`:
-
-```bash
-cd ~/laravel
-php artisan config:cache
-```
-
-After the new build and migration are live, an admin with `products.create`
-can also start this from **Admin → Products → Import → DropShipping.com.bd**.
-Choose a supplier category and page range there, or leave the defaults to
-process the whole catalog. The page shows progress and counts while the
-scheduled queue worker processes one supplier page at a time. The first run
-can filter by a numeric supplier category ID; later runs offer categories
-already discovered in the supplier records. Leave the existing once-per-minute
-scheduler cron active for this to progress.
-
-Then run the migration and importer from cPanel Terminal:
-
-```bash
-cd ~/laravel
-php artisan migrate --force
-php artisan dropshipping:import-catalog
-```
-
-If there is no Terminal, run those commands one at a time through the
-temporary one-off cron procedure in section 6b, then delete the cron job.
-The importer commits each product separately, so if shared-hosting execution
-stops partway through, run the same command again; it resumes by skipping
-products already mapped.
-
-Products are kept as drafts. Supplier category IDs are grouped under inactive
-placeholder categories until their real names are available. Supplier prices,
-category ID, attribute/variant IDs, details, and images are copied to the
-draft; the complete supplier payload is also retained in
-`dropshipping_catalog_items`.
-This API response does not include readable category labels or variant option
-names, so those details must be resolved before the drafts are published.
-This command imports the catalog only; it does not submit customer orders to
-the supplier.
+The existing once-per-minute scheduler cron drives everything
+(`dropshipping:sync` every 15 minutes, and the queue worker). Force a run from
+the terminal with `php artisan dropshipping:sync --force`.
 
 ## 12. Deploying an update later
 

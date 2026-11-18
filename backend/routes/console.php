@@ -23,6 +23,13 @@ Schedule::command('queue:work --queue=imports,default --stop-when-empty --max-ti
     ->everyMinute()
     ->withoutOverlapping();
 
+// DropShipping.com.bd: starts an import + price/stock sync when automatic
+// sync is on and the interval has passed. The run itself is a chain of
+// queued jobs drained by the worker above.
+Schedule::command('dropshipping:sync')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
+
 // Abandoned checkouts must give their stock back, or the shop shows itself
 // as sold out while the shelves are full.
 Schedule::command('reservations:release-expired')
